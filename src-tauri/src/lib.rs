@@ -2,6 +2,7 @@
 
 pub mod actions;
 pub mod commands;
+pub mod commands_extra;
 pub mod db;
 pub mod files;
 pub mod hotkey;
@@ -9,6 +10,7 @@ pub mod i18n;
 pub mod models;
 pub mod panel;
 pub mod services;
+pub mod shell;
 pub mod state;
 pub mod textract;
 pub mod transfer;
@@ -20,6 +22,49 @@ use tauri::{Manager, RunEvent, WindowEvent};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 use crate::state::AppState;
+
+/// Files sent from Explorer's context menu. With several files selected,
+/// Explorer may start one process per file; batch them briefly so the user
+/// gets one confirmation.
+fn add_from_explorer(app: &tauri::AppHandle, paths: Vec<String>) {
+    use std::sync::{Mutex, OnceLock};
+    static PENDING: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+    let pending = PENDING.get_or_init(|| Mutex::new(Vec::new()));
+    let first = {
+        let mut list = pending.lock().unwrap_or_else(|e| e.into_inner());
+        let first = list.is_empty();
+        list.extend(paths);
+        first
+    };
+    if !first {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        let batch = std::mem::take(&mut *pending.lock().unwrap_or_else(|e| e.into_inner()));
+        let state = app.state::<AppState>();
+        let (target, notify) = match db::get_settings(&state.db(), state.language) {
+            Ok(s) => (Some(s.last_shelf_id), s.notifications),
+            Err(_) => (None, true),
+        };
+        let Some(change) = services::ingest(&app, &batch, "manual", target.as_deref()) else {
+            return;
+        };
+        let visible = panel::window(&app)
+            .and_then(|w| w.is_visible().ok())
+            .unwrap_or(false);
+        if change.added > 0 && notify && !visible {
+            use tauri_plugin_notification::NotificationExt;
+            let _ = app
+                .notification()
+                .builder()
+                .title("Stash")
+                .body(i18n::files_added(state.language, change.added, &change.shelf_name))
+                .show();
+        }
+    });
+}
 
 pub fn run() {
     let data_dir = state::data_dir();
@@ -39,8 +84,14 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         // Must be first: a second launch only brings up the running panel.
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            panel::show(app);
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // "Add to Stash" from Explorer launches us with --add <path>.
+            let paths = shell::paths_from_args(&argv);
+            if paths.is_empty() {
+                panel::show(app);
+            } else {
+                add_from_explorer(app, paths);
+            }
         }))
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -73,6 +124,16 @@ pub fn run() {
 
             let handle = app.handle();
             tray::create(handle)?;
+            let _ = hotkey::reregister_action(
+                handle,
+                &settings.paste_hotkey,
+                hotkey::Action::PasteIntoDialog,
+            );
+            commands::sync_context_menu(handle, settings.context_menu);
+            let launch_paths = shell::paths_from_args(&std::env::args().collect::<Vec<_>>());
+            if !launch_paths.is_empty() {
+                add_from_explorer(handle, launch_paths);
+            }
             if !hotkey::reregister(handle, &settings.open_hotkey) && settings.notifications {
                 // Another app owns the shortcut; tell the user instead of failing silently.
                 use tauri_plugin_notification::NotificationExt;
@@ -135,6 +196,22 @@ pub fn run() {
             commands::check_for_updates,
             commands::install_update,
             commands::update_status,
+            commands_extra::set_file_note,
+            commands_extra::set_reminder,
+            commands_extra::set_shelf_expiry,
+            commands_extra::list_rules,
+            commands_extra::add_rule,
+            commands_extra::delete_rule,
+            commands_extra::search_content,
+            commands_extra::set_selection,
+            commands_extra::zip_files,
+            commands_extra::convert_images,
+            commands_extra::collect_files,
+            commands_extra::copy_paths,
+            commands_extra::open_files,
+            commands_extra::start_drag_zip,
+            commands_extra::paste_clipboard,
+            commands_extra::quick_look,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build Stash");

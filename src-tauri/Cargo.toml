@@ -44,6 +44,7 @@ qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 tiny_http = "0.12"
 
 [target.'cfg(windows)'.dependencies]
+winreg = "0.55"
 windows = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
@@ -52,6 +53,11 @@ windows = { version = "0.61", features = [
   "Win32_UI_Shell",
   "Win32_UI_Shell_Common",
   "Win32_UI_WindowsAndMessaging",
+  "Win32_System_DataExchange",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_System_LibraryLoader",
 ] }
 
 [dev-dependencies]

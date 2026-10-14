@@ -23,7 +23,7 @@ use crate::transfer;
 use crate::updater;
 use crate::win;
 
-type CmdResult<T> = Result<T, String>;
+pub type CmdResult<T> = Result<T, String>;
 
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
@@ -206,7 +206,23 @@ pub async fn add_files(
 #[tauri::command]
 pub fn remove_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<bool> {
     check_ids(&ids)?;
+    // Clips and phone uploads live in Stash's own folder; removing them from
+    // the shelf deletes the file too, unless another shelf still uses it.
+    let owned: Vec<String> = {
+        let conn = state.db();
+        ids.iter()
+            .filter_map(|id| db::get_file(&conn, id).ok().flatten())
+            .map(|f| f.absolute_path)
+            .filter(|p| crate::commands_extra::is_owned(&state, p))
+            .collect()
+    };
     db::remove_files(&state.db(), &ids).map_err(err)?;
+    let still_used = db::list_files(&state.db(), None).unwrap_or_default();
+    for path in owned {
+        if !still_used.iter().any(|f| f.absolute_path == path) {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
     Ok(true)
 }
 
@@ -483,6 +499,11 @@ pub fn set_settings(
             return Err("hotkey_unavailable".into());
         }
     }
+    if let Some(h) = &patch.paste_hotkey {
+        if !hotkey::reregister_action(&app, h, hotkey::Action::PasteIntoDialog) {
+            return Err("hotkey_unavailable".into());
+        }
+    }
     let next = db::set_settings(&state.db(), &patch, state.language).map_err(err)?;
     if patch.start_with_windows.is_some() {
         sync_autostart(&app, next.start_with_windows);
@@ -490,7 +511,26 @@ pub fn set_settings(
     if patch.watch_downloads.is_some() || patch.watch_screenshots.is_some() {
         crate::services::restart_watchers(&app);
     }
+    if patch.context_menu.is_some() {
+        sync_context_menu(&app, next.context_menu);
+    }
     Ok(next)
+}
+
+/// "Add to Stash" in Explorer's right-click menu. Debug builds never register.
+pub fn sync_context_menu(app: &AppHandle, enabled: bool) {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let label = i18n::strings(app.state::<AppState>().language).context_menu_label;
+    match std::env::current_exe() {
+        Ok(exe) => {
+            if let Err(e) = crate::shell::set_context_menu(enabled, label, &exe) {
+                log::warn!("context menu: {e}");
+            }
+        }
+        Err(e) => log::warn!("context menu: {e}"),
+    }
 }
 
 /// Start with Windows. Debug builds never register themselves.

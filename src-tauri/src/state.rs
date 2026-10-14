@@ -20,6 +20,9 @@ pub struct AppState {
     pub update: Mutex<UpdateStatus>,
     pub pending_update: Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>,
     pub hotkey: Mutex<Option<String>>,
+    pub paste_hotkey: Mutex<Option<String>>,
+    /// Files selected in the panel (for the paste-into-dialog shortcut).
+    pub selection: Mutex<Vec<String>>,
     pub watcher: Mutex<Option<notify::RecommendedWatcher>>,
 }
 
@@ -35,6 +38,8 @@ impl AppState {
             update: Mutex::new(UpdateStatus::Idle),
             pending_update: Mutex::new(None),
             hotkey: Mutex::new(None),
+            paste_hotkey: Mutex::new(None),
+            selection: Mutex::new(Vec::new()),
             watcher: Mutex::new(None),
         }
     }

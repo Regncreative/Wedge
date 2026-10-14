@@ -1,0 +1,452 @@
+//! Commands for notes, reminders, rules, content search, quick actions,
+//! clipboard and the preview overlay.
+
+use std::path::{Path, PathBuf};
+
+use serde::Serialize;
+use serde_json::{json, Value};
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
+
+use crate::actions::{self, ImageFormat};
+use crate::commands::{check_id, check_ids, CmdResult, MAX_PATH_CHARS};
+use crate::db;
+use crate::models::StashFile;
+use crate::panel;
+use crate::services;
+use crate::shell;
+use crate::state::AppState;
+use crate::textract;
+use crate::win;
+
+fn err(e: impl std::fmt::Display) -> String {
+    e.to_string()
+}
+
+fn files_by_ids(state: &AppState, ids: &[String]) -> CmdResult<Vec<StashFile>> {
+    check_ids(ids)?;
+    let conn = state.db();
+    Ok(ids
+        .iter()
+        .filter_map(|id| db::get_file(&conn, id).ok().flatten())
+        .collect())
+}
+
+fn existing_paths(files: &[StashFile]) -> Vec<PathBuf> {
+    files
+        .iter()
+        .map(|f| PathBuf::from(&f.absolute_path))
+        .filter(|p| p.exists())
+        .collect()
+}
+
+/// Add freshly created files (zip, converted images…) next to `like`.
+fn shelve_new(state: &AppState, paths: &[PathBuf], shelf_id: &str) {
+    let metas: Vec<_> = paths
+        .iter()
+        .filter_map(|p| crate::files::collect_meta(&p.to_string_lossy()))
+        .collect();
+    let _ = db::add_files(&state.db(), &metas, shelf_id);
+}
+
+// ── Notes, reminders, expiry, rules ───────────────────────
+
+#[tauri::command]
+pub fn set_file_note(state: State<'_, AppState>, id: String, note: String, tags: String) -> CmdResult<bool> {
+    check_id(&id)?;
+    if note.chars().count() > 2_000 || tags.chars().count() > 300 {
+        return Err("Invalid arguments: note".into());
+    }
+    let tags = tags
+        .split(',')
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ");
+    db::set_file_meta(&state.db(), &id, note.trim(), &tags).map_err(err)?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn set_reminder(state: State<'_, AppState>, id: String, at: Option<i64>) -> CmdResult<bool> {
+    check_id(&id)?;
+    if at.is_some_and(|t| t <= 0) {
+        return Err("Invalid arguments: at".into());
+    }
+    db::set_reminder(&state.db(), &id, at).map_err(err)?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn set_shelf_expiry(state: State<'_, AppState>, id: String, hours: Option<i64>) -> CmdResult<bool> {
+    check_id(&id)?;
+    if hours.is_some_and(|h| !(1..=24 * 365).contains(&h)) {
+        return Err("Invalid arguments: hours".into());
+    }
+    db::set_shelf_expiry(&state.db(), &id, hours).map_err(err)?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn list_rules(state: State<'_, AppState>) -> CmdResult<Vec<db::Rule>> {
+    db::list_rules(&state.db()).map_err(err)
+}
+
+const RULE_SOURCES: &[&str] = &["any", "manual", "downloads", "screenshots", "phone", "clipboard"];
+
+#[tauri::command]
+pub fn add_rule(
+    state: State<'_, AppState>,
+    shelf_id: String,
+    extensions: String,
+    source: String,
+) -> CmdResult<db::Rule> {
+    check_id(&shelf_id)?;
+    if extensions.len() > 300 || !RULE_SOURCES.contains(&source.as_str()) {
+        return Err("Invalid arguments: rule".into());
+    }
+    db::add_rule(&state.db(), &shelf_id, &extensions, &source).map_err(err)
+}
+
+#[tauri::command]
+pub fn delete_rule(state: State<'_, AppState>, id: String) -> CmdResult<bool> {
+    check_id(&id)?;
+    db::delete_rule(&state.db(), &id).map_err(err)?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn search_content(state: State<'_, AppState>, query: String) -> CmdResult<Vec<String>> {
+    if query.chars().count() > 200 {
+        return Err("Invalid arguments: query".into());
+    }
+    db::search_content(&state.db(), &query).map_err(err)
+}
+
+#[tauri::command]
+pub fn set_selection(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<()> {
+    if ids.len() > crate::commands::MAX_ITEMS {
+        return Err("Invalid arguments: ids".into());
+    }
+    *state.selection.lock().map_err(err)? = ids;
+    Ok(())
+}
+
+// ── Quick actions ─────────────────────────────────────────
+
+#[tauri::command]
+pub async fn zip_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<Value> {
+    let files = files_by_ids(&state, &ids)?;
+    let paths = existing_paths(&files);
+    let Some(first) = paths.first() else {
+        return Ok(json!({ "ok": false }));
+    };
+    let dir = first.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let stem = if paths.len() == 1 {
+        first.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+    } else {
+        "Stash".to_string()
+    };
+    let dest = actions::unique_path(&dir, &stem, "zip");
+    let (zip_paths, zip_dest) = (paths.clone(), dest.clone());
+    tauri::async_runtime::spawn_blocking(move || actions::zip_paths(&zip_paths, &zip_dest))
+        .await
+        .map_err(err)?
+        .map_err(err)?;
+    shelve_new(&state, std::slice::from_ref(&dest), &files[0].shelf_id);
+    Ok(json!({ "ok": true, "path": dest }))
+}
+
+#[tauri::command]
+pub async fn convert_images(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+    format: ImageFormat,
+    max_side: Option<u32>,
+) -> CmdResult<Value> {
+    if max_side.is_some_and(|m| !(16..=20_000).contains(&m)) {
+        return Err("Invalid arguments: maxSide".into());
+    }
+    let files = files_by_ids(&state, &ids)?;
+    let paths = existing_paths(&files);
+    let results = tauri::async_runtime::spawn_blocking(move || {
+        paths
+            .iter()
+            .map(|p| actions::convert_image(p, format, max_side))
+            .collect::<Vec<_>>()
+    })
+    .await
+    .map_err(err)?;
+    let made: Vec<PathBuf> = results.iter().filter_map(|r| r.as_ref().ok().cloned()).collect();
+    if let Some(first) = files.first() {
+        shelve_new(&state, &made, &first.shelf_id);
+    }
+    Ok(json!({ "converted": made.len(), "failed": results.len() - made.len() }))
+}
+
+#[tauri::command]
+pub async fn collect_files(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<Value> {
+    let files = files_by_ids(&state, &ids)?;
+    let paths = existing_paths(&files);
+    let mut dialog = app.dialog().file();
+    if let Some(win) = panel::window(&app) {
+        dialog = dialog.set_parent(&win);
+    }
+    let Some(folder) = dialog.blocking_pick_folder() else {
+        return Ok(json!({ "ok": false, "canceled": true }));
+    };
+    let dest = folder.into_path().map_err(err)?;
+    let copied = tauri::async_runtime::spawn_blocking(move || actions::copy_into(&paths, &dest))
+        .await
+        .map_err(err)?
+        .map_err(err)?;
+    Ok(json!({ "ok": true, "copied": copied }))
+}
+
+#[tauri::command]
+pub fn copy_paths(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<usize> {
+    let files = files_by_ids(&state, &ids)?;
+    let text = files.iter().map(|f| f.absolute_path.as_str()).collect::<Vec<_>>().join("\r\n");
+    app.clipboard().write_text(text).map_err(err)?;
+    Ok(files.len())
+}
+
+#[tauri::command]
+pub fn open_files(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<usize> {
+    let files = files_by_ids(&state, &ids)?;
+    let mut opened = 0;
+    for f in files.iter().filter(|f| Path::new(&f.absolute_path).exists()) {
+        if app.opener().open_path(&f.absolute_path, None::<&str>).is_ok() {
+            opened += 1;
+            let _ = db::touch_file(&state.db(), &f.id);
+        }
+    }
+    Ok(opened)
+}
+
+/// Zip the files into a temporary archive and drag that out (e.g. into a mail).
+#[tauri::command]
+pub fn start_drag_zip(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>, name: String) -> CmdResult<()> {
+    let files = files_by_ids(&state, &ids)?;
+    let paths = existing_paths(&files);
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let safe: String = name
+        .chars()
+        .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
+        .take(80)
+        .collect();
+    let dir = std::env::temp_dir().join("Stash");
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    let dest = dir.join(format!("{}.zip", if safe.trim().is_empty() { "Stash" } else { safe.trim() }));
+    let _ = std::fs::remove_file(&dest);
+    actions::zip_paths(&paths, &dest).map_err(err)?;
+    let window = panel::window(&app).ok_or("no window")?;
+    let icon = win::shell_image_png(&dest.to_string_lossy(), 64, false)
+        .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec());
+    drag::start_drag(
+        &window,
+        drag::DragItem::Files(vec![dest]),
+        drag::Image::Raw(icon),
+        |_result, _cursor| {},
+        drag::Options::default(),
+    )
+    .map_err(err)
+}
+
+// ── Clipboard ─────────────────────────────────────────────
+
+fn clips_dir(state: &AppState) -> PathBuf {
+    state.data_dir.join("clips")
+}
+
+/// Whether a path lives in Stash's own folders (clips, phone uploads), so
+/// removing it from the shelf may delete the file too.
+pub fn is_owned(state: &AppState, path: &str) -> bool {
+    let p = Path::new(path);
+    p.starts_with(clips_dir(state)) || p.starts_with(state.data_dir.join("inbox"))
+}
+
+fn timestamp_name() -> String {
+    // Local time isn't needed; a sortable UTC stamp keeps names unique and readable.
+    let secs = db::now_ms() / 1000;
+    let (d, s) = (secs / 86_400, secs % 86_400);
+    format!("{d}-{:02}{:02}{:02}", s / 3600, s % 3600 / 60, s % 60)
+}
+
+pub fn is_url(text: &str) -> bool {
+    let t = text.trim();
+    (t.starts_with("https://") || t.starts_with("http://")) && !t.contains(char::is_whitespace)
+}
+
+fn url_title(url: &str) -> String {
+    let host = url
+        .trim()
+        .split("://")
+        .nth(1)
+        .unwrap_or(url)
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("link")
+        .trim_start_matches("www.");
+    host.chars().filter(|c| c.is_alphanumeric() || *c == '.' || *c == '-').collect()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PasteResult {
+    kind: &'static str,
+    added: usize,
+}
+
+/// Ctrl+V in the panel: files copied in Explorer, an image (e.g. "Copy image"
+/// in a browser), a link, or text.
+#[tauri::command]
+pub async fn paste_clipboard(app: AppHandle, state: State<'_, AppState>, shelf_id: Option<String>) -> CmdResult<PasteResult> {
+    if let Some(id) = &shelf_id {
+        check_id(id)?;
+    }
+    let target = shelf_id.or_else(|| {
+        db::get_settings(&state.db(), state.language)
+            .ok()
+            .map(|s| s.default_shelf_id)
+    });
+    let added_to = |paths: Vec<String>, source: &str| -> usize {
+        services::ingest(&app, &paths, source, target.as_deref())
+            .map(|c| c.added)
+            .unwrap_or(0)
+    };
+
+    let files = tauri::async_runtime::spawn_blocking(shell::clipboard_files).await.map_err(err)?;
+    if !files.is_empty() {
+        let n = added_to(files, "manual");
+        return Ok(PasteResult { kind: "files", added: n });
+    }
+
+    let dir = clips_dir(&state);
+    std::fs::create_dir_all(&dir).map_err(err)?;
+
+    if let Ok(image) = app.clipboard().read_image() {
+        let (w, h) = (image.width(), image.height());
+        let rgba = image.rgba().to_vec();
+        let dest = actions::unique_path(&dir, &format!("clip-{}", timestamp_name()), "png");
+        let path = dest.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            image::RgbaImage::from_raw(w, h, rgba).map(|img| img.save(&path))
+        })
+        .await
+        .map_err(err)?
+        .ok_or("bad image")?
+        .map_err(err)?;
+        let n = added_to(vec![dest.to_string_lossy().into_owned()], "clipboard");
+        return Ok(PasteResult { kind: "image", added: n });
+    }
+
+    let text = app.clipboard().read_text().unwrap_or_default();
+    if text.trim().is_empty() {
+        return Ok(PasteResult { kind: "empty", added: 0 });
+    }
+    if text.chars().count() > 1_000_000 {
+        return Err("clipboard text too large".into());
+    }
+    let (dest, body, kind) = if is_url(&text) {
+        let dest = actions::unique_path(&dir, &url_title(&text), "url");
+        (dest, format!("[InternetShortcut]\r\nURL={}\r\n", text.trim()), "link")
+    } else {
+        let first_line: String = text
+            .lines()
+            .find(|l| !l.trim().is_empty())
+            .unwrap_or("note")
+            .chars()
+            .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
+            .take(40)
+            .collect();
+        let dest = actions::unique_path(&dir, first_line.trim(), "txt");
+        (dest, text, "text")
+    };
+    std::fs::write(&dest, body).map_err(err)?;
+    let n = added_to(vec![dest.to_string_lossy().into_owned()], "clipboard");
+    Ok(PasteResult { kind, added: n })
+}
+
+// ── Paste into an Open/Save dialog (global shortcut) ──────
+
+pub fn paste_into_dialog(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let selected = state.selection.lock().map(|s| s.clone()).unwrap_or_default();
+    let conn = state.db();
+    let mut paths: Vec<String> = selected
+        .iter()
+        .filter_map(|id| db::get_file(&conn, id).ok().flatten())
+        .map(|f| f.absolute_path)
+        .collect();
+    if paths.is_empty() {
+        // Nothing selected: the most recently used or added file.
+        paths = db::list_files(&conn, None)
+            .unwrap_or_default()
+            .into_iter()
+            .max_by_key(|f| f.last_accessed.unwrap_or(f.added_at))
+            .map(|f| vec![f.absolute_path])
+            .unwrap_or_default();
+    }
+    drop(conn);
+    if !paths.is_empty() && !shell::fill_file_dialog(&shell::dialog_text(&paths)) {
+        log::info!("paste hotkey: no file dialog in front");
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum Preview {
+    Image { url: String },
+    Text { text: String },
+    None,
+}
+
+/// Larger look at a file (Space): Windows' thumbnail for images, PDFs,
+/// videos and documents; otherwise the beginning of its text.
+#[tauri::command]
+pub async fn quick_look(state: State<'_, AppState>, id: String) -> CmdResult<Preview> {
+    check_id(&id)?;
+    let Some(file) = db::get_file(&state.db(), &id).map_err(err)? else {
+        return Ok(Preview::None);
+    };
+    if file.absolute_path.chars().count() > MAX_PATH_CHARS {
+        return Ok(Preview::None);
+    }
+    let path = file.absolute_path;
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(url) = win::shell_image_data_url(&path, 640, true) {
+            return Preview::Image { url };
+        }
+        match textract::extract(Path::new(&path)) {
+            Some(text) if !text.trim().is_empty() => Preview::Text {
+                text: text.chars().take(6_000).collect(),
+            },
+            _ => win::shell_image_data_url(&path, 256, false)
+                .map(|url| Preview::Image { url })
+                .unwrap_or(Preview::None),
+        }
+    })
+    .await
+    .map_err(err)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_links() {
+        assert!(is_url("https://example.com/a?b=1"));
+        assert!(is_url("  http://x.org  "));
+        assert!(!is_url("see https://example.com later"));
+        assert!(!is_url("ftp://example.com"));
+        assert_eq!(url_title("https://www.github.com/Regncreative/Stash"), "github.com");
+    }
+}
