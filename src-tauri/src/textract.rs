@@ -35,7 +35,12 @@ fn zipped_xml_text(path: &Path, part: impl Fn(&str) -> bool) -> Option<String> {
     let names: Vec<String> = archive.file_names().map(str::to_string).collect();
     for name in names.into_iter().filter(|n| part(n)) {
         let mut xml = String::new();
-        if archive.by_name(&name).ok()?.read_to_string(&mut xml).is_err() {
+        if archive
+            .by_name(&name)
+            .ok()?
+            .read_to_string(&mut xml)
+            .is_err()
+        {
             continue;
         }
         out.push_str(&strip_tags(&xml));
@@ -87,7 +92,9 @@ pub fn extract(path: &Path) -> Option<String> {
             String::from_utf8_lossy(&bytes[..bytes.len().min(MAX_CHARS * 2)]).into_owned()
         }
         "docx" => zipped_xml_text(path, |n| n.starts_with("word/") && n.ends_with(".xml"))?,
-        "pptx" => zipped_xml_text(path, |n| n.starts_with("ppt/slides/slide") && n.ends_with(".xml"))?,
+        "pptx" => zipped_xml_text(path, |n| {
+            n.starts_with("ppt/slides/slide") && n.ends_with(".xml")
+        })?,
         "xlsx" => zipped_xml_text(path, |n| {
             n == "xl/sharedStrings.xml" || (n.starts_with("xl/worksheets/") && n.ends_with(".xml"))
         })?,
@@ -133,14 +140,19 @@ mod tests {
         let mut zip = zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
         let opts = zip::write::SimpleFileOptions::default();
         zip.start_file("word/document.xml", opts).unwrap();
-        zip.write_all(b"<w:document><w:body><w:p><w:t>Kira sozlesmesi</w:t></w:p></w:body></w:document>")
-            .unwrap();
+        zip.write_all(
+            b"<w:document><w:body><w:p><w:t>Kira sozlesmesi</w:t></w:p></w:body></w:document>",
+        )
+        .unwrap();
         zip.start_file("docProps/app.xml", opts).unwrap();
         zip.write_all(b"<Application>Word</Application>").unwrap();
         zip.finish().unwrap();
         let text = extract(&path).unwrap();
         assert!(text.contains("Kira sozlesmesi"));
-        assert!(!text.contains("Application"), "only document parts are read");
+        assert!(
+            !text.contains("Application"),
+            "only document parts are read"
+        );
     }
 
     /// A minimal one-page PDF with the given ASCII text.
@@ -165,8 +177,11 @@ mod tests {
             pdf.extend(format!("{off:010} 00000 n \n").bytes());
         }
         pdf.extend(
-            format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objects.len() + 1)
-                .bytes(),
+            format!(
+                "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n",
+                objects.len() + 1
+            )
+            .bytes(),
         );
         pdf
     }

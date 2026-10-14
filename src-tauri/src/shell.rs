@@ -21,7 +21,11 @@ pub fn paths_from_args(args: &[String]) -> Vec<String> {
 pub fn dialog_text(paths: &[String]) -> String {
     match paths {
         [one] => one.clone(),
-        many => many.iter().map(|p| format!("\"{p}\"")).collect::<Vec<_>>().join(" "),
+        many => many
+            .iter()
+            .map(|p| format!("\"{p}\""))
+            .collect::<Vec<_>>()
+            .join(" "),
     }
 }
 
@@ -64,7 +68,9 @@ mod imp {
     }
 
     pub fn context_menu_registered() -> bool {
-        RegKey::predef(HKEY_CURRENT_USER).open_subkey(KEYS[0]).is_ok()
+        RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey(KEYS[0])
+            .is_ok()
     }
 
     /// Files copied in Explorer (Ctrl+C), if any.
@@ -113,7 +119,12 @@ mod imp {
                 .or_else(|| FindWindowExW(Some(combo), None, w!("Edit"), PCWSTR::null()).ok())
                 .unwrap_or(combo);
             let wide = HSTRING::from(text);
-            SendMessageW(edit, WM_SETTEXT, Some(WPARAM(0)), Some(LPARAM(wide.as_ptr() as isize)));
+            SendMessageW(
+                edit,
+                WM_SETTEXT,
+                Some(WPARAM(0)),
+                Some(LPARAM(wide.as_ptr() as isize)),
+            );
             true
         }
     }
@@ -155,7 +166,13 @@ mod tests {
         assert!(paths_from_args(&args(&["stash.exe"])).is_empty());
         assert!(paths_from_args(&args(&["stash.exe", "C:\\stray.txt"])).is_empty());
         assert_eq!(
-            paths_from_args(&args(&["stash.exe", "--add", "\"C:\\q.txt\"", "--other", "x"])),
+            paths_from_args(&args(&[
+                "stash.exe",
+                "--add",
+                "\"C:\\q.txt\"",
+                "--other",
+                "x"
+            ])),
             ["C:\\q.txt"]
         );
     }
@@ -163,7 +180,10 @@ mod tests {
     #[test]
     fn quotes_several_paths_for_a_file_dialog() {
         assert_eq!(dialog_text(&args(&["C:\\a b.txt"])), "C:\\a b.txt");
-        assert_eq!(dialog_text(&args(&["C:\\a.txt", "C:\\b.txt"])), "\"C:\\a.txt\" \"C:\\b.txt\"");
+        assert_eq!(
+            dialog_text(&args(&["C:\\a.txt", "C:\\b.txt"])),
+            "\"C:\\a.txt\" \"C:\\b.txt\""
+        );
     }
 
     #[cfg(windows)]

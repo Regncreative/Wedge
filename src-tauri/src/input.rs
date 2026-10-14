@@ -43,7 +43,11 @@ impl ShakeDetector {
     pub fn feed(&mut self, ev: MouseEvent) -> Option<Gesture> {
         match ev {
             MouseEvent::Down { x, y, .. } => {
-                *self = Self { down: Some((x, y)), last_x: x, ..Default::default() };
+                *self = Self {
+                    down: Some((x, y)),
+                    last_x: x,
+                    ..Default::default()
+                };
                 None
             }
             MouseEvent::Up { .. } => {
@@ -73,7 +77,8 @@ impl ShakeDetector {
                 // Direction changed: count it if the previous stroke was long enough.
                 if self.dir != 0 && self.segment >= Self::MIN_SEGMENT {
                     self.reversals.push(t);
-                    self.reversals.retain(|&r| t.wrapping_sub(r) <= Self::WINDOW_MS);
+                    self.reversals
+                        .retain(|&r| t.wrapping_sub(r) <= Self::WINDOW_MS);
                     if self.reversals.len() >= Self::REVERSALS {
                         self.fired = true;
                         return Some(Gesture::Shake { x, y });
@@ -103,7 +108,14 @@ impl EdgeDetector {
     const REARM_DISTANCE: i32 = 40;
 
     pub fn new(left_edge: i32, right_edge: i32, top: i32, bottom: i32) -> Self {
-        Self { left_edge, right_edge, top, bottom, since: None, armed: true }
+        Self {
+            left_edge,
+            right_edge,
+            top,
+            bottom,
+            since: None,
+            armed: true,
+        }
     }
 
     /// `side`: 1 = left, 2 = right.
@@ -112,7 +124,11 @@ impl EdgeDetector {
             return None;
         };
         let left = side == 1;
-        let edge_x = if left { self.left_edge } else { self.right_edge };
+        let edge_x = if left {
+            self.left_edge
+        } else {
+            self.right_edge
+        };
         let distance = (x - edge_x).abs();
         if distance > Self::REARM_DISTANCE {
             self.armed = true;
@@ -290,7 +306,14 @@ mod tests {
     #[test]
     fn a_quick_shake_while_dragging_opens_the_shelf() {
         let mut d = ShakeDetector::default();
-        assert_eq!(d.feed(MouseEvent::Down { x: 500, y: 500, t: 0 }), None);
+        assert_eq!(
+            d.feed(MouseEvent::Down {
+                x: 500,
+                y: 500,
+                t: 0
+            }),
+            None
+        );
         assert_eq!(d.feed(mv(530, 10)), None); // starts a drag
         let mut fired = None;
         let mut t = 20;
@@ -313,16 +336,28 @@ mod tests {
             assert_eq!(d.feed(mv(*x, i as u32 * 50)), None, "button not held");
         }
         let mut slow = ShakeDetector::default();
-        slow.feed(MouseEvent::Down { x: 500, y: 500, t: 0 });
+        slow.feed(MouseEvent::Down {
+            x: 500,
+            y: 500,
+            t: 0,
+        });
         slow.feed(mv(530, 10));
         for (i, x) in [600, 520, 600, 520, 600, 520].iter().enumerate() {
             assert_eq!(slow.feed(mv(*x, 20 + i as u32 * 400)), None, "too slow");
         }
         let mut tiny = ShakeDetector::default();
-        tiny.feed(MouseEvent::Down { x: 500, y: 500, t: 0 });
+        tiny.feed(MouseEvent::Down {
+            x: 500,
+            y: 500,
+            t: 0,
+        });
         tiny.feed(mv(530, 10));
         for (i, x) in [540, 530, 540, 530, 540, 530].iter().enumerate() {
-            assert_eq!(tiny.feed(mv(*x, 20 + i as u32 * 40)), None, "jitter is not a shake");
+            assert_eq!(
+                tiny.feed(mv(*x, 20 + i as u32 * 40)),
+                None,
+                "jitter is not a shake"
+            );
         }
     }
 
@@ -332,7 +367,10 @@ mod tests {
         let at = |x: i32, y: i32, t: u32| MouseEvent::Move { x, y, t };
         assert_eq!(e.feed(at(0, 540, 0), 1, false), None);
         assert_eq!(e.feed(at(0, 541, 200), 1, false), None);
-        assert!(matches!(e.feed(at(0, 542, 400), 1, false), Some(Gesture::Edge { left: true, .. })));
+        assert!(matches!(
+            e.feed(at(0, 542, 400), 1, false),
+            Some(Gesture::Edge { left: true, .. })
+        ));
         // Staying there doesn't fire again until the cursor leaves.
         assert_eq!(e.feed(at(0, 542, 900), 1, false), None);
         e.feed(at(200, 542, 1000), 1, false);

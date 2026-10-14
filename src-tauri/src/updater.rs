@@ -55,15 +55,7 @@ fn notify(app: &AppHandle, title: &str, body: &str) {
 /// Stable per-install bucket 0–99 for staged rollouts.
 fn rollout_bucket(app: &AppHandle) -> u64 {
     let state = app.state::<AppState>();
-    let conn = state.db();
-    let id = match db::get_raw(&conn, "installId").ok().flatten() {
-        Some(serde_json::Value::String(id)) => id,
-        _ => {
-            let id = uuid::Uuid::new_v4().to_string();
-            let _ = db::set_raw(&conn, "installId", &serde_json::Value::String(id.clone()));
-            id
-        }
-    };
+    let id = db::install_id(&state.db()).unwrap_or_default();
     bucket_for(&id)
 }
 

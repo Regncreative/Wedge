@@ -2,7 +2,9 @@
 //! the user shakes the mouse while dragging. Files dropped on it collect on
 //! the "Drop shelf" (kept 24 hours) until they are dragged out together.
 
-use tauri::{AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+};
 
 use crate::db;
 use crate::i18n;

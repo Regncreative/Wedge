@@ -81,7 +81,9 @@ pub fn check_settings_patch(p: &SettingsPatch) -> CmdResult<()> {
         }
     }
     if let Some(dir) = &p.sync_folder {
-        if dir.chars().count() > MAX_PATH_CHARS || (!dir.is_empty() && !std::path::Path::new(dir).is_absolute()) {
+        if dir.chars().count() > MAX_PATH_CHARS
+            || (!dir.is_empty() && !std::path::Path::new(dir).is_absolute())
+        {
             return bad("syncFolder");
         }
     }

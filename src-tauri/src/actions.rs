@@ -8,7 +8,11 @@ use std::path::{Path, PathBuf};
 /// `dir/stem.ext`, or `dir/stem (2).ext`, `(3)`… if taken.
 pub fn unique_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
     let name = |n: u32| {
-        let suffix = if n == 1 { String::new() } else { format!(" ({n})") };
+        let suffix = if n == 1 {
+            String::new()
+        } else {
+            format!(" ({n})")
+        };
         if ext.is_empty() {
             format!("{stem}{suffix}")
         } else {
@@ -56,7 +60,10 @@ pub fn zip_paths(paths: &[PathBuf], dest: &Path) -> io::Result<()> {
         let mut n = 2;
         while !used.insert(name.to_lowercase()) {
             let path = Path::new(&base);
-            let stem = path.file_stem().map(|s| s.to_string_lossy()).unwrap_or_default();
+            let stem = path
+                .file_stem()
+                .map(|s| s.to_string_lossy())
+                .unwrap_or_default();
             name = match path.extension() {
                 Some(ext) => format!("{stem} ({n}).{}", ext.to_string_lossy()),
                 None => format!("{stem} ({n})"),
@@ -89,7 +96,11 @@ impl ImageFormat {
 
 /// Convert (and optionally shrink so the longest side is `max_side`) an image,
 /// writing a new file next to the original. Returns the new file's path.
-pub fn convert_image(src: &Path, format: ImageFormat, max_side: Option<u32>) -> Result<PathBuf, String> {
+pub fn convert_image(
+    src: &Path,
+    format: ImageFormat,
+    max_side: Option<u32>,
+) -> Result<PathBuf, String> {
     let img = image::open(src).map_err(|e| e.to_string())?;
     let img = match max_side {
         Some(max) if img.width().max(img.height()) > max => {
@@ -97,7 +108,10 @@ pub fn convert_image(src: &Path, format: ImageFormat, max_side: Option<u32>) -> 
         }
         _ => img,
     };
-    let stem = src.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let stem = src
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let stem = match max_side {
         Some(max) => format!("{stem}-{max}px"),
         None => stem,
@@ -134,11 +148,16 @@ fn copy_dir(src: &Path, dest: &Path) -> io::Result<()> {
 pub fn copy_into(paths: &[PathBuf], dest_dir: &Path) -> io::Result<usize> {
     let mut copied = 0;
     for p in paths {
-        let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let stem = p
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let ext = if p.is_dir() {
             String::new()
         } else {
-            p.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default()
+            p.extension()
+                .map(|e| e.to_string_lossy().into_owned())
+                .unwrap_or_default()
         };
         let target = unique_path(dest_dir, &stem, &ext);
         if p.is_dir() {
@@ -159,9 +178,15 @@ mod tests {
     #[test]
     fn unique_names_do_not_overwrite() {
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(unique_path(dir.path(), "a", "zip"), dir.path().join("a.zip"));
+        assert_eq!(
+            unique_path(dir.path(), "a", "zip"),
+            dir.path().join("a.zip")
+        );
         std::fs::write(dir.path().join("a.zip"), b"").unwrap();
-        assert_eq!(unique_path(dir.path(), "a", "zip"), dir.path().join("a (2).zip"));
+        assert_eq!(
+            unique_path(dir.path(), "a", "zip"),
+            dir.path().join("a (2).zip")
+        );
     }
 
     #[test]
@@ -176,12 +201,20 @@ mod tests {
         std::fs::write(a.join("sub").join("deep.txt"), b"D").unwrap();
 
         let dest = dir.path().join("out.zip");
-        zip_paths(&[a.join("report.txt"), b.join("report.txt"), a.join("sub")], &dest).unwrap();
+        zip_paths(
+            &[a.join("report.txt"), b.join("report.txt"), a.join("sub")],
+            &dest,
+        )
+        .unwrap();
 
         let mut archive = zip::ZipArchive::new(File::open(&dest).unwrap()).unwrap();
         let mut read = |name: &str| {
             let mut s = String::new();
-            archive.by_name(name).unwrap().read_to_string(&mut s).unwrap();
+            archive
+                .by_name(name)
+                .unwrap()
+                .read_to_string(&mut s)
+                .unwrap();
             s
         };
         assert_eq!(read("report.txt"), "A");
@@ -221,9 +254,21 @@ mod tests {
         std::fs::write(src.join("folder").join("b.txt"), b"b").unwrap();
         std::fs::write(dest.join("a.txt"), b"existing").unwrap();
 
-        assert_eq!(copy_into(&[src.join("a.txt"), src.join("folder")], &dest).unwrap(), 2);
-        assert_eq!(std::fs::read_to_string(dest.join("a.txt")).unwrap(), "existing");
-        assert_eq!(std::fs::read_to_string(dest.join("a (2).txt")).unwrap(), "new");
-        assert_eq!(std::fs::read_to_string(dest.join("folder").join("b.txt")).unwrap(), "b");
+        assert_eq!(
+            copy_into(&[src.join("a.txt"), src.join("folder")], &dest).unwrap(),
+            2
+        );
+        assert_eq!(
+            std::fs::read_to_string(dest.join("a.txt")).unwrap(),
+            "existing"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dest.join("a (2).txt")).unwrap(),
+            "new"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dest.join("folder").join("b.txt")).unwrap(),
+            "b"
+        );
     }
 }

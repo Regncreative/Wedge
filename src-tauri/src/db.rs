@@ -79,6 +79,19 @@ const MIGRATIONS: &[&str] = &[
     CREATE TRIGGER IF NOT EXISTS files_text_cleanup AFTER DELETE ON files BEGIN
       DELETE FROM file_text WHERE file_id = old.id;
     END;
+
+    -- Removals, so PC-to-PC sync can carry deletions over.
+    CREATE TABLE IF NOT EXISTS tombstones (
+      shelf_name TEXT NOT NULL,
+      path TEXT NOT NULL,
+      at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_tombstones_at ON tombstones(at);
+    CREATE TRIGGER IF NOT EXISTS files_tombstone AFTER DELETE ON files BEGIN
+      INSERT INTO tombstones (shelf_name, path, at)
+        SELECT name, old.absolute_path, CAST(strftime('%s', 'now') AS INTEGER) * 1000
+        FROM shelves WHERE id = old.shelf_id;
+    END;
     "#,
 ];
 
@@ -649,6 +662,16 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     Ok(())
 }
 
+/// A random id for this installation (sync device id, rollout bucket).
+pub fn install_id(conn: &Connection) -> Result<String> {
+    if let Some(Value::String(id)) = get_raw(conn, "installId")? {
+        return Ok(id);
+    }
+    let id = uuid::Uuid::new_v4().to_string();
+    set_raw(conn, "installId", &Value::String(id.clone()))?;
+    Ok(id)
+}
+
 // ── Notes, tags, reminders ────────────────────────────────
 
 pub fn set_file_meta(conn: &Connection, id: &str, note: &str, tags: &str) -> Result<()> {
@@ -660,7 +683,10 @@ pub fn set_file_meta(conn: &Connection, id: &str, note: &str, tags: &str) -> Res
 }
 
 pub fn set_reminder(conn: &Connection, id: &str, at: Option<i64>) -> Result<()> {
-    conn.execute("UPDATE files SET remind_at = ?1 WHERE id = ?2", params![at, id])?;
+    conn.execute(
+        "UPDATE files SET remind_at = ?1 WHERE id = ?2",
+        params![at, id],
+    )?;
     Ok(())
 }
 
@@ -1072,7 +1098,10 @@ mod tests {
         assert_eq!(due.len(), 1);
         assert_eq!(due[0].note, "for the tax office");
         assert_eq!(due[0].tags, "finance, 2026");
-        assert!(take_due_reminders(&conn, 2_000).unwrap().is_empty(), "fires once");
+        assert!(
+            take_due_reminders(&conn, 2_000).unwrap().is_empty(),
+            "fires once"
+        );
         assert_eq!(take_due_reminders(&conn, 9_000).unwrap().len(), 1);
     }
 
@@ -1102,9 +1131,17 @@ mod tests {
         set_files_pinned(&conn, &[keep.id], true).unwrap();
 
         let two_days = now_ms() + 48 * 3_600_000;
-        assert_eq!(expire_files(&conn, now_ms()).unwrap(), 0, "nothing is old yet");
+        assert_eq!(
+            expire_files(&conn, now_ms()).unwrap(),
+            0,
+            "nothing is old yet"
+        );
         assert_eq!(expire_files(&conn, two_days).unwrap(), 1);
-        let left: Vec<_> = list_files(&conn, None).unwrap().into_iter().map(|f| f.name).collect();
+        let left: Vec<_> = list_files(&conn, None)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
         assert_eq!(left.len(), 2);
         assert!(left.contains(&"keep.txt".to_string()) && left.contains(&"work.txt".to_string()));
     }
@@ -1117,10 +1154,19 @@ mod tests {
         add_rule(&conn, &shelves[2].id, "", "screenshots").unwrap();
         assert_eq!(list_rules(&conn).unwrap()[0].extensions, "pdf,docx");
 
-        assert_eq!(shelf_for(&conn, "pdf", "downloads").unwrap(), Some(shelves[1].id.clone()));
-        assert_eq!(shelf_for(&conn, "PDF", "downloads").unwrap(), Some(shelves[1].id.clone()));
+        assert_eq!(
+            shelf_for(&conn, "pdf", "downloads").unwrap(),
+            Some(shelves[1].id.clone())
+        );
+        assert_eq!(
+            shelf_for(&conn, "PDF", "downloads").unwrap(),
+            Some(shelves[1].id.clone())
+        );
         assert_eq!(shelf_for(&conn, "pdf", "manual").unwrap(), None);
-        assert_eq!(shelf_for(&conn, "png", "screenshots").unwrap(), Some(shelves[2].id.clone()));
+        assert_eq!(
+            shelf_for(&conn, "png", "screenshots").unwrap(),
+            Some(shelves[2].id.clone())
+        );
 
         // Deleting a shelf removes its rules.
         delete_shelf(&conn, &shelves[1].id).unwrap();
@@ -1133,17 +1179,40 @@ mod tests {
         let work = list_shelves(&conn).unwrap()[0].id.clone();
         add_files(&conn, &[file("C:\\inv.pdf"), file("C:\\notes.txt")], &work).unwrap();
         let files = list_files(&conn, None).unwrap();
-        let inv = files.iter().find(|f| f.name == "inv.pdf").unwrap().id.clone();
-        index_text(&conn, &inv, "Fatura No 2026-114 Toplam tutar: 4.250 TL Ödeme").unwrap();
+        let inv = files
+            .iter()
+            .find(|f| f.name == "inv.pdf")
+            .unwrap()
+            .id
+            .clone();
+        index_text(
+            &conn,
+            &inv,
+            "Fatura No 2026-114 Toplam tutar: 4.250 TL Ödeme",
+        )
+        .unwrap();
         assert_eq!(files_without_text(&conn, 10).unwrap().len(), 1);
 
-        assert_eq!(search_content(&conn, "fatura").unwrap(), std::slice::from_ref(&inv));
-        assert_eq!(search_content(&conn, "odeme tut").unwrap(), std::slice::from_ref(&inv), "diacritics + prefixes");
-        assert!(search_content(&conn, "fatura kira").unwrap().is_empty(), "all words must match");
+        assert_eq!(
+            search_content(&conn, "fatura").unwrap(),
+            std::slice::from_ref(&inv)
+        );
+        assert_eq!(
+            search_content(&conn, "odeme tut").unwrap(),
+            std::slice::from_ref(&inv),
+            "diacritics + prefixes"
+        );
+        assert!(
+            search_content(&conn, "fatura kira").unwrap().is_empty(),
+            "all words must match"
+        );
         assert!(search_content(&conn, "\"").unwrap().is_empty());
 
         remove_files(&conn, &[inv]).unwrap();
-        assert!(search_content(&conn, "fatura").unwrap().is_empty(), "index follows deletes");
+        assert!(
+            search_content(&conn, "fatura").unwrap().is_empty(),
+            "index follows deletes"
+        );
     }
 
     #[test]

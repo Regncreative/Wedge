@@ -67,12 +67,40 @@ pub fn strings(lang: Language) -> &'static Strings {
 pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'static str) {
     let tr = lang == Language::Tr;
     match kind {
-        "downloads" => (if tr { "İndirilenler" } else { "Downloads" }, "download", "#0078D4"),
-        "screenshots" => (if tr { "Ekran görüntüleri" } else { "Screenshots" }, "camera", "#8764B8"),
-        "phone" => (if tr { "Telefondan" } else { "From phone" }, "smartphone", "#038387"),
-        "clipboard" => (if tr { "Pano" } else { "Clipboard" }, "clipboard", "#CA5010"),
-        "drop" => (if tr { "Bırakılanlar" } else { "Drop shelf" }, "inbox", "#2563EB"),
-        _ => (if tr { "Gelen kutusu" } else { "Inbox" }, "inbox", "#2563EB"),
+        "downloads" => (
+            if tr { "İndirilenler" } else { "Downloads" },
+            "download",
+            "#0078D4",
+        ),
+        "screenshots" => (
+            if tr {
+                "Ekran görüntüleri"
+            } else {
+                "Screenshots"
+            },
+            "camera",
+            "#8764B8",
+        ),
+        "phone" => (
+            if tr { "Telefondan" } else { "From phone" },
+            "smartphone",
+            "#038387",
+        ),
+        "clipboard" => (
+            if tr { "Pano" } else { "Clipboard" },
+            "clipboard",
+            "#CA5010",
+        ),
+        "drop" => (
+            if tr { "Bırakılanlar" } else { "Drop shelf" },
+            "inbox",
+            "#2563EB",
+        ),
+        _ => (
+            if tr { "Gelen kutusu" } else { "Inbox" },
+            "inbox",
+            "#2563EB",
+        ),
     }
 }
 

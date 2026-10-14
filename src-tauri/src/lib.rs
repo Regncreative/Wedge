@@ -11,13 +11,16 @@ pub mod i18n;
 pub mod input;
 pub mod models;
 pub mod panel;
+pub mod phone;
 pub mod services;
 pub mod shell;
 pub mod state;
+pub mod sync;
 pub mod textract;
 pub mod transfer;
 pub mod tray;
 pub mod updater;
+pub mod widget;
 pub mod win;
 
 use tauri::{Manager, RunEvent, WindowEvent};
@@ -62,7 +65,11 @@ fn add_from_explorer(app: &tauri::AppHandle, paths: Vec<String>) {
                 .notification()
                 .builder()
                 .title("Stash")
-                .body(i18n::files_added(state.language, change.added, &change.shelf_name))
+                .body(i18n::files_added(
+                    state.language,
+                    change.added,
+                    &change.shelf_name,
+                ))
                 .show();
         }
     });
@@ -151,6 +158,8 @@ pub fn run() {
             updater::schedule_startup_check(handle);
             services::restart_watchers(handle);
             services::start_background_jobs(handle);
+            sync::start(handle);
+            widget::restore(handle);
             // Silent launch: the panel stays hidden until tray click / hotkey.
             // (End-to-end tests ask for it to be shown right away.)
             if std::env::var_os("STASH_SHOW_ON_START").is_some() {
@@ -171,6 +180,9 @@ pub fn run() {
                     }
                 }
                 WindowEvent::Focused(true) if is_panel => panel::on_focus(window.app_handle()),
+                WindowEvent::Moved(pos) => {
+                    widget::on_moved(window.app_handle(), window.label(), pos.x, pos.y)
+                }
                 _ => {}
             }
         })
@@ -224,6 +236,11 @@ pub fn run() {
             commands_extra::quick_look,
             dropshelf::drop_shelf,
             dropshelf::hide_drop_shelf,
+            phone::phone_start,
+            phone::phone_stop,
+            widget::open_widget,
+            widget::close_widget,
+            sync::sync_now,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build Stash");

@@ -40,7 +40,9 @@ fn register(app: &AppHandle, accelerator: &str, action: Action) -> bool {
 /// the user is never left without a working shortcut.
 pub fn reregister_action(app: &AppHandle, accelerator: &str, action: Action) -> bool {
     let state = app.state::<AppState>();
-    let mut current = slot(&state, action).lock().unwrap_or_else(|e| e.into_inner());
+    let mut current = slot(&state, action)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     if current.as_deref() == Some(accelerator) {
         return true;
     }

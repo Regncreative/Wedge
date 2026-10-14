@@ -47,14 +47,30 @@ pub fn is_ignored(path: &Path) -> bool {
         || name == "thumbs.db"
         || matches!(
             ext.as_str(),
-            "crdownload" | "part" | "partial" | "tmp" | "temp" | "download" | "opdownload" | "!ut" | "td"
+            "crdownload"
+                | "part"
+                | "partial"
+                | "tmp"
+                | "temp"
+                | "download"
+                | "opdownload"
+                | "!ut"
+                | "td"
         )
 }
 
 /// Add paths to the shelf chosen by the sorting rules, or else to the
 /// automatic shelf for `source` (created on first use), or `fallback`.
-pub fn ingest(app: &AppHandle, paths: &[String], source: &str, fallback: Option<&str>) -> Option<FilesChanged> {
-    let metas: Vec<FileInput> = paths.iter().filter_map(|p| files::collect_meta(p)).collect();
+pub fn ingest(
+    app: &AppHandle,
+    paths: &[String],
+    source: &str,
+    fallback: Option<&str>,
+) -> Option<FilesChanged> {
+    let metas: Vec<FileInput> = paths
+        .iter()
+        .filter_map(|p| files::collect_meta(p))
+        .collect();
     if metas.is_empty() {
         return None;
     }
@@ -70,7 +86,9 @@ pub fn ingest(app: &AppHandle, paths: &[String], source: &str, fallback: Option<
                 Some(id) => id.to_string(),
                 None => {
                     let (name, icon, color) = i18n::kind_shelf(state.language, source);
-                    db::ensure_kind_shelf(&conn, source, name, icon, color).ok()?.id
+                    db::ensure_kind_shelf(&conn, source, name, icon, color)
+                        .ok()?
+                        .id
                 }
             },
         };
@@ -90,7 +108,11 @@ pub fn ingest(app: &AppHandle, paths: &[String], source: &str, fallback: Option<
         }
     }
     drop(conn);
-    let change = FilesChanged { added: added_total, shelf_name: last_shelf, source: source.into() };
+    let change = FilesChanged {
+        added: added_total,
+        shelf_name: last_shelf,
+        source: source.into(),
+    };
     if added_total > 0 {
         let _ = app.emit(FILES_CHANGED, change.clone());
     }
@@ -142,7 +164,10 @@ pub fn restart_watchers(app: &AppHandle) {
             if is_ignored(&path) {
                 continue;
             }
-            if let Some((_, source)) = roots.iter().find(|(root, _)| path.parent() == Some(root.as_path())) {
+            if let Some((_, source)) = roots
+                .iter()
+                .find(|(root, _)| path.parent() == Some(root.as_path()))
+            {
                 let _ = tx.send((path, source));
             }
         }
@@ -187,8 +212,13 @@ pub fn restart_watchers(app: &AppHandle) {
                     *since = Instant::now();
                     return true;
                 }
-                if since.elapsed() >= Duration::from_millis(1500) && std::fs::File::open(path).is_ok() {
-                    ready.entry(source).or_default().push(path.to_string_lossy().into_owned());
+                if since.elapsed() >= Duration::from_millis(1500)
+                    && std::fs::File::open(path).is_ok()
+                {
+                    ready
+                        .entry(source)
+                        .or_default()
+                        .push(path.to_string_lossy().into_owned());
                     return false;
                 }
                 true
@@ -203,7 +233,9 @@ pub fn restart_watchers(app: &AppHandle) {
 /// Index text for files that don't have any yet (a batch at a time).
 fn index_batch(app: &AppHandle) {
     let state = app.state::<AppState>();
-    let Ok(batch) = db::files_without_text(&state.db(), 25) else { return };
+    let Ok(batch) = db::files_without_text(&state.db(), 25) else {
+        return;
+    };
     for file in batch {
         let path = PathBuf::from(&file.absolute_path);
         let text = textract::extract(&path).unwrap_or_default();
@@ -219,7 +251,11 @@ fn run_periodic(app: &AppHandle, tick: u64) {
         if expired > 0 {
             let _ = app.emit(
                 FILES_CHANGED,
-                FilesChanged { added: 0, shelf_name: String::new(), source: "expiry".into() },
+                FilesChanged {
+                    added: 0,
+                    shelf_name: String::new(),
+                    source: "expiry".into(),
+                },
             );
         }
         let due = db::take_due_reminders(&state.db(), now).unwrap_or_default();
@@ -259,10 +295,20 @@ mod tests {
 
     #[test]
     fn ignores_partial_downloads_and_system_files() {
-        for p in ["C:\\d\\movie.mp4.crdownload", "C:\\d\\a.part", "C:\\d\\~$report.docx", "C:\\d\\desktop.ini", "C:\\d\\.hidden"] {
+        for p in [
+            "C:\\d\\movie.mp4.crdownload",
+            "C:\\d\\a.part",
+            "C:\\d\\~$report.docx",
+            "C:\\d\\desktop.ini",
+            "C:\\d\\.hidden",
+        ] {
             assert!(is_ignored(Path::new(p)), "{p}");
         }
-        for p in ["C:\\d\\invoice.pdf", "C:\\d\\Screenshot 2026-10-14.png", "C:\\d\\archive.zip"] {
+        for p in [
+            "C:\\d\\invoice.pdf",
+            "C:\\d\\Screenshot 2026-10-14.png",
+            "C:\\d\\archive.zip",
+        ] {
             assert!(!is_ignored(Path::new(p)), "{p}");
         }
     }
