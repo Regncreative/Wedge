@@ -2,24 +2,53 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Stash is a Windows app: test and package on Windows.
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
+      # postinstall rebuilds better-sqlite3 for Electron.
       - run: npm ci
 
       - run: npm run lint
 
       - run: npm run typecheck
 
+      - name: Unit tests
+        run: npm run test:coverage
+
       - run: npm run build
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Package (unpacked, no publish)
+        run: npx electron-builder --dir --publish never
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
