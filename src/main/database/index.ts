@@ -314,6 +314,14 @@ export function removeFile(id: string): void {
   getDb().prepare('DELETE FROM files WHERE id = ?').run(id)
 }
 
+export function removeFiles(ids: string[]): void {
+  if (ids.length === 0) return
+  const remove = getDb().prepare('DELETE FROM files WHERE id = ?')
+  getDb().transaction((items: string[]) => {
+    for (const id of items) remove.run(id)
+  })(ids)
+}
+
 export function setFilePinned(id: string, pinned: boolean): void {
   getDb().prepare('UPDATE files SET is_pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id)
 }

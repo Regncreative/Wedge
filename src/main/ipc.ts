@@ -1,5 +1,6 @@
 import { ipcMain, shell, clipboard, Notification, nativeImage, app, NativeImage } from 'electron'
-import { existsSync, statSync } from 'fs'
+import { existsSync } from 'fs'
+import { stat } from 'fs/promises'
 import { basename, extname, join } from 'path'
 import koffi from 'koffi'
 import { IpcChannels } from '../shared/ipc'
@@ -8,6 +9,7 @@ import { getPanelWindow, beginExternalDialog } from './window'
 import { syncAutoLaunch } from './auto-launch'
 import { reregisterHotkey } from './hotkey'
 import { checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
+import { checkPath, isReachable } from './file-exists'
 import { getMessages } from '../shared/i18n'
 import type { FileInput } from './database'
 import type { AppSettings } from '../shared/types'
@@ -133,10 +135,9 @@ function openNativeProperties(filePath: string): boolean {
   return ok
 }
 
-function collectFileMeta(filePath: string): FileInput | null {
+async function collectFileMeta(filePath: string): Promise<FileInput | null> {
   try {
-    if (!existsSync(filePath)) return null
-    const stats = statSync(filePath)
+    const stats = await stat(filePath)
     const name = basename(filePath)
     const extension = stats.isDirectory() ? '' : extname(filePath).replace(/^\./, '').toLowerCase()
     return {
@@ -155,25 +156,23 @@ function collectFileMeta(filePath: string): FileInput | null {
 export function registerIpcHandlers(): void {
   // ── Files ──────────────────────────────────────────────
   ipcMain.handle(IpcChannels.FILES_LIST, (_e, shelfId?: string | null) => {
-    return db.listFiles(shelfId).map(enrichExists)
+    return Promise.all(db.listFiles(shelfId).map(enrichExists))
   })
 
   ipcMain.handle(IpcChannels.FILES_SEARCH, (_e, query: string, shelfId?: string | null) => {
-    return db.searchFiles(query, shelfId).map(enrichExists)
+    return Promise.all(db.searchFiles(query, shelfId).map(enrichExists))
   })
 
   ipcMain.handle(
     IpcChannels.FILES_ADD,
-    (_e, paths: string[], shelfId?: string) => {
+    async (_e, paths: string[], shelfId?: string) => {
       const settings = db.getSettings()
       const targetShelfId = shelfId || settings.defaultShelfId || db.listShelves()[0]?.id
       if (!targetShelfId) throw new Error('No shelf available')
 
-      const metas: FileInput[] = []
-      for (const p of paths) {
-        const meta = collectFileMeta(p)
-        if (meta) metas.push(meta)
-      }
+      const metas = (await Promise.all(paths.map(collectFileMeta))).filter(
+        (meta): meta is FileInput => meta !== null
+      )
 
       const result = db.addFiles(metas, targetShelfId)
       const shelf = db.listShelves().find((s) => s.id === targetShelfId)
@@ -208,16 +207,14 @@ export function registerIpcHandlers(): void {
     return true
   })
 
-  ipcMain.handle(IpcChannels.FILES_CLEAR_MISSING, () => {
+  ipcMain.handle(IpcChannels.FILES_CLEAR_MISSING, async () => {
     const all = db.listFiles(null)
-    let removed = 0
-    for (const file of all) {
-      if (!existsSync(file.absolutePath)) {
-        db.removeFile(file.id)
-        removed++
-      }
-    }
-    return removed
+    const states = await Promise.all(all.map((file) => checkPath(file.absolutePath)))
+    // Only drop confirmed-missing files; an unreachable network share (null)
+    // may come back, so its references are kept.
+    const missingIds = all.filter((_, i) => states[i] === false).map((file) => file.id)
+    db.removeFiles(missingIds)
+    return missingIds.length
   })
 
   ipcMain.handle(IpcChannels.FILES_PIN, (_e, id: string, pinned: boolean) => {
@@ -233,16 +230,16 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.FILES_OPEN, async (_e, id: string) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
-    if (!existsSync(file.absolutePath)) return { ok: false, error: 'missing' }
+    if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
     db.touchFileAccessed(id)
     const err = await shell.openPath(file.absolutePath)
     return err ? { ok: false, error: err } : { ok: true }
   })
 
-  ipcMain.handle(IpcChannels.FILES_REVEAL, (_e, id: string) => {
+  ipcMain.handle(IpcChannels.FILES_REVEAL, async (_e, id: string) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
-    if (!existsSync(file.absolutePath)) return { ok: false, error: 'missing' }
+    if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
     shell.showItemInFolder(file.absolutePath)
     return { ok: true }
   })
@@ -256,7 +253,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IpcChannels.FILES_ICON, async (_e, id: string) => {
     const file = db.getFileById(id)
-    if (!file || file.isDirectory || !existsSync(file.absolutePath)) return null
+    if (!file || file.isDirectory || !(await isReachable(file.absolutePath))) return null
 
     const cached = iconCache.get(file.absolutePath)
     if (cached !== undefined) return cached
@@ -268,7 +265,7 @@ export function registerIpcHandlers(): void {
       if (file.extension.toLowerCase() === 'lnk') {
         try {
           const link = shell.readShortcutLink(file.absolutePath)
-          if (link.target && existsSync(link.target)) iconPath = link.target
+          if (link.target && (await isReachable(link.target))) iconPath = link.target
         } catch {
           // keep the .lnk itself as icon source
         }
@@ -284,10 +281,10 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(IpcChannels.FILES_PROPERTIES, (_e, id: string) => {
+  ipcMain.handle(IpcChannels.FILES_PROPERTIES, async (_e, id: string) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
-    if (!existsSync(file.absolutePath)) return { ok: false, error: 'missing' }
+    if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
     try {
       const ok = openNativeProperties(file.absolutePath)
       return ok ? { ok: true } : { ok: false, error: 'failed' }
@@ -300,7 +297,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.FILES_CHECK_EXISTS, (_e, id: string) => {
     const file = db.getFileById(id)
     if (!file) return false
-    return existsSync(file.absolutePath)
+    return isReachable(file.absolutePath)
   })
 
   ipcMain.on(IpcChannels.FILES_START_DRAG, (event, id: string) => {
@@ -391,6 +388,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.UPDATE_GET_STATUS, () => getUpdateStatus())
 }
 
-function enrichExists<T extends { absolutePath: string; exists?: boolean }>(file: T): T {
-  return { ...file, exists: existsSync(file.absolutePath) }
+async function enrichExists<T extends { absolutePath: string; exists?: boolean }>(
+  file: T
+): Promise<T> {
+  return { ...file, exists: await isReachable(file.absolutePath) }
 }
