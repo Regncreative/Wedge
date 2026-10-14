@@ -2,11 +2,12 @@ import { Rectangle } from 'electron'
 import {
   BrowserWindow,
   screen,
-  nativeTheme,
-  ipcMain
+  nativeTheme
 } from 'electron'
+import { z } from 'zod'
 import { join } from 'path'
 import { IpcChannels } from '../shared/ipc'
+import { handle } from './ipc-validate'
 
 const PANEL_WIDTH = 420
 const PANEL_HEIGHT = 650
@@ -191,23 +192,27 @@ export function setPinned(pinned: boolean): void {
 }
 
 export function registerWindowIpc(): void {
-  ipcMain.handle(IpcChannels.WINDOW_HIDE, () => {
+  handle(IpcChannels.WINDOW_HIDE, [], () => {
     hidePanel()
   })
 
-  ipcMain.handle(IpcChannels.WINDOW_PIN, (_e, pinned: boolean) => {
+  handle(IpcChannels.WINDOW_PIN, [z.boolean()], (pinned) => {
     setPinned(pinned)
     return isPinned
   })
 
-  ipcMain.handle(IpcChannels.WINDOW_IS_PINNED, () => isPinned)
+  handle(IpcChannels.WINDOW_IS_PINNED, [], () => isPinned)
 
-  ipcMain.handle(IpcChannels.WINDOW_SET_OPACITY, (_e, opacity: number, animate?: boolean) => {
-    setPanelOpacity(typeof opacity === 'number' ? opacity : 1, animate !== false)
-    return true
-  })
+  handle(
+    IpcChannels.WINDOW_SET_OPACITY,
+    [z.number().finite(), z.boolean().optional()],
+    (opacity, animate) => {
+      setPanelOpacity(opacity, animate !== false)
+      return true
+    }
+  )
 
-  ipcMain.handle(IpcChannels.THEME_GET, () => {
+  handle(IpcChannels.THEME_GET, [], () => {
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
   })
 

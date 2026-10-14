@@ -32,6 +32,7 @@ describe('database', () => {
     const shelves = db.listShelves()
     expect(shelves.map((s) => s.name)).toEqual(['Work', 'Personal', 'Temporary'])
     expect(db.getSettings().defaultShelfId).toBe(shelves[0].id)
+    expect(db.getSettings().onboardingDone).toBe(false)
   })
 
   it('skips files that are already on the same shelf', () => {
@@ -152,6 +153,8 @@ describe('migrations', () => {
     expect(db.getDb().pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION)
     expect(db.listShelves().map((s) => s.name)).toEqual(['Old shelf'])
     expect(existsSync(`${path}.backup`)).toBe(true)
+    // Upgrading users skip the first-run welcome.
+    expect(db.getSettings().onboardingDone).toBe(true)
   })
 
   it('leaves a newer schema untouched', () => {

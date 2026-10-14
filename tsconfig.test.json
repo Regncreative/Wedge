@@ -19,5 +19,5 @@
       "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["tests/**/*", "vitest.config.mts", "playwright.config.ts"]
+  "include": ["tests/**/*", "src/renderer/src/env.d.ts", "vitest.config.mts", "playwright.config.ts"]
 }

@@ -48,6 +48,10 @@ function seedDefaults(database: Database.Database): void {
 
     // Persist default shelf id
     setSettingRaw(database, 'defaultShelfId', ids[0])
+  } else {
+    // Existing users already know the app; only fresh installs see the welcome.
+    const welcomed = database.prepare("SELECT 1 FROM settings WHERE key = 'onboardingDone'").get()
+    if (!welcomed) setSettingRaw(database, 'onboardingDone', true)
   }
 
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {

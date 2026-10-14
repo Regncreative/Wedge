@@ -52,6 +52,7 @@ export interface StashApi {
   notify: (title: string, body: string) => Promise<void>
   getAppVersion: () => Promise<string>
   openReleases: () => Promise<boolean>
+  openLogsFolder: () => Promise<string>
 
   // Updates
   checkForUpdates: () => Promise<UpdateStatus>
@@ -100,6 +101,7 @@ const api: StashApi = {
   notify: (title, body) => ipcRenderer.invoke(IpcChannels.NOTIFY, title, body),
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.APP_GET_VERSION),
   openReleases: () => ipcRenderer.invoke(IpcChannels.OPEN_RELEASES),
+  openLogsFolder: () => ipcRenderer.invoke(IpcChannels.OPEN_LOGS),
 
   checkForUpdates: () => ipcRenderer.invoke(IpcChannels.UPDATE_CHECK),
   installUpdate: () => ipcRenderer.invoke(IpcChannels.UPDATE_INSTALL),

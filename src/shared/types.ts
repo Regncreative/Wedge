@@ -3,6 +3,7 @@
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type AppLanguage = 'tr' | 'en'
 export type FileSort = 'added' | 'name' | 'recent' | 'size'
+export type UpdateChannel = 'stable' | 'beta'
 
 export type FileFilter =
   | 'all'
@@ -60,6 +61,10 @@ export interface AppSettings {
   idleOpacity: number
   /** Seconds without mouse activity before fading (5–60). */
   idleTimeoutSec: number
+  /** 'beta' also offers pre-release versions. */
+  updateChannel: UpdateChannel
+  /** First-run welcome has been dismissed. */
+  onboardingDone: boolean
 }
 
 export interface ShelfStats {
@@ -121,7 +126,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifications: true,
   fileSort: 'added',
   idleOpacity: 0.4,
-  idleTimeoutSec: 10
+  idleTimeoutSec: 10,
+  updateChannel: 'stable',
+  onboardingDone: false
 }
 
 /** Ensure settings always have valid numeric/enum fields (older DBs / partial IPC). */
@@ -141,6 +148,8 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   }
   s.notifications = s.notifications !== false
   s.startWithWindows = s.startWithWindows === true
+  s.updateChannel = s.updateChannel === 'beta' ? 'beta' : 'stable'
+  s.onboardingDone = s.onboardingDone === true
   return s
 }
 

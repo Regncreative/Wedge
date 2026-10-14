@@ -6,6 +6,15 @@ import { registerIpcHandlers } from './ipc'
 import { syncAutoLaunch } from './auto-launch'
 import { reregisterHotkey, unregisterHotkeys } from './hotkey'
 import { initUpdater } from './updater'
+import { initLogging } from './logging'
+
+// Isolated profile for end-to-end tests and side-by-side debugging. Must be
+// set before the single-instance lock, which is scoped to userData.
+if (process.env.STASH_USER_DATA) {
+  app.setPath('userData', process.env.STASH_USER_DATA)
+}
+
+initLogging()
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {

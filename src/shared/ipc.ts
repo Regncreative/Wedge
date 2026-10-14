@@ -42,6 +42,7 @@ export const IpcChannels = {
   NOTIFY: 'notify',
   APP_GET_VERSION: 'app:get-version',
   OPEN_RELEASES: 'app:open-releases',
+  OPEN_LOGS: 'app:open-logs',
 
   // Updates
   UPDATE_CHECK: 'update:check',

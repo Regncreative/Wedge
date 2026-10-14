@@ -1,4 +1,5 @@
-import { ipcMain, shell, clipboard, Notification, nativeImage, app, NativeImage } from 'electron'
+import { shell, clipboard, Notification, nativeImage, app, NativeImage } from 'electron'
+import { z } from 'zod'
 import { existsSync } from 'fs'
 import { stat } from 'fs/promises'
 import { basename, extname, join } from 'path'
@@ -10,9 +11,11 @@ import { syncAutoLaunch } from './auto-launch'
 import { reregisterHotkey } from './hotkey'
 import { checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
 import { checkPath, isReachable } from './file-exists'
+import { handle, on } from './ipc-validate'
+import { openLogsFolder } from './logging'
+import * as v from './ipc-schemas'
 import { getMessages } from '../shared/i18n'
 import type { FileInput } from './database'
-import type { AppSettings } from '../shared/types'
 
 /** SEE_MASK_INVOKEIDLIST — required for the "properties" verb. */
 const SEE_MASK_INVOKEIDLIST = 0x0000000c
@@ -154,13 +157,14 @@ async function collectFileMeta(filePath: string): Promise<FileInput | null> {
 
 export function registerIpcHandlers(): void {
   // ── Files ──────────────────────────────────────────────
-  ipcMain.handle(IpcChannels.FILES_LIST, (_e, shelfId?: string | null) => {
+  handle(IpcChannels.FILES_LIST, [v.optionalShelfId], (shelfId) => {
     return Promise.all(db.listFiles(shelfId).map(enrichExists))
   })
 
-  ipcMain.handle(
+  handle(
     IpcChannels.FILES_ADD,
-    async (_e, paths: string[], shelfId?: string) => {
+    [v.filePaths, v.optionalShelfId],
+    async (paths, shelfId) => {
       const settings = db.getSettings()
       const targetShelfId = shelfId || settings.defaultShelfId || db.listShelves()[0]?.id
       if (!targetShelfId) throw new Error('No shelf available')
@@ -197,12 +201,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(IpcChannels.FILES_REMOVE, (_e, id: string) => {
+  handle(IpcChannels.FILES_REMOVE, [v.id], (id) => {
     db.removeFile(id)
     return true
   })
 
-  ipcMain.handle(IpcChannels.FILES_CLEAR_MISSING, async () => {
+  handle(IpcChannels.FILES_CLEAR_MISSING, [], async () => {
     const all = db.listFiles(null)
     const states = await Promise.all(all.map((file) => checkPath(file.absolutePath)))
     // Only drop confirmed-missing files; an unreachable network share (null)
@@ -212,17 +216,17 @@ export function registerIpcHandlers(): void {
     return missingIds.length
   })
 
-  ipcMain.handle(IpcChannels.FILES_PIN, (_e, id: string, pinned: boolean) => {
+  handle(IpcChannels.FILES_PIN, [v.id, z.boolean()], (id, pinned) => {
     db.setFilePinned(id, pinned)
     return true
   })
 
-  ipcMain.handle(IpcChannels.FILES_MOVE, (_e, id: string, shelfId: string) => {
+  handle(IpcChannels.FILES_MOVE, [v.id, v.id], (id, shelfId) => {
     db.moveFile(id, shelfId)
     return true
   })
 
-  ipcMain.handle(IpcChannels.FILES_OPEN, async (_e, id: string) => {
+  handle(IpcChannels.FILES_OPEN, [v.id], async (id) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
     if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
@@ -231,7 +235,7 @@ export function registerIpcHandlers(): void {
     return err ? { ok: false, error: err } : { ok: true }
   })
 
-  ipcMain.handle(IpcChannels.FILES_REVEAL, async (_e, id: string) => {
+  handle(IpcChannels.FILES_REVEAL, [v.id], async (id) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
     if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
@@ -239,14 +243,14 @@ export function registerIpcHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.handle(IpcChannels.FILES_COPY_PATH, (_e, id: string) => {
+  handle(IpcChannels.FILES_COPY_PATH, [v.id], (id) => {
     const file = db.getFileById(id)
     if (!file) return false
     clipboard.writeText(file.absolutePath)
     return true
   })
 
-  ipcMain.handle(IpcChannels.FILES_ICON, async (_e, id: string) => {
+  handle(IpcChannels.FILES_ICON, [v.id], async (id) => {
     const file = db.getFileById(id)
     if (!file || file.isDirectory || !(await isReachable(file.absolutePath))) return null
 
@@ -276,7 +280,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(IpcChannels.FILES_PROPERTIES, async (_e, id: string) => {
+  handle(IpcChannels.FILES_PROPERTIES, [v.id], async (id) => {
     const file = db.getFileById(id)
     if (!file) return { ok: false, error: 'not_found' }
     if (!(await isReachable(file.absolutePath))) return { ok: false, error: 'missing' }
@@ -289,7 +293,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.on(IpcChannels.FILES_START_DRAG, (event, id: string) => {
+  on(IpcChannels.FILES_START_DRAG, [v.id], (event, id) => {
     const file = db.getFileById(id)
     if (!file || !existsSync(file.absolutePath)) return
 
@@ -306,44 +310,32 @@ export function registerIpcHandlers(): void {
   })
 
   // ── Shelves ────────────────────────────────────────────
-  ipcMain.handle(IpcChannels.SHELVES_LIST, () => db.listShelves())
+  handle(IpcChannels.SHELVES_LIST, [], () => db.listShelves())
 
-  ipcMain.handle(
-    IpcChannels.SHELVES_CREATE,
-    (_e, input: { name: string; icon?: string; color?: string }) => {
-      return db.createShelf(input)
-    }
-  )
+  handle(IpcChannels.SHELVES_CREATE, [v.shelfInput], (input) => db.createShelf(input))
 
-  ipcMain.handle(IpcChannels.SHELVES_RENAME, (_e, id: string, name: string) => {
+  handle(IpcChannels.SHELVES_RENAME, [v.id, v.shelfInput.shape.name], (id, name) => {
     db.renameShelf(id, name)
     return true
   })
 
-  ipcMain.handle(IpcChannels.SHELVES_DELETE, (_e, id: string) => {
+  handle(IpcChannels.SHELVES_DELETE, [v.id], (id) => {
     db.deleteShelf(id)
     return true
   })
 
-  ipcMain.handle(
-    IpcChannels.SHELVES_UPDATE,
-    (
-      _e,
-      id: string,
-      updates: Partial<{ name: string; icon: string; color: string; sortOrder: number }>
-    ) => {
-      db.updateShelf(id, updates)
-      return true
-    }
-  )
+  handle(IpcChannels.SHELVES_UPDATE, [v.id, v.shelfUpdates], (id, updates) => {
+    db.updateShelf(id, updates)
+    return true
+  })
 
   // ── Stats ──────────────────────────────────────────────
-  ipcMain.handle(IpcChannels.STATS_GET, () => db.getStats())
+  handle(IpcChannels.STATS_GET, [], () => db.getStats())
 
   // ── Settings ───────────────────────────────────────────
-  ipcMain.handle(IpcChannels.SETTINGS_GET, () => db.getSettings())
+  handle(IpcChannels.SETTINGS_GET, [], () => db.getSettings())
 
-  ipcMain.handle(IpcChannels.SETTINGS_SET, (_e, partial: Partial<AppSettings>) => {
+  handle(IpcChannels.SETTINGS_SET, [v.settingsPatch], (partial) => {
     // Register first: an unavailable hotkey must not be persisted.
     if (partial.openHotkey !== undefined && !reregisterHotkey(partial.openHotkey)) {
       throw new Error('hotkey_unavailable')
@@ -355,7 +347,7 @@ export function registerIpcHandlers(): void {
     return next
   })
 
-  ipcMain.handle(IpcChannels.NOTIFY, (_e, title: string, body: string) => {
+  handle(IpcChannels.NOTIFY, [v.shortText, v.shortText], (title, body) => {
     if (!db.getSettings().notifications) return
     try {
       new Notification({ title, body }).show()
@@ -364,18 +356,20 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(IpcChannels.APP_GET_VERSION, () => app.getVersion())
-  ipcMain.handle(IpcChannels.OPEN_RELEASES, () => {
+  handle(IpcChannels.APP_GET_VERSION, [], () => app.getVersion())
+  handle(IpcChannels.OPEN_RELEASES, [], () => {
     void shell.openExternal('https://github.com/Regncreative/Stash/releases/latest')
     return true
   })
 
-  ipcMain.handle(IpcChannels.UPDATE_CHECK, () => checkForUpdates(true))
-  ipcMain.handle(IpcChannels.UPDATE_INSTALL, () => {
+  handle(IpcChannels.OPEN_LOGS, [], () => openLogsFolder())
+
+  handle(IpcChannels.UPDATE_CHECK, [], () => checkForUpdates(true))
+  handle(IpcChannels.UPDATE_INSTALL, [], () => {
     installUpdateNow()
     return true
   })
-  ipcMain.handle(IpcChannels.UPDATE_GET_STATUS, () => getUpdateStatus())
+  handle(IpcChannels.UPDATE_GET_STATUS, [], () => getUpdateStatus())
 }
 
 async function enrichExists<T extends { absolutePath: string; exists?: boolean }>(
