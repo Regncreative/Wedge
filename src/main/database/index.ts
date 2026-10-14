@@ -12,6 +12,7 @@ import {
   normalizeSettings
 } from '../../shared/types'
 import { resolveSystemLanguage } from '../../shared/i18n'
+import { runMigrations } from './migrations'
 
 let db: Database.Database | null = null
 
@@ -20,54 +21,13 @@ export function getDb(): Database.Database {
   return db
 }
 
-export function initDatabase(): void {
-  const dbPath = join(app.getPath('userData'), 'stash.db')
+/** Opens (and migrates) the database. `dbPath` overrides the userData location, e.g. ':memory:' in tests. */
+export function initDatabase(dbPath = join(app.getPath('userData'), 'stash.db')): void {
   db = new Database(dbPath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
-  migrate(db)
+  runMigrations(db, dbPath === ':memory:' ? undefined : `${dbPath}.backup`)
   seedDefaults(db)
-}
-
-function migrate(database: Database.Database): void {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS shelves (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      icon TEXT NOT NULL DEFAULT 'folder',
-      color TEXT NOT NULL DEFAULT '#0078D4',
-      created_at INTEGER NOT NULL,
-      sort_order INTEGER NOT NULL DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS files (
-      id TEXT PRIMARY KEY,
-      shelf_id TEXT NOT NULL,
-      absolute_path TEXT NOT NULL,
-      name TEXT NOT NULL,
-      extension TEXT NOT NULL DEFAULT '',
-      size INTEGER NOT NULL DEFAULT 0,
-      is_directory INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      added_at INTEGER NOT NULL,
-      last_accessed INTEGER,
-      is_pinned INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (shelf_id) REFERENCES shelves(id) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_files_path_shelf
-      ON files(absolute_path, shelf_id);
-    CREATE INDEX IF NOT EXISTS idx_files_shelf ON files(shelf_id);
-    CREATE INDEX IF NOT EXISTS idx_files_name ON files(name);
-    CREATE INDEX IF NOT EXISTS idx_files_ext ON files(extension);
-    CREATE INDEX IF NOT EXISTS idx_files_pinned ON files(is_pinned);
-    CREATE INDEX IF NOT EXISTS idx_files_added ON files(added_at DESC);
-  `)
 }
 
 function seedDefaults(database: Database.Database): void {
