@@ -1,8 +1,12 @@
 name: Release
 
-# Push a version tag (npm version patch && git push --follow-tags) to build
-# the installer and upload it to a *draft* GitHub Release. Nothing reaches
-# users until a maintainer reviews the draft and clicks "Publish release".
+# Push a version tag (npm version minor && git push --follow-tags) to build
+# the signed installer and upload it to a *draft* GitHub Release. Nothing
+# reaches users until a maintainer reviews the draft and publishes it.
+#
+# Required repository secrets:
+#   TAURI_SIGNING_PRIVATE_KEY           contents of the updater private key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password (empty if none)
 
 on:
   push:
@@ -17,6 +21,9 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v5
@@ -26,62 +33,80 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Check tag matches package.json
-        shell: bash
         run: |
           version=$(node -p "require('./package.json').version")
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
             exit 1
           fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - run: npm ci
-
       - run: npm run lint
-
       - run: npm run typecheck
-
       - run: npm test
+      - run: npm run test:rust
 
-      - run: npm run build
+      # Code signing (Authenticode): once a certificate is available
+      # (SignPath / Certum), sign stash.exe and the installer here.
 
-      - run: npm run test:e2e
-
-      # Code signing: once a certificate is available (SignPath / Certum),
-      # sign Stash.exe and the installer here, then set
-      # build.win.verifyUpdateCodeSignature back to true in package.json.
-
-      - name: Build installer and upload draft release
-        run: npx electron-builder --win --publish always
+      - name: Build signed installer
+        run: npx tauri build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      # Stable users only get releases that are not pre-releases, so a beta
-      # tag (v1.2.0-beta.1) must never be published as a normal release.
-      - name: Mark pre-release versions
-        if: contains(github.ref_name, '-')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "$GITHUB_REF_NAME" --prerelease --repo "$GITHUB_REPOSITORY"
-
-      - name: Add release notes
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Locate installer
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          # Section of CHANGELOG.md for this version, if present.
-          notes=$(awk -v v="$version" '
+          setup=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe)
+          echo "SETUP=$setup" >> "$GITHUB_ENV"
+
+      - name: Verify update signature against the shipped public key
+        run: cargo test --manifest-path src-tauri/Cargo.toml -- --ignored signature
+        env:
+          STASH_INSTALLER: ${{ env.SETUP }}
+
+      - name: End-to-end tests against the release build
+        run: npm run test:e2e
+        env:
+          STASH_EXE: src-tauri/target/release/stash.exe
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          awk -v v="$VERSION" '
             index($0, "## [" v "]") == 1 { found=1; next }
             found && index($0, "## [") == 1 { exit }
             found && index($0, "[") == 1 && index($0, "]: http") > 0 { exit }
             found { print }
-          ' CHANGELOG.md)
-          if [ -n "$notes" ]; then
-            printf '%s\n' "$notes" > notes.md
-            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md --repo "$GITHUB_REPOSITORY"
-          else
-            echo "::warning::No CHANGELOG.md section for $version"
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::warning::No CHANGELOG.md section for $VERSION"
+            echo "Stash $VERSION" > notes.md
           fi
+
+      - name: Update manifests
+        run: |
+          mkdir manifests
+          node scripts/release-manifests.mjs "$SETUP" "$VERSION" "$GITHUB_REF_NAME" notes.md manifests
+          # Pre-releases must never reach 1.x installs (they only read
+          # releases/latest), but keep the file out of beta drafts entirely.
+          if [[ "$VERSION" == *-* ]]; then rm manifests/latest.yml; fi
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          flags=(--draft --title "Stash $VERSION" --notes-file notes.md)
+          # Stable users only see non-pre-releases.
+          if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "${flags[@]}" \
+            "$SETUP" "$SETUP.sig" manifests/*

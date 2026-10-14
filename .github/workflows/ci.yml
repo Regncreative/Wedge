@@ -25,23 +25,37 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # postinstall rebuilds better-sqlite3 for Electron.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - run: npm ci
 
-      - run: npm run lint
+      - name: Lint (ESLint + Clippy)
+        run: npm run lint
+
+      - name: Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
       - run: npm run typecheck
 
-      - name: Unit tests
+      - name: Unit tests (frontend)
         run: npm run test:coverage
 
-      - run: npm run build
+      - name: Unit tests (Rust)
+        run: npm run test:rust
+
+      # Debug build with the frontend embedded, plus an installer, without
+      # update signing (that key only exists in the Release workflow).
+      - name: Build app and installer
+        run: npx tauri build --debug --config src-tauri/tauri.ci.conf.json
 
       - name: End-to-end tests
         run: npm run test:e2e
-
-      - name: Package (unpacked, no publish)
-        run: npx electron-builder --dir --publish never
 
       - name: Upload Playwright report
         if: failure()

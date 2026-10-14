@@ -80,7 +80,9 @@ pub fn open(path: &Path, lang: Language) -> Result<Connection> {
     conn.pragma_update(None, "foreign_keys", "ON")?;
     let backup = path.with_file_name(format!(
         "{}.backup",
-        path.file_name().and_then(|n| n.to_str()).unwrap_or("stash.db")
+        path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("stash.db")
     ));
     run_migrations(&conn, Some(&backup))?;
     seed_defaults(&conn, lang)?;
@@ -182,8 +184,14 @@ pub fn list_shelves(conn: &Connection) -> Result<Vec<Shelf>> {
     rows.collect()
 }
 
-pub fn create_shelf(conn: &Connection, name: &str, icon: Option<&str>, color: Option<&str>) -> Result<Shelf> {
-    let max: Option<i64> = conn.query_row("SELECT MAX(sort_order) FROM shelves", [], |r| r.get(0))?;
+pub fn create_shelf(
+    conn: &Connection,
+    name: &str,
+    icon: Option<&str>,
+    color: Option<&str>,
+) -> Result<Shelf> {
+    let max: Option<i64> =
+        conn.query_row("SELECT MAX(sort_order) FROM shelves", [], |r| r.get(0))?;
     let shelf = Shelf {
         id: uuid::Uuid::new_v4().to_string(),
         name: name.to_string(),
@@ -200,7 +208,10 @@ pub fn create_shelf(conn: &Connection, name: &str, icon: Option<&str>, color: Op
 }
 
 pub fn rename_shelf(conn: &Connection, id: &str, name: &str) -> Result<()> {
-    conn.execute("UPDATE shelves SET name = ?1 WHERE id = ?2", params![name, id])?;
+    conn.execute(
+        "UPDATE shelves SET name = ?1 WHERE id = ?2",
+        params![name, id],
+    )?;
     Ok(())
 }
 
@@ -218,7 +229,8 @@ pub fn delete_shelf(conn: &Connection, id: &str) -> std::result::Result<(), Dele
     if count <= 1 {
         return Err(DeleteShelfError::LastShelf);
     }
-    conn.execute("DELETE FROM shelves WHERE id = ?1", [id]).map_err(db)?;
+    conn.execute("DELETE FROM shelves WHERE id = ?1", [id])
+        .map_err(db)?;
     Ok(())
 }
 
@@ -245,7 +257,8 @@ pub fn list_files(conn: &Connection, shelf_id: Option<&str>) -> Result<Vec<Stash
     let order = "ORDER BY is_pinned DESC, added_at DESC";
     match shelf_id {
         Some(id) => {
-            let mut stmt = conn.prepare(&format!("SELECT * FROM files WHERE shelf_id = ?1 {order}"))?;
+            let mut stmt =
+                conn.prepare(&format!("SELECT * FROM files WHERE shelf_id = ?1 {order}"))?;
             let rows = stmt.query_map([id], map_file)?;
             rows.collect()
         }
@@ -258,7 +271,8 @@ pub fn list_files(conn: &Connection, shelf_id: Option<&str>) -> Result<Vec<Stash
 }
 
 pub fn get_file(conn: &Connection, id: &str) -> Result<Option<StashFile>> {
-    conn.query_row("SELECT * FROM files WHERE id = ?1", [id], map_file).optional()
+    conn.query_row("SELECT * FROM files WHERE id = ?1", [id], map_file)
+        .optional()
 }
 
 /// Insert files into a shelf; paths already on that shelf are skipped.
@@ -316,12 +330,18 @@ pub fn set_files_pinned(conn: &Connection, ids: &[String], pinned: bool) -> Resu
 }
 
 pub fn move_file(conn: &Connection, id: &str, shelf_id: &str) -> Result<()> {
-    conn.execute("UPDATE files SET shelf_id = ?1 WHERE id = ?2", params![shelf_id, id])?;
+    conn.execute(
+        "UPDATE files SET shelf_id = ?1 WHERE id = ?2",
+        params![shelf_id, id],
+    )?;
     Ok(())
 }
 
 pub fn touch_file(conn: &Connection, id: &str) -> Result<()> {
-    conn.execute("UPDATE files SET last_accessed = ?1 WHERE id = ?2", params![now_ms(), id])?;
+    conn.execute(
+        "UPDATE files SET last_accessed = ?1 WHERE id = ?2",
+        params![now_ms(), id],
+    )?;
     Ok(())
 }
 
@@ -332,7 +352,11 @@ pub fn stats(conn: &Connection) -> Result<ShelfStats> {
         [],
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
-    Ok(ShelfStats { shelf_count, file_count, total_size })
+    Ok(ShelfStats {
+        shelf_count,
+        file_count,
+        total_size,
+    })
 }
 
 // ── Settings ──────────────────────────────────────────────
@@ -340,7 +364,9 @@ pub fn stats(conn: &Connection) -> Result<ShelfStats> {
 
 pub fn get_raw(conn: &Connection, key: &str) -> Result<Option<Value>> {
     let raw: Option<String> = conn
-        .query_row("SELECT value FROM settings WHERE key = ?1", [key], |r| r.get(0))
+        .query_row("SELECT value FROM settings WHERE key = ?1", [key], |r| {
+            r.get(0)
+        })
         .optional()?;
     Ok(raw.and_then(|s| serde_json::from_str(&s).ok()))
 }
@@ -397,7 +423,8 @@ pub fn is_hex_color(s: &str) -> bool {
 }
 
 fn enum_or<T: serde::de::DeserializeOwned>(v: Option<&Value>, fallback: T) -> T {
-    v.and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or(fallback)
+    v.and_then(|v| serde_json::from_value(v.clone()).ok())
+        .unwrap_or(fallback)
 }
 
 /// Read settings, filling and persisting defaults for missing keys and
@@ -423,7 +450,13 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         }
     }
 
-    let str_of = |k: &str| stored.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+    let str_of = |k: &str| {
+        stored
+            .get(k)
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
     let bool_of = |k: &str, d: bool| stored.get(k).and_then(Value::as_bool).unwrap_or(d);
     let num_of = |k: &str| stored.get(k).and_then(Value::as_f64).unwrap_or(f64::NAN);
 
@@ -431,10 +464,18 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
     let hotkey = str_of("openHotkey");
     let mut s = AppSettings {
         theme: enum_or(stored.get("theme"), Theme::Dark),
-        accent_color: if is_hex_color(&accent) { accent } else { "#2563EB".into() },
+        accent_color: if is_hex_color(&accent) {
+            accent
+        } else {
+            "#2563EB".into()
+        },
         start_with_windows: bool_of("startWithWindows", true),
         language: lang,
-        open_hotkey: if hotkey.is_empty() { DEFAULT_HOTKEY.into() } else { hotkey },
+        open_hotkey: if hotkey.is_empty() {
+            DEFAULT_HOTKEY.into()
+        } else {
+            hotkey
+        },
         default_shelf_id: str_of("defaultShelfId"),
         last_shelf_id: str_of("lastShelfId"),
         notifications: bool_of("notifications", true),
@@ -451,7 +492,11 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
     if !has(&s.default_shelf_id) {
         s.default_shelf_id = shelves.first().map(|sh| sh.id.clone()).unwrap_or_default();
         if !s.default_shelf_id.is_empty() {
-            set_raw(conn, "defaultShelfId", &Value::String(s.default_shelf_id.clone()))?;
+            set_raw(
+                conn,
+                "defaultShelfId",
+                &Value::String(s.default_shelf_id.clone()),
+            )?;
         }
     }
     if !has(&s.last_shelf_id) {
@@ -464,7 +509,11 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
 }
 
 /// Persist a validated patch. The language is never stored: it follows Windows.
-pub fn set_settings(conn: &Connection, patch: &SettingsPatch, lang: Language) -> Result<AppSettings> {
+pub fn set_settings(
+    conn: &Connection,
+    patch: &SettingsPatch,
+    lang: Language,
+) -> Result<AppSettings> {
     in_tx(conn, |tx| write_patch(tx, patch))?;
     get_settings(conn, lang)
 }
@@ -551,9 +600,23 @@ mod tests {
     fn skips_duplicates_per_shelf() {
         let conn = db();
         let shelves = list_shelves(&conn).unwrap();
-        assert_eq!(add_files(&conn, &[file("C:\\a.txt"), file("C:\\b.txt")], &shelves[0].id).unwrap(), (2, 0));
-        assert_eq!(add_files(&conn, &[file("C:\\a.txt")], &shelves[0].id).unwrap(), (0, 1));
-        assert_eq!(add_files(&conn, &[file("C:\\a.txt")], &shelves[1].id).unwrap(), (1, 0));
+        assert_eq!(
+            add_files(
+                &conn,
+                &[file("C:\\a.txt"), file("C:\\b.txt")],
+                &shelves[0].id
+            )
+            .unwrap(),
+            (2, 0)
+        );
+        assert_eq!(
+            add_files(&conn, &[file("C:\\a.txt")], &shelves[0].id).unwrap(),
+            (0, 1)
+        );
+        assert_eq!(
+            add_files(&conn, &[file("C:\\a.txt")], &shelves[1].id).unwrap(),
+            (1, 0)
+        );
     }
 
     #[test]
@@ -562,9 +625,17 @@ mod tests {
         let work = list_shelves(&conn).unwrap()[0].id.clone();
         add_files(&conn, &[file("C:\\old.txt")], &work).unwrap();
         add_files(&conn, &[file("C:\\new.txt")], &work).unwrap();
-        let old = list_files(&conn, Some(&work)).unwrap().into_iter().find(|f| f.name == "old.txt").unwrap();
+        let old = list_files(&conn, Some(&work))
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == "old.txt")
+            .unwrap();
         set_files_pinned(&conn, &[old.id], true).unwrap();
-        let names: Vec<_> = list_files(&conn, Some(&work)).unwrap().into_iter().map(|f| f.name).collect();
+        let names: Vec<_> = list_files(&conn, Some(&work))
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
         assert_eq!(names, ["old.txt", "new.txt"]);
     }
 
@@ -572,12 +643,24 @@ mod tests {
     fn moves_removes_and_counts() {
         let conn = db();
         let shelves = list_shelves(&conn).unwrap();
-        add_files(&conn, &[file("C:\\a.txt"), file("C:\\b.txt"), file("C:\\c.txt")], &shelves[0].id).unwrap();
+        add_files(
+            &conn,
+            &[file("C:\\a.txt"), file("C:\\b.txt"), file("C:\\c.txt")],
+            &shelves[0].id,
+        )
+        .unwrap();
         let files = list_files(&conn, None).unwrap();
         move_file(&conn, &files[0].id, &shelves[1].id).unwrap();
         assert_eq!(list_files(&conn, Some(&shelves[1].id)).unwrap().len(), 1);
         remove_files(&conn, &[files[1].id.clone(), files[2].id.clone()]).unwrap();
-        assert_eq!(stats(&conn).unwrap(), ShelfStats { shelf_count: 3, file_count: 1, total_size: 100 });
+        assert_eq!(
+            stats(&conn).unwrap(),
+            ShelfStats {
+                shelf_count: 3,
+                file_count: 1,
+                total_size: 100
+            }
+        );
     }
 
     #[test]
@@ -598,7 +681,10 @@ mod tests {
         let shelves = list_shelves(&conn).unwrap();
         delete_shelf(&conn, &shelves[0].id).unwrap();
         delete_shelf(&conn, &shelves[1].id).unwrap();
-        assert_eq!(delete_shelf(&conn, &shelves[2].id), Err(DeleteShelfError::LastShelf));
+        assert_eq!(
+            delete_shelf(&conn, &shelves[2].id),
+            Err(DeleteShelfError::LastShelf)
+        );
     }
 
     #[test]
@@ -650,7 +736,9 @@ mod tests {
     fn stays_fast_with_ten_thousand_files() {
         let conn = db();
         let work = list_shelves(&conn).unwrap()[0].id.clone();
-        let many: Vec<_> = (0..10_000).map(|i| file(&format!("C:\\data\\file-{i}.txt"))).collect();
+        let many: Vec<_> = (0..10_000)
+            .map(|i| file(&format!("C:\\data\\file-{i}.txt")))
+            .collect();
         let t0 = std::time::Instant::now();
         add_files(&conn, &many, &work).unwrap();
         assert_eq!(list_files(&conn, None).unwrap().len(), 10_000);
@@ -666,12 +754,17 @@ mod tests {
             let legacy = Connection::open(&path).unwrap();
             legacy.execute_batch(MIGRATIONS[0]).unwrap();
             legacy
-                .execute("INSERT INTO shelves (id, name, created_at) VALUES ('legacy', 'Old shelf', 1)", [])
+                .execute(
+                    "INSERT INTO shelves (id, name, created_at) VALUES ('legacy', 'Old shelf', 1)",
+                    [],
+                )
                 .unwrap();
             set_raw(&legacy, "theme", &Value::String("light".into())).unwrap();
         }
         let conn = open(&path, Language::En).unwrap();
-        let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap();
         assert_eq!(version, SCHEMA_VERSION);
         assert_eq!(list_shelves(&conn).unwrap()[0].name, "Old shelf");
         assert!(dir.path().join("stash.db.backup").exists());
@@ -687,10 +780,14 @@ mod tests {
         {
             let future = Connection::open(&path).unwrap();
             future.execute_batch(MIGRATIONS[0]).unwrap();
-            future.pragma_update(None, "user_version", SCHEMA_VERSION + 5).unwrap();
+            future
+                .pragma_update(None, "user_version", SCHEMA_VERSION + 5)
+                .unwrap();
         }
         let conn = open(&path, Language::En).unwrap();
-        let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap();
         assert_eq!(version, SCHEMA_VERSION + 5);
     }
 }

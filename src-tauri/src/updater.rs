@@ -13,10 +13,12 @@ use crate::i18n;
 use crate::models::{UpdateChannel, UpdateStatus};
 use crate::state::AppState;
 
-const STABLE_FEED: &str = "https://github.com/Regncreative/Stash/releases/latest/download/latest.json";
+const STABLE_FEED: &str =
+    "https://github.com/Regncreative/Stash/releases/latest/download/latest.json";
 /// A fixed pre-release ("channel-beta") whose latest.json the Release
 /// workflow points at the newest version, beta or stable.
-const BETA_FEED: &str = "https://github.com/Regncreative/Stash/releases/download/channel-beta/latest.json";
+const BETA_FEED: &str =
+    "https://github.com/Regncreative/Stash/releases/download/channel-beta/latest.json";
 
 fn set_status(app: &AppHandle, status: UpdateStatus) {
     let state = app.state::<AppState>();
@@ -120,12 +122,23 @@ pub async fn check(app: &AppHandle, manual: bool) -> UpdateStatus {
     match result {
         Ok(Some(update)) if in_rollout(&update.raw_json, rollout_bucket(app)) => {
             let version = update.version.clone();
-            set_status(app, UpdateStatus::Available { version: version.clone() });
-            notify(app, t.update_title, &i18n::update_downloading(lang, &version));
+            set_status(
+                app,
+                UpdateStatus::Available {
+                    version: version.clone(),
+                },
+            );
+            notify(
+                app,
+                t.update_title,
+                &i18n::update_downloading(lang, &version),
+            );
             download(app, update).await
         }
         Ok(_) => {
-            let s = UpdateStatus::NotAvailable { version: current.clone() };
+            let s = UpdateStatus::NotAvailable {
+                version: current.clone(),
+            };
             set_status(app, s.clone());
             if manual {
                 notify(app, "Stash", &i18n::up_to_date(lang, &current));
@@ -134,7 +147,9 @@ pub async fn check(app: &AppHandle, manual: bool) -> UpdateStatus {
         }
         Err(message) => {
             log::warn!("update check failed: {message}");
-            let s = UpdateStatus::Error { message: message.clone() };
+            let s = UpdateStatus::Error {
+                message: message.clone(),
+            };
             set_status(app, s.clone());
             if manual {
                 notify(app, t.update_error, &message);
@@ -172,15 +187,23 @@ async fn download(app: &AppHandle, update: tauri_plugin_updater::Update) -> Upda
                 .pending_update
                 .lock()
                 .unwrap_or_else(|e| e.into_inner()) = Some((update, bytes));
-            let s = UpdateStatus::Downloaded { version: version.clone() };
+            let s = UpdateStatus::Downloaded {
+                version: version.clone(),
+            };
             set_status(app, s.clone());
-            notify(app, i18n::strings(lang).update_ready_title, &i18n::update_ready(lang, &version));
+            notify(
+                app,
+                i18n::strings(lang).update_ready_title,
+                &i18n::update_ready(lang, &version),
+            );
             s
         }
         Err(e) => {
             // Includes signature verification failures.
             log::error!("update download failed: {e}");
-            let s = UpdateStatus::Error { message: e.to_string() };
+            let s = UpdateStatus::Error {
+                message: e.to_string(),
+            };
             set_status(app, s.clone());
             s
         }
@@ -198,7 +221,12 @@ pub fn install(app: &AppHandle) {
     if let Some((update, bytes)) = pending {
         if let Err(e) = update.install(bytes) {
             log::error!("update install failed: {e}");
-            set_status(app, UpdateStatus::Error { message: e.to_string() });
+            set_status(
+                app,
+                UpdateStatus::Error {
+                    message: e.to_string(),
+                },
+            );
         }
     }
 }
@@ -221,15 +249,58 @@ mod tests {
         let staged = serde_json::json!({ "version": "2.0.0", "stagingPercentage": 10 });
         assert!(in_rollout(&staged, 3));
         assert!(!in_rollout(&staged, 10));
-        assert!(!in_rollout(&serde_json::json!({ "stagingPercentage": 0 }), 0));
+        assert!(!in_rollout(
+            &serde_json::json!({ "stagingPercentage": 0 }),
+            0
+        ));
         assert!(in_rollout(&serde_json::json!({ "version": "2.0.0" }), 99));
+    }
+
+    /// Checks a built installer against the public key shipped in
+    /// tauri.conf.json, exactly as the updater will. Run by the Release
+    /// workflow: STASH_INSTALLER=<setup.exe> cargo test -- --ignored signature
+    #[test]
+    #[ignore]
+    fn release_signature_matches_shipped_public_key() {
+        use base64::Engine;
+        let installer = std::env::var("STASH_INSTALLER").expect("STASH_INSTALLER");
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let decode = |b64: &str| {
+            String::from_utf8(
+                base64::engine::general_purpose::STANDARD
+                    .decode(b64.trim())
+                    .unwrap(),
+            )
+            .unwrap()
+        };
+        let pubkey = decode(conf["plugins"]["updater"]["pubkey"].as_str().unwrap());
+        let signature = decode(&std::fs::read_to_string(format!("{installer}.sig")).unwrap());
+        let pk = minisign_verify::PublicKey::decode(&pubkey).unwrap();
+        let sig = minisign_verify::Signature::decode(&signature).unwrap();
+
+        let mut bytes = std::fs::read(&installer).unwrap();
+        pk.verify(&bytes, &sig, true)
+            .expect("genuine installer must verify");
+
+        let mid = bytes.len() / 2;
+        bytes[mid] ^= 0xff;
+        assert!(
+            pk.verify(&bytes, &sig, true).is_err(),
+            "tampered installer must be rejected"
+        );
     }
 
     #[test]
     fn buckets_are_stable_and_spread() {
         assert_eq!(bucket_for("abc"), bucket_for("abc"));
-        let buckets: std::collections::HashSet<_> =
-            (0..1000).map(|i| bucket_for(&format!("install-{i}"))).collect();
-        assert!(buckets.len() > 90, "only {} distinct buckets", buckets.len());
+        let buckets: std::collections::HashSet<_> = (0..1000)
+            .map(|i| bucket_for(&format!("install-{i}")))
+            .collect();
+        assert!(
+            buckets.len() > 90,
+            "only {} distinct buckets",
+            buckets.len()
+        );
     }
 }

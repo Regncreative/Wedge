@@ -129,7 +129,10 @@ pub fn run() {
     app.run(|_app, event| {
         // Stay alive in the tray when the panel is closed; app.exit(code)
         // (tray → Quit) still exits.
-        if let RunEvent::ExitRequested { api, code: None, .. } = event {
+        if let RunEvent::ExitRequested {
+            api, code: None, ..
+        } = event
+        {
             api.prevent_exit();
         }
     });

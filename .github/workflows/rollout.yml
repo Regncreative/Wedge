@@ -1,15 +1,15 @@
 name: Rollout
 
-# Staged rollout for a published release. electron-updater reads
-# `stagingPercentage` from the update file and only that share of installs
-# (by a random per-install id) updates. Use e.g. 10 → 50 → 100, or 0 to
-# halt a bad release. 100 removes the limit.
+# Staged rollout for a published release. Each install computes a stable
+# bucket 0–99 and only updates when bucket < stagingPercentage. Use e.g.
+# 10 → 50 → 100, or 0 to halt a bad release. 100 removes the limit.
+# Applies to both feeds: latest.json (2.x) and latest.yml (1.x upgrading).
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (e.g. v1.1.0)
+        description: Release tag (e.g. v2.0.0)
         required: true
       percentage:
         description: Share of users who get the update (0-100)
@@ -32,19 +32,31 @@ jobs:
             exit 1
           fi
 
-      - name: Update stagingPercentage in the release's update files
+      - name: Set stagingPercentage
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}
           PCT: ${{ inputs.percentage }}
         run: |
-          mkdir rollout
-          gh release download "$TAG" --pattern '*.yml' --dir rollout --repo "$GITHUB_REPOSITORY"
-          for f in rollout/*.yml; do
-            sed -i '/^stagingPercentage:/d' "$f"
+          mkdir feed
+          gh release download "$TAG" --pattern 'latest.*' --dir feed --repo "$GITHUB_REPOSITORY"
+          if [ -f feed/latest.json ]; then
             if [ "$PCT" -lt 100 ]; then
-              echo "stagingPercentage: $PCT" >> "$f"
+              jq --argjson p "$PCT" '.stagingPercentage = $p' feed/latest.json > feed/tmp && mv feed/tmp feed/latest.json
+            else
+              jq 'del(.stagingPercentage)' feed/latest.json > feed/tmp && mv feed/tmp feed/latest.json
             fi
-            echo "--- $f"; cat "$f"
-          done
-          gh release upload "$TAG" rollout/*.yml --clobber --repo "$GITHUB_REPOSITORY"
+          fi
+          if [ -f feed/latest.yml ]; then
+            sed -i '/^stagingPercentage:/d' feed/latest.yml
+            if [ "$PCT" -lt 100 ]; then echo "stagingPercentage: $PCT" >> feed/latest.yml; fi
+          fi
+          head -50 feed/*
+          gh release upload "$TAG" feed/latest.* --clobber --repo "$GITHUB_REPOSITORY"
+
+          # Keep the beta feed in step when it points at this release.
+          if gh release download channel-beta --pattern latest.json --dir beta --repo "$GITHUB_REPOSITORY" 2>/dev/null \
+             && [ "$(jq -r .version beta/latest.json)" = "$(jq -r .version feed/latest.json)" ]; then
+            cp feed/latest.json beta/latest.json
+            gh release upload channel-beta beta/latest.json --clobber --repo "$GITHUB_REPOSITORY"
+          fi

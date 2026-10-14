@@ -80,10 +80,15 @@ pub fn check_settings_patch(p: &SettingsPatch) -> CmdResult<()> {
             return bad("openHotkey");
         }
     }
-    for id in [&p.default_shelf_id, &p.last_shelf_id].into_iter().flatten() {
+    for id in [&p.default_shelf_id, &p.last_shelf_id]
+        .into_iter()
+        .flatten()
+    {
         check_id(id)?;
     }
-    if p.idle_opacity.is_some_and(|v| !v.is_finite()) || p.idle_timeout_sec.is_some_and(|v| !v.is_finite()) {
+    if p.idle_opacity.is_some_and(|v| !v.is_finite())
+        || p.idle_timeout_sec.is_some_and(|v| !v.is_finite())
+    {
         return bad("idle");
     }
     Ok(())
@@ -115,7 +120,10 @@ pub fn is_pinned(state: State<'_, AppState>) -> bool {
 // ── Files ─────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn list_files(state: State<'_, AppState>, shelf_id: Option<String>) -> CmdResult<Vec<StashFile>> {
+pub async fn list_files(
+    state: State<'_, AppState>,
+    shelf_id: Option<String>,
+) -> CmdResult<Vec<StashFile>> {
     if let Some(id) = &shelf_id {
         check_id(id)?;
     }
@@ -139,7 +147,10 @@ pub async fn add_files(
         check_id(id)?;
     }
     let metas = tauri::async_runtime::spawn_blocking(move || {
-        paths.iter().filter_map(|p| files::collect_meta(p)).collect::<Vec<_>>()
+        paths
+            .iter()
+            .filter_map(|p| files::collect_meta(p))
+            .collect::<Vec<_>>()
     })
     .await
     .map_err(err)?;
@@ -160,17 +171,29 @@ pub async fn add_files(
             .map(|s| s.name.clone())
             .unwrap_or_default();
         (
-            AddFilesResult { added, skipped, shelf_id: target, shelf_name },
+            AddFilesResult {
+                added,
+                skipped,
+                shelf_id: target,
+                shelf_name,
+            },
             settings.notifications,
         )
     };
 
     // Drops land on the open panel, which shows its own toast; only notify
     // when files arrive while the panel is hidden.
-    let visible = panel::window(&app).and_then(|w| w.is_visible().ok()).unwrap_or(false);
+    let visible = panel::window(&app)
+        .and_then(|w| w.is_visible().ok())
+        .unwrap_or(false);
     if result.added > 0 && notify && !visible {
         let body = i18n::files_added(state.language, result.added, &result.shelf_name);
-        let _ = app.notification().builder().title("Stash").body(body).show();
+        let _ = app
+            .notification()
+            .builder()
+            .title("Stash")
+            .body(body)
+            .show();
     }
     Ok(result)
 }
@@ -216,7 +239,11 @@ pub fn move_file(state: State<'_, AppState>, id: String, shelf_id: String) -> Cm
 }
 
 #[tauri::command]
-pub async fn open_file(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<OpResult> {
+pub async fn open_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<OpResult> {
     let Some(file) = file_by_id(&state, &id)? else {
         return Ok(OpResult::err("not_found"));
     };
@@ -224,14 +251,20 @@ pub async fn open_file(app: AppHandle, state: State<'_, AppState>, id: String) -
         return Ok(OpResult::err("missing"));
     }
     let _ = db::touch_file(&state.db(), &id);
-    Ok(match app.opener().open_path(&file.absolute_path, None::<&str>) {
-        Ok(()) => OpResult::ok(),
-        Err(e) => OpResult::err(e.to_string()),
-    })
+    Ok(
+        match app.opener().open_path(&file.absolute_path, None::<&str>) {
+            Ok(()) => OpResult::ok(),
+            Err(e) => OpResult::err(e.to_string()),
+        },
+    )
 }
 
 #[tauri::command]
-pub async fn reveal_file(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<OpResult> {
+pub async fn reveal_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<OpResult> {
     let Some(file) = file_by_id(&state, &id)? else {
         return Ok(OpResult::err("not_found"));
     };
@@ -249,12 +282,18 @@ pub fn copy_path(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdR
     let Some(file) = file_by_id(&state, &id)? else {
         return Ok(false);
     };
-    app.clipboard().write_text(file.absolute_path).map_err(err)?;
+    app.clipboard()
+        .write_text(file.absolute_path)
+        .map_err(err)?;
     Ok(true)
 }
 
 #[tauri::command]
-pub async fn show_properties(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<OpResult> {
+pub async fn show_properties(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<OpResult> {
     let Some(file) = file_by_id(&state, &id)? else {
         return Ok(OpResult::err("not_found"));
     };
@@ -269,10 +308,19 @@ pub async fn show_properties(app: AppHandle, state: State<'_, AppState>, id: Str
         let _ = tx.send(win::show_properties(&path));
     })
     .map_err(err)?;
-    Ok(if rx.await.unwrap_or(false) { OpResult::ok() } else { OpResult::err("failed") })
+    Ok(if rx.await.unwrap_or(false) {
+        OpResult::ok()
+    } else {
+        OpResult::err("failed")
+    })
 }
 
-async fn shell_image(state: &AppState, id: &str, size: i32, thumbnail: bool) -> CmdResult<Option<String>> {
+async fn shell_image(
+    state: &AppState,
+    id: &str,
+    size: i32,
+    thumbnail: bool,
+) -> CmdResult<Option<String>> {
     let Some(file) = file_by_id(state, id)? else {
         return Ok(None);
     };
@@ -287,9 +335,11 @@ async fn shell_image(state: &AppState, id: &str, size: i32, thumbnail: bool) -> 
         return Ok(None);
     }
     let path = file.absolute_path;
-    let url = tauri::async_runtime::spawn_blocking(move || win::shell_image_data_url(&path, size, thumbnail))
-        .await
-        .map_err(err)?;
+    let url = tauri::async_runtime::spawn_blocking(move || {
+        win::shell_image_data_url(&path, size, thumbnail)
+    })
+    .await
+    .map_err(err)?;
     let mut cache = state.icon_cache.lock().map_err(err)?;
     if cache.len() > 2_000 {
         cache.clear(); // simple bound; icons are cheap to recreate
@@ -360,12 +410,21 @@ pub fn list_shelves(state: State<'_, AppState>) -> CmdResult<Vec<Shelf>> {
 #[tauri::command]
 pub fn create_shelf(state: State<'_, AppState>, input: ShelfInput) -> CmdResult<Shelf> {
     let name = check_shelf_name(&input.name)?;
-    if input.icon.as_ref().is_some_and(|i| i.is_empty() || i.len() > 50)
+    if input
+        .icon
+        .as_ref()
+        .is_some_and(|i| i.is_empty() || i.len() > 50)
         || input.color.as_ref().is_some_and(|c| !db::is_hex_color(c))
     {
         return Err("Invalid arguments: style".into());
     }
-    db::create_shelf(&state.db(), &name, input.icon.as_deref(), input.color.as_deref()).map_err(err)
+    db::create_shelf(
+        &state.db(),
+        &name,
+        input.icon.as_deref(),
+        input.color.as_deref(),
+    )
+    .map_err(err)
 }
 
 #[tauri::command]
@@ -404,7 +463,11 @@ pub fn get_settings(state: State<'_, AppState>) -> CmdResult<AppSettings> {
 }
 
 #[tauri::command]
-pub fn set_settings(app: AppHandle, state: State<'_, AppState>, patch: SettingsPatch) -> CmdResult<AppSettings> {
+pub fn set_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    patch: SettingsPatch,
+) -> CmdResult<AppSettings> {
     check_settings_patch(&patch)?;
     // Register first: an unavailable hotkey must not be persisted.
     if let Some(h) = &patch.open_hotkey {
@@ -444,7 +507,10 @@ pub fn app_version(app: AppHandle) -> String {
 #[tauri::command]
 pub fn open_releases(app: AppHandle) -> bool {
     app.opener()
-        .open_url("https://github.com/Regncreative/Stash/releases/latest", None::<&str>)
+        .open_url(
+            "https://github.com/Regncreative/Stash/releases/latest",
+            None::<&str>,
+        )
         .is_ok()
 }
 
@@ -550,11 +616,20 @@ mod tests {
 
     #[test]
     fn validates_settings_patches() {
-        let ok = SettingsPatch { accent_color: Some("#00ff00".into()), ..Default::default() };
+        let ok = SettingsPatch {
+            accent_color: Some("#00ff00".into()),
+            ..Default::default()
+        };
         assert!(check_settings_patch(&ok).is_ok());
-        let css = SettingsPatch { accent_color: Some("red; background:url(x)".into()), ..Default::default() };
+        let css = SettingsPatch {
+            accent_color: Some("red; background:url(x)".into()),
+            ..Default::default()
+        };
         assert!(check_settings_patch(&css).is_err());
-        let hk = SettingsPatch { open_hotkey: Some(String::new()), ..Default::default() };
+        let hk = SettingsPatch {
+            open_hotkey: Some(String::new()),
+            ..Default::default()
+        };
         assert!(check_settings_patch(&hk).is_err());
     }
 }

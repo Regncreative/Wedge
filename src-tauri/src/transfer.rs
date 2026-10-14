@@ -169,7 +169,11 @@ fn validate(data: &StashExport) -> Result<(), ImportError> {
 
 /// Merge an export into the current data in one transaction. Shelves are
 /// matched by name (case-insensitive) or created; existing files are skipped.
-pub fn apply_import(conn: &Connection, raw: &str, lang: Language) -> Result<(usize, usize), ImportError> {
+pub fn apply_import(
+    conn: &Connection,
+    raw: &str,
+    lang: Language,
+) -> Result<(usize, usize), ImportError> {
     let data: StashExport =
         serde_json::from_str(raw).map_err(|e| ImportError::Invalid(e.to_string()))?;
     validate(&data)?;
@@ -200,15 +204,18 @@ pub fn apply_import(conn: &Connection, raw: &str, lang: Language) -> Result<(usi
     let mut by_target: HashMap<&str, Vec<FileInput>> = HashMap::new();
     for f in &data.files {
         if let Some(target) = id_map.get(&f.shelf_id) {
-            by_target.entry(target.as_str()).or_default().push(FileInput {
-                absolute_path: f.absolute_path.clone(),
-                name: f.name.clone(),
-                extension: f.extension.clone(),
-                size: f.size,
-                is_directory: f.is_directory,
-                created_at: f.created_at,
-                is_pinned: f.is_pinned,
-            });
+            by_target
+                .entry(target.as_str())
+                .or_default()
+                .push(FileInput {
+                    absolute_path: f.absolute_path.clone(),
+                    name: f.name.clone(),
+                    extension: f.extension.clone(),
+                    size: f.size,
+                    is_directory: f.is_directory,
+                    created_at: f.created_at,
+                    is_pinned: f.is_pinned,
+                });
         }
     }
     let mut added = 0;
@@ -252,7 +259,11 @@ mod tests {
         let work = db::list_shelves(&conn).unwrap()[0].id.clone();
         let invoices = db::create_shelf(&conn, "Invoices", None, Some("#00B294")).unwrap();
         db::add_files(&conn, &[file("C:\\a.txt"), file("C:\\b.txt")], &work).unwrap();
-        let a = db::list_files(&conn, None).unwrap().into_iter().find(|f| f.name == "a.txt").unwrap();
+        let a = db::list_files(&conn, None)
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == "a.txt")
+            .unwrap();
         db::set_files_pinned(&conn, &[a.id], true).unwrap();
         db::add_files(&conn, &[file("C:\\inv.txt")], &invoices.id).unwrap();
         let patch = SettingsPatch {
@@ -283,11 +294,18 @@ mod tests {
             .into_iter()
             .map(|f| (f.name, f.is_pinned))
             .collect();
-        assert_eq!(work, [("a.txt".to_string(), true), ("b.txt".to_string(), false)]);
+        assert_eq!(
+            work,
+            [("a.txt".to_string(), true), ("b.txt".to_string(), false)]
+        );
         let s = db::get_settings(&fresh, Language::En).unwrap();
         assert_eq!(s.theme, Theme::Light);
         assert_eq!(s.file_sort, FileSort::Name);
-        assert_eq!(s.open_hotkey, db::DEFAULT_HOTKEY, "hotkey is machine-specific");
+        assert_eq!(
+            s.open_hotkey,
+            db::DEFAULT_HOTKEY,
+            "hotkey is machine-specific"
+        );
     }
 
     #[test]
@@ -295,7 +313,11 @@ mod tests {
         let conn = seeded();
         let json = export_json(&conn);
         assert_eq!(apply_import(&conn, &json, Language::En).unwrap().1, 0);
-        let invoices = db::list_shelves(&conn).unwrap().into_iter().filter(|s| s.name == "Invoices").count();
+        let invoices = db::list_shelves(&conn)
+            .unwrap()
+            .into_iter()
+            .filter(|s| s.name == "Invoices")
+            .count();
         assert_eq!(invoices, 1);
     }
 
@@ -309,18 +331,32 @@ mod tests {
           "settings":{"theme":"dark","idleTimeoutSec":20}}"##;
         let conn = db::open_in_memory(Language::En).unwrap();
         assert_eq!(apply_import(&conn, json, Language::En).unwrap(), (1, 1));
-        assert_eq!(db::get_settings(&conn, Language::En).unwrap().idle_timeout_sec, 20);
+        assert_eq!(
+            db::get_settings(&conn, Language::En)
+                .unwrap()
+                .idle_timeout_sec,
+            20
+        );
     }
 
     #[test]
     fn rejects_bad_files_and_changes_nothing() {
         let conn = seeded();
         let before = db::list_files(&conn, None).unwrap().len();
-        assert!(matches!(apply_import(&conn, r#"{"hello":"world"}"#, Language::En), Err(ImportError::Invalid(_))));
+        assert!(matches!(
+            apply_import(&conn, r#"{"hello":"world"}"#, Language::En),
+            Err(ImportError::Invalid(_))
+        ));
         let wrong_version = export_json(&conn).replace("\"version\":1", "\"version\":99");
-        assert!(matches!(apply_import(&conn, &wrong_version, Language::En), Err(ImportError::Invalid(_))));
+        assert!(matches!(
+            apply_import(&conn, &wrong_version, Language::En),
+            Err(ImportError::Invalid(_))
+        ));
         let bad_color = export_json(&conn).replace("#00B294", "red");
-        assert!(matches!(apply_import(&conn, &bad_color, Language::En), Err(ImportError::Invalid(_))));
+        assert!(matches!(
+            apply_import(&conn, &bad_color, Language::En),
+            Err(ImportError::Invalid(_))
+        ));
         assert_eq!(db::list_files(&conn, None).unwrap().len(), before);
     }
 

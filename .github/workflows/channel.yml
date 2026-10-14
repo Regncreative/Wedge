@@ -1,0 +1,30 @@
+name: Beta channel
+
+# Users who opt into beta versions read latest.json from a fixed
+# pre-release tagged "channel-beta". When any release (beta or stable) is
+# published, point that feed at it, so beta users get stable releases too.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-feed:
+    if: github.event.release.tag_name != 'channel-beta'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Point the beta feed at this release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release download "$TAG" --pattern latest.json --dir feed --repo "$GITHUB_REPOSITORY"
+          if ! gh release view channel-beta --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create channel-beta --prerelease --title "Beta update channel" \
+              --notes "Update feed for Stash beta users. Managed by the Beta channel workflow; do not delete." \
+              --repo "$GITHUB_REPOSITORY"
+          fi
+          gh release upload channel-beta feed/latest.json --clobber --repo "$GITHUB_REPOSITORY"

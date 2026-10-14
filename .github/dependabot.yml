@@ -6,13 +6,21 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      tauri:
+        patterns: ["@tauri-apps/*"]
       dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
-    ignore:
-      # Electron majors need manual testing (native modules, APIs).
-      - dependency-name: "electron"
-        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+    groups:
+      tauri:
+        patterns: ["tauri", "tauri-*"]
+      minor-and-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
