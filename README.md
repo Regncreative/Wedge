@@ -37,7 +37,7 @@ Windows doesn’t have a convenient place to park files while you work — so pe
 
 **Stash** adds a lightweight file shelf that lives in the system tray. Drop files onto shelves, pin what matters, then drag them back into any app when you need them. Stash stores **references only** — your files stay where they are on disk.
 
-Designed to feel like a built-in Windows 11 feature (Fluent Design), and light like one: a **3 MB installer** that uses the WebView2 runtime built into Windows.
+Designed to feel like a built-in Windows 11 feature (Fluent Design), and light like one: a **5 MB installer** that uses the WebView2 runtime built into Windows.
 
 ## Features
 
@@ -66,7 +66,7 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 - **Turkish & English** — full UI + tray localization
 - **Auto update** — updates from GitHub Releases, with an opt-in beta channel; every update is signature-checked
 - **Export / import** — move your shelves and settings to another PC
-- **Small and light** — 3 MB installer, low memory use, browser engine kept up to date by Windows
+- **Small and light** — 5 MB installer, low memory use, browser engine kept up to date by Windows
 - **Missing-file awareness** — deleted or moved files show as unavailable until you clear them
 - **Private by design** — no account, no telemetry ([privacy](PRIVACY.md))
 
@@ -168,7 +168,7 @@ scripts/          Release helpers
 - [x] Idle opacity & missing-file cleanup
 - [x] Multi-select, keyboard navigation, export / import
 - [x] Automated, staged releases with a beta channel
-- [x] 2.0: rebuilt on Tauri (3 MB installer, signed updates)
+- [x] 2.0: rebuilt on Tauri (5 MB installer, signed updates)
 - [x] Automatic shelves, rules, content search, Quick Look
 - [x] Phone to PC, desktop widgets, quick actions
 - [x] Edge handle, shared shelves (cloud folders), new design

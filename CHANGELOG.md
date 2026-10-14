@@ -21,7 +21,7 @@ Stash 2.0 is rebuilt on Tauri with a new design. Your shelves and settings carry
 - **Desktop widgets:** pin a shelf to the desktop.
 
 ### Changed
-- Rebuilt on Tauri 2 with a Rust backend. The installer is 3 MB instead of 90 MB and the app uses far less memory.
+- Rebuilt on Tauri 2 with a Rust backend. The installer is under 5 MB instead of 90 MB and the app uses far less memory.
 - The panel is drawn by WebView2, which Windows keeps up to date, instead of a bundled Chromium that no longer received security fixes (Electron 34).
 - 1.x installs upgrade automatically; the old app is removed and its data is reused.
 - Image previews are rendered by Windows (thumbnails) instead of loading files into the panel.
