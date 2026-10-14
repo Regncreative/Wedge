@@ -15,6 +15,6 @@ Include what you found, how to reproduce it, and the Stash and Windows versions.
 ## Scope
 
 Of particular interest:
-- The auto-update channel (anything that could make Stash install something other than an official release)
-- The IPC bridge between the panel and the main process
+- The auto-update channel (anything that could make Stash install something other than an official, signed release)
+- The command bridge between the panel (WebView2) and the Rust backend
 - Handling of file paths, shortcuts (`.lnk`) and drag and drop

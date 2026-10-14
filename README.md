@@ -19,7 +19,8 @@
   <a href="https://github.com/Regncreative/Stash/actions/workflows/codeql.yml"><img src="https://github.com/Regncreative/Stash/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
   <a href="https://github.com/Regncreative/Stash/releases/latest"><img src="https://img.shields.io/github/v/release/Regncreative/Stash?label=latest%20release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/Electron-34-47848F?logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" alt="Tauri">
+  <img src="https://img.shields.io/badge/Rust-backend-B7410E?logo=rust&logoColor=white" alt="Rust">
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
@@ -34,7 +35,7 @@ Windows doesn’t have a convenient place to park files while you work — so pe
 
 **Stash** adds a lightweight file shelf that lives in the system tray. Drop files onto shelves, pin what matters, then drag them back into any app when you need them. Stash stores **references only** — your files stay where they are on disk.
 
-Designed to feel like a built-in Windows 11 feature (Fluent Design), not a typical Electron utility.
+Designed to feel like a built-in Windows 11 feature (Fluent Design), and light like one: a **3 MB installer** that uses the WebView2 runtime built into Windows.
 
 ## Features
 
@@ -50,6 +51,8 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), not a typic
 - **Auto launch** — start with Windows (installed builds)
 - **Auto update** — updates from GitHub Releases, with an opt-in beta channel
 - **Export / import** — move your shelves and settings to another PC
+- **Small and light** — 3 MB installer, low memory use, browser engine kept up to date by Windows
+- **Verified updates** — every update is signature-checked before it installs
 - **SQLite storage** — fast local metadata, no cloud required, automatic backup before upgrades
 - **Missing-file awareness** — deleted or recycled paths show as unavailable until you clear them
 - **Private by design** — no account, no telemetry ([privacy](PRIVACY.md))
@@ -76,43 +79,45 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), not a typic
 
 ### For everyone (recommended)
 
-1. Download from **[stash.regncreative.com](https://stash.regncreative.com)** or **[Stash-Setup.exe](https://github.com/Regncreative/Stash/releases/latest)**
+1. Download from **[stash.regncreative.com](https://stash.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Stash/releases/latest)** (`Stash_<version>_x64-setup.exe`)
 2. Run the installer
 3. Launch **Stash** — it appears in the system tray
 4. Click the tray icon (or press `Ctrl+Shift+Space`) to open the panel
 
 > Tip: enable **Start with Windows** in Settings so Stash is ready after sign-in.
+>
+> Upgrading from 1.x happens automatically: the 2.0 installer replaces the old app and keeps all your shelves and settings.
 
 ### For developers
 
+Requires Windows 10/11, [Node.js 22](https://nodejs.org) (`.nvmrc`), [Rust](https://rustup.rs) and the Visual Studio C++ Build Tools ([Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)).
+
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-The app starts silently in the tray. Click the tray icon or use the hotkey to open the panel.
+The app starts silently in the tray. Click the tray icon or use the hotkey to open the panel. See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and conventions.
 
 ## Development
 
-Requires Windows and Node.js 22 (`.nvmrc`).
-
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Development mode |
-| `npm run build` | Production build (`out/`) |
-| `npm run dist` | Build Windows installer locally |
-| `npm test` | Unit tests (Vitest) |
-| `npm run test:e2e` | End-to-end tests against the built app (Playwright) |
+| `npm run dev` | Run the app with hot reload |
+| `npm run build` | Release build + installer (`src-tauri/target/release/bundle/nsis/`) |
+| `npm test` | Frontend unit tests (Vitest) |
+| `npm run test:rust` | Backend unit tests (cargo test) |
+| `npm run build:e2e` then `npm run test:e2e` | End-to-end tests against the real app (Playwright over WebView2) |
 | `npm run typecheck` | TypeScript check |
-| `npm run lint` | ESLint |
+| `npm run lint` | ESLint + Clippy |
 
 ## Tech stack
 
-- **Electron** + **React** + **TypeScript** + **Vite** (`electron-vite`)
+- **Tauri 2** with a **Rust** backend; UI in **React** + **TypeScript** + **Vite**
 - **Tailwind CSS** + **Framer Motion** + **Zustand**
-- **better-sqlite3** for local storage, **zod** for IPC validation, **electron-log** for logs
-- **electron-builder** + **electron-updater** for packaging and updates
-- **Vitest** + **Playwright** for tests, GitHub Actions on Windows for CI and releases
+- **rusqlite** (SQLite), the **windows** crate for shell icons and Properties, **drag** for native drag-out
+- Tauri plugins for tray, global shortcut, autostart, notifications, dialogs, logging and signed updates
+- **Vitest**, **cargo test** + **Playwright** for tests, GitHub Actions on Windows for CI and releases
 
 ## Architecture
 
@@ -123,23 +128,14 @@ Requires Windows and Node.js 22 (`.nvmrc`).
 └───────────────────┬─────────────────────┘
                     │
 ┌───────────────────▼─────────────────────┐
-│            Electron Main                │
-│  Window · Tray · Auto-launch · Updater  │
+│           Rust backend (Tauri)          │
+│  Panel window · Tray · Updater · Shell  │
+│  SQLite (rusqlite) · validated commands │
 └───────────────────┬─────────────────────┘
-                    │ IPC
+                    │ invoke / events
 ┌───────────────────▼─────────────────────┐
-│           Preload bridge                │
-│         window.stash (typed API)        │
-└───────────────────┬─────────────────────┘
-                    │
-┌───────────────────▼─────────────────────┐
-│           React Renderer                │
-│     Fluent panel · shelves · settings   │
-└───────────────────┬─────────────────────┘
-                    │
-┌───────────────────▼─────────────────────┐
-│               SQLite                    │
-│     shelves · file refs · settings      │
+│        React panel (WebView2)           │
+│  window.stash API · shelves · settings  │
 └─────────────────────────────────────────┘
 ```
 
@@ -147,13 +143,16 @@ Requires Windows and Node.js 22 (`.nvmrc`).
 
 ```text
 src/
-  main/           Electron main — tray, panel window, IPC, auto-launch
-    database/     SQLite schema + queries
-  preload/        contextBridge API (`window.stash`)
-  renderer/       React UI (Fluent panel)
-  shared/         Shared types, i18n, IPC channel names
-resources/        Tray / app icons
-docs/             README images
+  renderer/       React panel (Fluent UI); lib/api.ts bridges to Rust
+  shared/         Types and translations (locales/)
+src-tauri/
+  src/            Rust backend: commands, database, tray, updater, shell
+  windows/        Installer hooks (upgrade from 1.x)
+  tauri.conf.json App, window, bundle and updater configuration
+tests/
+  unit/           Vitest
+  e2e/            Playwright, driving the real stash.exe
+scripts/          Release helpers
 ```
 
 ## Roadmap
@@ -167,6 +166,7 @@ docs/             README images
 - [x] Official demo GIF in README
 - [x] Multi-select, keyboard navigation, export / import
 - [x] Automated, staged releases with a beta channel
+- [x] 2.0: rebuilt on Tauri (3 MB installer, signed updates)
 - [ ] Code signing
 - [ ] Microsoft Store and winget
 - [ ] Plugins / extensions

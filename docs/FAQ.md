@@ -27,7 +27,7 @@ Yes. Select them with **Ctrl+click** or **Shift+click** (or Shift + arrow keys),
 | Esc | Clear the selection / close search or settings |
 
 ### Windows warns "Windows protected your PC" when I install
-Stash is not code-signed yet, so SmartScreen shows this for new downloads. Click **More info → Run anyway**. The Microsoft Store version (once available) doesn't show this warning.
+Stash is not code-signed yet, so SmartScreen shows this for new downloads. Click **More info → Run anyway**. Updates are not affected: Stash checks each update's signature itself before installing it.
 
 ### How do I move my shelves to another computer?
 *Settings → Data → Export* on the old PC, then *Import* on the new one. Shelves with the same name are merged. File paths must exist on the new PC to be usable.
@@ -37,6 +37,9 @@ Turn on *Settings → Updates → Get beta versions*. Turning it off later doesn
 
 ### Where are the logs?
 *Settings → Data → Open logs folder* opens `%APPDATA%\Stash\logs`. Attach `main.log` when you report a bug.
+
+### I used Stash 1.x. What happens to my shelves?
+Nothing you need to do: 1.x updates itself to 2.0, the installer replaces the old app, and 2.0 opens the same shelves and settings. Export from 1.x is also compatible with 2.0's import.
 
 ### Does Stash collect any data?
 No. See [PRIVACY.md](../PRIVACY.md).

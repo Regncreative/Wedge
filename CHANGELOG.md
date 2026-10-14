@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+Stash 2.0 is rebuilt on Tauri. It looks and works the same, with your shelves and settings carried over, and it is much smaller and safer.
+
+### Changed
+- Rebuilt on Tauri 2 with a Rust backend. The installer is 3 MB instead of 90 MB and the app uses far less memory.
+- The panel is drawn by WebView2, which Windows keeps up to date, instead of a bundled Chromium that no longer received security fixes (Electron 34).
+- 1.x installs upgrade automatically; the old app is removed and its data is reused.
+- Image previews are rendered by Windows (thumbnails) instead of loading files into the panel.
+
+### Security
+- Every update is verified against Stash's signing key before it installs.
+
 ### Added
 - Multi-select with Ctrl/Shift+click or the keyboard; drag, pin or remove several files at once.
 - Full keyboard navigation of the file list (see the FAQ for shortcuts).
@@ -14,7 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Logs in `%APPDATA%\Stash\logs` and an "Open logs folder" button.
 - The uninstaller asks whether to delete shelves and settings.
 
-### Changed
+### Changed (since 1.0.4)
 - The database schema is versioned and backed up before upgrades.
 - Releases are built and published by GitHub Actions, as drafts reviewed before going out, with optional staged rollout.
 
