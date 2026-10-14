@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Releases are built and published by GitHub Actions, as drafts reviewed before going out, with optional staged rollout.
 
 ### Fixed
+- Launching Stash while it is already running no longer starts a second copy against the same database; it just opens the panel.
 - Recording a hotkey with the Windows key no longer saves it as Ctrl.
 - Unreachable network paths no longer freeze the app; file checks run asynchronously with a timeout.
 - Choosing a hotkey that is already taken keeps the previous one and shows a message.

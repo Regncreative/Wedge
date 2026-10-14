@@ -16,16 +16,19 @@ if (process.env.STASH_USER_DATA) {
 
 initLogging()
 
-const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
+// app.quit() is asynchronous and 'ready' still fires afterwards, so startup
+// must only be wired up when this process holds the lock. Otherwise a second
+// launch would open the same database and create a second tray icon.
+if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
     showPanel(getTray()?.getBounds())
   })
+  app.whenReady().then(start)
 }
 
-app.whenReady().then(() => {
+function start(): void {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.stash.app')
   }
@@ -43,7 +46,7 @@ app.whenReady().then(() => {
 
   // Silent launch — panel stays hidden until tray click / hotkey
   initUpdater()
-})
+}
 
 app.on('window-all-closed', () => {
   // Stay alive in the tray on Windows/Linux
