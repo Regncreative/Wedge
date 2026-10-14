@@ -20,7 +20,7 @@ npm run dev
 
 The first Rust build takes a few minutes; later ones are incremental.
 
-`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Stash`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
+`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Stash`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
 
 ## Checks
 
@@ -32,6 +32,8 @@ npm run test:rust     # backend unit tests (cargo test)
 npm run build:e2e     # debug build with the UI embedded
 npm run test:e2e      # Playwright drives the real stash.exe over WebView2
 ```
+
+Real Windows drag and drop is tested too, by moving the mouse cursor (`tests/e2e/real-drop.spec.ts`). Those tests only run with `STASH_REAL_INPUT=1`, on a machine nobody is using at the time; the helpers refuse to press or release the mouse anywhere but on Stash's own windows.
 
 Close any running Stash before the end-to-end tests: Stash is single-instance, so a running copy would swallow the test launches.
 
@@ -56,14 +58,14 @@ src-tauri/src/
   commands_extra.rs     Notes, reminders, rules, search, actions, clipboard, preview
   db.rs                 SQLite access and schema migrations (incl. FTS5 index)
   services.rs           Downloads/Screenshots watchers, expiry, reminders, indexing
+  shared.rs             Shared shelves: a shelf mirroring a (cloud) folder
   textract.rs           Text from Office/OpenDocument, PDF and text files
-  actions.rs            ZIP, image conversion, copy into folder
-  input.rs              Mouse hook: shake-to-open and edge reveal
-  dropshelf.rs          The floating drop shelf window
+  actions.rs            ZIP, image conversion and size reduction, copy into folder
+  dragdrop.rs           File drops in every window (WebView2 file objects → paths)
+  edge.rs               The edge handle window
   widget.rs             Desktop widgets
   phone.rs              Phone → PC upload server (QR)
-  sync.rs               Folder-based sync between PCs
-  shell.rs              Explorer context menu, clipboard files, file-dialog paste
+  shell.rs              Explorer context menu, clipboard files
   transfer.rs           Export / import
   files.rs              Non-blocking file checks
   win.rs                Shell icons, thumbnails, Properties (Win32)
@@ -80,8 +82,8 @@ Rules of thumb:
 - **Commands:** validate every argument in `commands.rs` before touching the database or the file system; deserialization rejects unknown fields.
 - **Database:** schema changes go in a new entry at the end of `MIGRATIONS` in `db.rs`. Never edit a migration that has shipped. 1.x and 2.x share the same `stash.db`.
 - **Blocking work:** file-system and shell calls run off the UI thread (`spawn_blocking`) and must not hang on unreachable network paths.
-- **Windows:** create windows only from async commands or the main thread; doing it in a synchronous command deadlocks on Windows.
-- **UI:** keep to the existing Fluent panel style. Interactive elements need an accessible name and must work with the keyboard.
+- **Windows:** create windows from an async command (or post to the main thread from another thread). `run_on_main_thread` runs immediately when already on the main thread, so creating a window in a synchronous command or during `setup` deadlocks or leaves the webview unloaded. Extra windows are opened once the panel reports `app_ready`.
+- **UI:** use the design tokens in `styles/globals.css` (`--surface`, `--fg-2`, `--accent-soft`…) and the shared classes (`btn`, `btn-icon`, `field`, `chip`, `menu-item`, `flyout`). Interactive elements need an accessible name and must work with the keyboard.
 - **Strings:** never hard-code UI text; add it to `Messages` in `src/shared/i18n.ts` and every file in `src/shared/locales/`. Tray and notification strings live in `src-tauri/src/i18n.rs`.
 
 ## Translations

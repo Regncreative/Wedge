@@ -26,7 +26,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Stash demo — drag files onto the tray shelf" width="900">
+  <img src="docs/panel-dark.png" alt="Stash: shelves on the left, files on the right" width="360">
+  &nbsp;
+  <img src="docs/panel-light.png" alt="Stash grid view with previews, light theme" width="360">
 </p>
 
 ## What is Stash?
@@ -39,58 +41,41 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 
 ## Features
 
-**Collect from anywhere, drop anywhere**
-- **Shake to open** — shake the mouse while dragging a file and a drop shelf opens right at the cursor; collect files from several folders, then drag them all out at once
+**Collect from anywhere**
+- **Edge handle** — a slim tab on the side of the screen: drag files onto it and pick a shelf, even while the panel is closed; click it to open the panel
+- **Drop onto any shelf** — drop on the panel, or straight onto a shelf in the rail; drag a file onto another shelf to move it
 - **Automatic shelves** — new downloads and screenshots appear on their own shelves; rules send files to the right shelf by type
 - **Right-click → Add to Stash** in Explorer, **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
-- **Paste into file dialogs** — a shortcut types the selected file's path into any Open/Save window
+
+**Share**
+- **Shared shelves** — turn a Google Drive, OneDrive or Dropbox folder into a shelf. Files you drop are copied into the folder; whatever a friend (or your other PC) puts there shows up on your shelf. Everyone keeps their own Drive and just links the same shared folder
 
 **Find and use**
-- **Search inside files** — PDF, Word, Excel, PowerPoint, text and code, not just names
-- **Space to preview** — Quick Look for images, PDFs, documents and text
-- **Quick actions** — ZIP, convert or shrink images, copy into a folder, open all, drag a whole shelf as one ZIP
+- **Previews everywhere** — thumbnails in the list, a grid view, Space for Quick Look, and previews in desktop widgets
+- **Search inside files** — PDF, Word, Excel, PowerPoint, text and code, across every shelf
+- **Quick actions** — ZIP, convert images (JPG, PNG, lossy WebP), **reduce size** (never makes a file bigger), copy into a folder, open all, drag a whole shelf as one ZIP
 - **Notes, tags and reminders** on any file; **temporary shelves** that clean themselves up
-
-**Everywhere you work**
-- **Sync between PCs** through a OneDrive, Dropbox or Google Drive folder
 - **Desktop widgets** — pin a shelf to the desktop
-- **Edge reveal** — push the cursor against the screen edge to slide the panel in
 
 **Plus**
+- **New design** — a shelf rail on the left, content on the right; Fluent-style dark and light themes with accent colors
 - **System tray integration** — silent background app, always one click away
-- **Drag & drop shelves** — drop files in, drag them out to Explorer, browsers, and other apps
 - **Multi-select** — Ctrl/Shift+click, then drag, pin or remove several files at once
 - **Keyboard friendly** — navigate, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
 - **Global shortcut** — open the panel with `Ctrl+Shift+Space` (customizable)
-- **Multiple shelves** — organize by context (Work, Personal, Temporary…)
-- **Instant search & filters** — find files by name, type, or shelf
-- **Fluent Design UI** — dark/light themes, accent colors, smooth motion
 - **Turkish & English** — full UI + tray localization
-- **Auto launch** — start with Windows (installed builds)
-- **Auto update** — updates from GitHub Releases, with an opt-in beta channel
+- **Auto update** — updates from GitHub Releases, with an opt-in beta channel; every update is signature-checked
 - **Export / import** — move your shelves and settings to another PC
 - **Small and light** — 3 MB installer, low memory use, browser engine kept up to date by Windows
-- **Verified updates** — every update is signature-checked before it installs
-- **SQLite storage** — fast local metadata, no cloud required, automatic backup before upgrades
-- **Missing-file awareness** — deleted or recycled paths show as unavailable until you clear them
+- **Missing-file awareness** — deleted or moved files show as unavailable until you clear them
 - **Private by design** — no account, no telemetry ([privacy](PRIVACY.md))
 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/panel-dark.jpg" alt="Stash panel — dark mode" width="360">
+  <img src="docs/settings.png" alt="Stash settings" width="360">
   &nbsp;
-  <img src="docs/panel-light.jpg" alt="Stash panel — light mode" width="360">
-</p>
-
-<p align="center">
-  <img src="docs/settings.jpg" alt="Stash settings" width="360">
-  &nbsp;
-  <img src="docs/settings-behavior.jpg" alt="Stash settings — sorting and shelves" width="360">
-</p>
-
-<p align="center">
-  <img src="docs/tray.jpg" alt="Stash in the Windows system tray" width="420">
+  <img src="docs/shared-shelf.png" alt="Creating a shared shelf from a cloud folder" width="360">
 </p>
 
 ## Installation
@@ -147,7 +132,7 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
                     │
 ┌───────────────────▼─────────────────────┐
 │           Rust backend (Tauri)          │
-│  Panel window · Tray · Updater · Shell  │
+│  Panel · Edge handle · Widgets · Tray   │
 │  SQLite (rusqlite) · validated commands │
 └───────────────────┬─────────────────────┘
                     │ invoke / events
@@ -161,10 +146,10 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
 
 ```text
 src/
-  renderer/       React panel (Fluent UI); lib/api.ts bridges to Rust
+  renderer/       React UI (panel, edge handle, widgets); lib/api.ts bridges to Rust
   shared/         Types and translations (locales/)
 src-tauri/
-  src/            Rust backend: commands, database, tray, updater, shell
+  src/            Rust backend: commands, database, shared shelves, edge handle, tray, updater
   windows/        Installer hooks (upgrade from 1.x)
   tauri.conf.json App, window, bundle and updater configuration
 tests/
@@ -181,17 +166,17 @@ scripts/          Release helpers
 - [x] Themes, accents, localization (TR/EN)
 - [x] Auto update via GitHub Releases
 - [x] Idle opacity & missing-file cleanup
-- [x] Official demo GIF in README
 - [x] Multi-select, keyboard navigation, export / import
 - [x] Automated, staged releases with a beta channel
 - [x] 2.0: rebuilt on Tauri (3 MB installer, signed updates)
-- [x] Shake-to-open drop shelf, automatic shelves, rules, content search, Quick Look
-- [x] Phone to PC, sync between PCs, desktop widgets, quick actions
+- [x] Automatic shelves, rules, content search, Quick Look
+- [x] Phone to PC, desktop widgets, quick actions
+- [x] Edge handle, shared shelves (cloud folders), new design
 - [ ] Share links (needs a hosting decision)
+- [ ] New demo GIF
 - [ ] Code signing
 - [ ] Microsoft Store and winget
 - [ ] Plugins / extensions
-- [ ] Optional cloud sync
 - [ ] Smarter / AI-assisted search
 
 ## Releases & auto-update

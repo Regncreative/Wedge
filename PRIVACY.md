@@ -22,13 +22,15 @@ When uninstalling, tick *Delete the application data* to remove both folders.
 
 With *Automatic shelves* on, Stash notices new files in your **Downloads** and **Pictures\Screenshots** folders and lists them. Turn either off in Settings.
 
-The *shake to open* and *edge reveal* gestures read mouse movement system-wide, only to detect the gesture; nothing is recorded. Turning both off stops this entirely.
+If you link a **shared shelf**, Stash also watches that folder (only its top level) so files added there show up on the shelf.
+
+Stash doesn't read your keyboard or mouse outside its own windows. The edge handle is an ordinary small window; it only sees drags and clicks on itself.
 
 ## Network access
 
 **Phone to PC:** only while the *Send from your phone* window is open (at most 15 minutes), Stash accepts uploads on your local network at an address with a random secret, shown as a QR code. Nothing is sent to the internet.
 
-**Sync between PCs:** if you choose a sync folder, Stash writes your shelf lists (file paths, names, notes, tags) to that folder. Your cloud drive (OneDrive, Dropbox, Google Drive) then syncs it under its own privacy terms. Stash itself doesn't contact any server for this.
+**Shared shelves:** a shared shelf is a folder you choose, typically inside Google Drive, OneDrive or Dropbox. Files you drop on it are **copied into that folder**, and your cloud app uploads them and shares them with whoever the folder is shared with, under the cloud provider's own terms. Stash itself doesn't contact any server for this, and it never writes your notes, tags or other shelves there.
 
 Apart from that, Stash connects to the internet only to check for updates:
 

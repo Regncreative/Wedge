@@ -5,25 +5,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Stash 2.0 is rebuilt on Tauri. It looks and works the same, with your shelves and settings carried over, and it is much smaller and safer.
+Stash 2.0 is rebuilt on Tauri with a new design. Your shelves and settings carry over, and the app is much smaller and safer.
 
 ### Added in 2.0
-- **Drop shelf:** shake the mouse while dragging a file to open a shelf at the cursor; collect files from anywhere and drag them out together.
+- **New design:** a shelf rail on the left (every shelf is also a drop target), files on the right as a list with thumbnails or a grid with large previews, type filters, and redesigned settings.
+- **Edge handle:** a slim tab on the screen edge; drag files onto it to pick a shelf, even with the panel closed; click it to open the panel. It hides during full-screen apps.
+- **Shared shelves:** link a Google Drive, OneDrive or Dropbox folder as a shelf; files you drop are copied into it and files others add show up for you.
+- **Drag a file onto a shelf in the rail** to move it there.
 - **Automatic shelves** for new downloads and screenshots, and **rules** that route files to shelves by type and source.
-- **Search inside files** (PDF, Word, Excel, PowerPoint, OpenDocument, text and code), diacritic-insensitive.
-- **Quick Look** preview with Space; Ctrl+Space now toggles selection.
-- **Quick actions:** ZIP, convert/shrink images, copy into a folder, open all, drag a shelf as one ZIP.
+- **Search inside files** (PDF, Word, Excel, PowerPoint, OpenDocument, text and code) across every shelf, diacritic-insensitive.
+- **Quick Look** preview with Space; Ctrl+Space toggles selection. Desktop widgets preview on hover and with Space.
+- **Quick actions:** ZIP, convert images, **reduce size**, copy into a folder, open all, drag a shelf as one ZIP. Conversions report the size before and after.
 - **Notes, tags and reminders** on files; **temporary shelves** that clear themselves.
 - **Explorer "Add to Stash"** context menu, **Ctrl+V** for files/images/links/text, and **phone to PC** via QR code.
-- **Paste into Open/Save dialogs** with a shortcut (Ctrl+Alt+V).
-- **Sync between PCs** through a OneDrive/Dropbox/Google Drive folder.
-- **Desktop widgets** and **edge reveal** (slide the panel in from a screen edge).
+- **Desktop widgets:** pin a shelf to the desktop.
 
 ### Changed
 - Rebuilt on Tauri 2 with a Rust backend. The installer is 3 MB instead of 90 MB and the app uses far less memory.
 - The panel is drawn by WebView2, which Windows keeps up to date, instead of a bundled Chromium that no longer received security fixes (Electron 34).
 - 1.x installs upgrade automatically; the old app is removed and its data is reused.
 - Image previews are rendered by Windows (thumbnails) instead of loading files into the panel.
+- WebP conversion is lossy (quality 80) and JPG uses quality 82, so converted photos no longer grow; PNG uses maximum compression.
+- Dropping files works the same in every Stash window (panel, edge handle, widgets), using WebView2's own drop handling.
 
 ### Security
 - Every update is verified against Stash's signing key before it installs.

@@ -3,6 +3,8 @@
 ### Does Stash move or copy my files?
 No. Stash only remembers **where** a file is. The file stays where it was; removing it from a shelf never deletes it from disk.
 
+The one exception is a **shared shelf** (see below): it *is* a folder, so files you drop there are copied into it, and removing a file from it moves the file to the Recycle Bin.
+
 ### A file shows "not found". What happened?
 It was moved, renamed or deleted after you added it, or it is on a drive or network share that isn't connected right now. Files on a disconnected share come back when the share does. *Settings → Clear missing files* removes references that are definitely gone; it keeps the ones on unreachable shares.
 
@@ -12,22 +14,35 @@ Click the Stash icon in the system tray, or press **Ctrl + Shift + Space**. You 
 ### Can I drag several files at once?
 Yes. Select them with **Ctrl+click** or **Shift+click** (or Shift + arrow keys), then drag any of the selected files.
 
-### What is the drop shelf?
-While dragging a file anywhere in Windows, **shake the mouse left and right**: a small shelf opens next to the cursor. Drop the file there, go and collect more from other folders, then drag them all out together with *Drag all*. The drop shelf clears itself after 24 hours. You can also open it from the tray menu, or turn the gesture off in *Settings → Gestures*.
+### What is the slim tab on the edge of my screen?
+That's the **edge handle**. Drag files onto it from anywhere: it opens into a list of your shelves, and you drop on the one you want (dropping on the header uses your default shelf). Click it to open the panel, or drag it up or down to move it. It hides while the panel is open and while a full-screen app (a game, a video, a presentation) is running. Choose the left or right edge, or turn it off, in *Settings → Catching files*.
+
+You can also drop files straight onto a shelf in the panel's left rail, and drag a file from the list onto another shelf to move it there.
 
 ### How do files get onto shelves automatically?
 With *Settings → Automatic shelves* on, new files in **Downloads** and new screenshots (Win+Shift+S, when Snipping Tool saves them) appear on their own shelves. *Settings → Rules* sends files elsewhere, e.g. "PDFs from Downloads → Invoices".
 
 ### Can I add files without opening Stash?
+- The **edge handle** on the side of the screen (see above).
 - Explorer: right-click → **Add to Stash** (on Windows 11 under *Show more options*).
 - Clipboard: copy files, an image ("Copy image" in a browser), a link or text, then press **Ctrl+V** in the panel.
 - Phone: click the phone icon in the panel and scan the QR code. Your phone and PC must be on the same Wi-Fi; the page works for 15 minutes, only with the code's secret link.
 
-### How does "paste into file dialogs" work?
-Select a file in Stash, then in any Open or Save window press **Ctrl+Alt+V** (changeable in Settings): the file's full path is filled in. With nothing selected, the most recently used file is used.
+### How do shared shelves work? My Google Drive and my friend's are different.
+That's fine: you don't share a Drive, you share **one folder**.
 
-### How do I sync shelves between PCs?
-*Settings → Sync between PCs → Choose folder* and pick a folder inside OneDrive, Dropbox or Google Drive; do the same on the other PC. Shelves, notes and file lists stay in step; files in your synced cloud folders open on both PCs. Automatic shelves (Downloads, Screenshots…) stay on each PC.
+1. In Google Drive (or OneDrive, Dropbox), create a folder and share it with your friend.
+2. Your friend opens *Shared with me*, right-clicks the folder and picks *Add shortcut to Drive* (OneDrive: *Add shortcut to My files*). Now the folder appears in their Google Drive for desktop too.
+3. In Stash, each of you clicks **+** in the left rail → **Shared shelf…** and picks that folder (for example `G:\My Drive\Project`).
+
+From then on the shelf *is* the folder: files you drop on it are copied into the folder and your cloud app uploads them; files your friend adds appear on your shelf a few seconds after they arrive on your PC. Removing a file from the shelf deletes it from the folder for everyone (it goes to the Recycle Bin). Notes, tags and pins stay on your own PC. Removing the shelf itself leaves the folder and its files alone.
+
+It works the same between your own PCs: link the same folder in OneDrive on both.
+
+### Why did a converted image get bigger?
+Older versions saved PNG and WebP without loss, so a photo converted to them could grow. Now *Convert → WebP* uses lossy compression (like JPG) and JPG uses a sensible quality, so photos get smaller. PNG is always lossless, so converting a photo **to** PNG will still make it larger; that's how the format works.
+
+To make a file smaller, use **Reduce size**: it scales very large images down to 2560 px, saves photos as JPG (and images with transparency as WebP), and only keeps the copy if it really is smaller. The message shows the size before and after.
 
 ### Keyboard shortcuts
 
@@ -35,6 +50,7 @@ Select a file in Stash, then in any Open or Save window press **Ctrl+Alt+V** (ch
 |---|---|
 | ↑ / ↓, Home / End, PgUp / PgDn | Move between files |
 | Shift + arrows | Extend the selection |
+| ← / → | Move between files in the grid view |
 | Space | Preview the focused file (← / → for the next one) |
 | Ctrl + Space | Select / deselect the focused file |
 | Ctrl + V | Paste files, an image, a link or text onto the shelf |
@@ -42,20 +58,20 @@ Select a file in Stash, then in any Open or Save window press **Ctrl+Alt+V** (ch
 | Enter | Open the focused file |
 | P | Pin / unpin the selection |
 | Delete | Remove the selection from the shelf |
-| Ctrl + F | Search |
+| Ctrl + F | Search every shelf (names, notes, tags and text inside files) |
 | Esc | Clear the selection / close search or settings |
 
 ### Windows warns "Windows protected your PC" when I install
 Stash is not code-signed yet, so SmartScreen shows this for new downloads. Click **More info → Run anyway**. Updates are not affected: Stash checks each update's signature itself before installing it.
 
 ### How do I move my shelves to another computer?
-*Settings → Data → Export* on the old PC, then *Import* on the new one. Shelves with the same name are merged. File paths must exist on the new PC to be usable.
+*Settings → Data and upkeep → Export* on the old PC, then *Import* on the new one. Shelves with the same name are merged. File paths must exist on the new PC to be usable.
 
 ### How do I try new features early?
 Turn on *Settings → Updates → Get beta versions*. Turning it off later doesn't downgrade you; you'll get the next stable version when it comes out.
 
 ### Where are the logs?
-*Settings → Data → Open logs folder* opens `%APPDATA%\Stash\logs`. Attach `main.log` when you report a bug.
+*Settings → Data and upkeep → Open log folder* opens `%APPDATA%\Stash\logs`. Attach `main.log` when you report a bug.
 
 ### I used Stash 1.x. What happens to my shelves?
 Nothing you need to do: 1.x updates itself to 2.0, the installer replaces the old app, and 2.0 opens the same shelves and settings. Export from 1.x is also compatible with 2.0's import.
