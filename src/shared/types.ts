@@ -4,11 +4,13 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 export type AppLanguage = 'tr' | 'en'
 export type FileSort = 'added' | 'name' | 'recent' | 'size'
 export type UpdateChannel = 'stable' | 'beta'
-export type EdgeReveal = 'off' | 'left' | 'right'
+/** Where the edge handle sits (a drop target and panel opener on the screen edge). */
+export type EdgeHandle = 'off' | 'left' | 'right'
 /** How a file got onto a shelf. */
-export type FileSource = 'manual' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'sync'
-/** Automatic shelves are filled by Stash itself. */
-export type ShelfKind = 'normal' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'drop'
+export type FileSource = 'manual' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared'
+/** Automatic shelves are filled by Stash itself; shared shelves mirror a folder. */
+export type ShelfKind =
+  'normal' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared' | 'drop'
 
 export type FileFilter =
   | 'all'
@@ -33,6 +35,11 @@ export interface Shelf {
   kind: ShelfKind
   /** Files older than this many hours are removed (temporary shelf). */
   expireHours: number | null
+  /**
+   * Shared shelf: the folder it mirrors (e.g. in Google Drive). Files added
+   * are copied there; whatever is in the folder shows on the shelf.
+   */
+  folder: string | null
 }
 
 export interface StashFile {
@@ -65,9 +72,7 @@ export interface Rule {
 }
 
 export type Preview =
-  | { kind: 'image'; url: string }
-  | { kind: 'text'; text: string }
-  | { kind: 'none' }
+  { kind: 'image'; url: string } | { kind: 'text'; text: string } | { kind: 'none' }
 
 export interface PhoneSession {
   url: string
@@ -75,16 +80,27 @@ export interface PhoneSession {
   expiresAt: number
 }
 
-export interface SyncDevice {
-  name: string
-  updatedAt: number
-  thisPc: boolean
-}
-
 export interface FilesChanged {
   added: number
   shelfName: string
   source: FileSource | 'expiry'
+}
+
+/** An image written by Convert / Reduce size, with its size before and after. */
+export interface ConvertedImage {
+  name: string
+  before: number
+  after: number
+}
+
+export interface ConvertResult {
+  results: ConvertedImage[]
+  failed: number
+}
+
+export interface ShrinkResult extends ConvertResult {
+  /** Images that couldn't get smaller (nothing was written). */
+  alreadySmall: number
 }
 
 export interface AppSettings {
@@ -114,16 +130,10 @@ export interface AppSettings {
   watchDownloads: boolean
   /** New screenshots land on the Screenshots shelf. */
   watchScreenshots: boolean
-  /** Shaking the mouse while dragging opens a drop shelf at the cursor. */
-  shakeToOpen: boolean
-  /** Pushing the cursor against this screen edge opens the panel. */
-  edgeReveal: EdgeReveal
+  /** A small handle on this screen edge: drop files on it, click to open the panel. */
+  edgeHandle: EdgeHandle
   /** "Add to Stash" in Explorer's right-click menu. */
   contextMenu: boolean
-  /** Fills the selected file's path into an Open/Save dialog. */
-  pasteHotkey: string
-  /** Cloud-synced folder used to sync shelves between PCs; empty = off. */
-  syncFolder: string
 }
 
 export interface ShelfStats {
@@ -171,11 +181,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   onboardingDone: false,
   watchDownloads: true,
   watchScreenshots: true,
-  shakeToOpen: true,
-  edgeReveal: 'off',
-  contextMenu: true,
-  pasteHotkey: 'Control+Alt+V',
-  syncFolder: ''
+  edgeHandle: 'right',
+  contextMenu: true
 }
 
 /** Ensure settings always have valid numeric/enum fields (older DBs / partial IPC). */
@@ -199,10 +206,8 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   s.onboardingDone = s.onboardingDone === true
   s.watchDownloads = s.watchDownloads !== false
   s.watchScreenshots = s.watchScreenshots !== false
-  s.shakeToOpen = s.shakeToOpen !== false
-  s.edgeReveal = s.edgeReveal === 'left' || s.edgeReveal === 'right' ? s.edgeReveal : 'off'
+  s.edgeHandle = s.edgeHandle === 'left' || s.edgeHandle === 'off' ? s.edgeHandle : 'right'
   s.contextMenu = s.contextMenu !== false
-  s.syncFolder = typeof s.syncFolder === 'string' ? s.syncFolder : ''
   return s
 }
 
@@ -243,17 +248,7 @@ export const AUDIO_EXTS = new Set([
   'aiff',
   'opus'
 ])
-export const ARCHIVE_EXTS = new Set([
-  'zip',
-  'rar',
-  '7z',
-  'tar',
-  'gz',
-  'bz2',
-  'xz',
-  'iso',
-  'cab'
-])
+export const ARCHIVE_EXTS = new Set(['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso', 'cab'])
 export const OFFICE_EXTS = new Set([
   'doc',
   'docx',

@@ -1,132 +1,127 @@
 import {
+  BookOpen,
+  Briefcase,
+  Camera,
+  Clipboard,
+  Clock,
+  Cloud,
+  Code2,
+  Download,
   File,
   FileArchive,
   FileAudio,
   FileCode,
   FileImage,
+  FileSpreadsheet,
   FileText,
   FileVideo,
   Folder,
-  Heart,
-  Briefcase,
-  Inbox,
-  Package,
-  Clock,
   GraduationCap,
-  Download,
-  Camera,
+  Heart,
+  Image,
+  Inbox,
+  Music,
+  Package,
   Smartphone,
-  Clipboard
+  Star,
+  Users
 } from 'lucide-react'
-import { classifyExtension } from '@shared/types'
+import type { LucideIcon } from 'lucide-react'
 import type { StashFile } from '@shared/types'
+import { classifyExtension } from '@shared/types'
 import { cn } from '@/lib/utils'
 
-const SHELF_ICONS: Record<string, typeof Inbox> = {
+export const SHELF_ICONS: Record<string, LucideIcon> = {
   inbox: Inbox,
+  folder: Folder,
   briefcase: Briefcase,
   heart: Heart,
-  folder: Folder,
+  star: Star,
   package: Package,
   clock: Clock,
   graduation: GraduationCap,
+  book: BookOpen,
+  image: Image,
+  music: Music,
+  code: Code2,
   download: Download,
   camera: Camera,
   smartphone: Smartphone,
-  clipboard: Clipboard
+  clipboard: Clipboard,
+  users: Users,
+  cloud: Cloud
 }
 
 export function ShelfIcon({
   name,
   color,
-  className
+  className,
+  size = 18
 }: {
   name: string
   color?: string
   className?: string
+  size?: number
 }) {
   const Icon = SHELF_ICONS[name] ?? Folder
-  return <Icon className={cn('h-4 w-4', className)} style={color ? { color } : undefined} strokeWidth={1.75} />
+  return (
+    <Icon
+      size={size}
+      className={className}
+      style={color ? { color } : undefined}
+      strokeWidth={1.75}
+      aria-hidden
+    />
+  )
 }
 
-const ICON_WRAP =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]'
+type Kind = ReturnType<typeof classifyExtension>
 
+const KIND_STYLE: Record<Kind, { icon: LucideIcon; color: string }> = {
+  folders: { icon: Folder, color: '#f5a524' },
+  images: { icon: FileImage, color: '#17c964' },
+  videos: { icon: FileVideo, color: '#9353d3' },
+  audio: { icon: FileAudio, color: '#f31260' },
+  archives: { icon: FileArchive, color: '#f97316' },
+  pdf: { icon: FileText, color: '#e5484d' },
+  office: { icon: FileText, color: '#3b82f6' },
+  executables: { icon: Package, color: '#8b95a5' },
+  code: { icon: FileCode, color: '#06b6d4' },
+  unknown: { icon: File, color: '#8b8b95' },
+  all: { icon: File, color: '#8b8b95' }
+}
+
+function officeStyle(ext: string): { icon: LucideIcon; color: string } {
+  if (['xls', 'xlsx', 'ods', 'csv'].includes(ext))
+    return { icon: FileSpreadsheet, color: '#22a35a' }
+  if (['ppt', 'pptx', 'odp'].includes(ext)) return { icon: FileText, color: '#d9541e' }
+  return { icon: FileText, color: '#2f6fe4' }
+}
+
+/** A tinted tile with a glyph for the file's kind (used when Windows has no icon). */
 export function FileTypeIcon({
   file,
+  size = 40,
   className
 }: {
-  file: Pick<StashFile, 'extension' | 'isDirectory' | 'name'>
+  file: Pick<StashFile, 'extension' | 'isDirectory'>
+  size?: number
   className?: string
 }) {
   const kind = classifyExtension(file.extension, file.isDirectory)
-  const iconClass = cn('h-[18px] w-[18px]', className)
-
-  switch (kind) {
-    case 'folders':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#f59e0b]/15')}>
-          <Folder className={cn(iconClass, 'text-[#f59e0b]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'images':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#10b981]/15')}>
-          <FileImage className={cn(iconClass, 'text-[#10b981]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'videos':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#8b5cf6]/15')}>
-          <FileVideo className={cn(iconClass, 'text-[#8b5cf6]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'audio':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#ec4899]/15')}>
-          <FileAudio className={cn(iconClass, 'text-[#ec4899]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'archives':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#f97316]/15')}>
-          <FileArchive className={cn(iconClass, 'text-[#f97316]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'pdf':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#ef4444]/15')}>
-          <FileText className={cn(iconClass, 'text-[#ef4444]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'office': {
-      const ext = file.extension.toLowerCase()
-      const isWord = ['doc', 'docx', 'odt', 'rtf'].includes(ext)
-      const isExcel = ['xls', 'xlsx', 'ods', 'csv'].includes(ext)
-      const color = isWord ? '#3b82f6' : isExcel ? '#22c55e' : '#a855f7'
-      return (
-        <div className={cn(ICON_WRAP)} style={{ background: `${color}26` }}>
-          <FileText className={iconClass} style={{ color }} strokeWidth={1.75} />
-        </div>
-      )
-    }
-    case 'code':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#06b6d4]/15')}>
-          <FileCode className={cn(iconClass, 'text-[#06b6d4]')} strokeWidth={1.75} />
-        </div>
-      )
-    case 'executables':
-      return (
-        <div className={cn(ICON_WRAP, 'bg-[#64748b]/15')}>
-          <Package className={cn(iconClass, 'text-[#94a3b8]')} strokeWidth={1.75} />
-        </div>
-      )
-    default:
-      return (
-        <div className={cn(ICON_WRAP, 'bg-white/5')}>
-          <File className={cn(iconClass, 'text-[var(--muted-foreground)]')} strokeWidth={1.75} />
-        </div>
-      )
-  }
+  const ext = file.extension.toLowerCase()
+  const { icon: Icon, color } = kind === 'office' ? officeStyle(ext) : KIND_STYLE[kind]
+  return (
+    <div
+      className={cn('flex shrink-0 items-center justify-center rounded-[22%]', className)}
+      style={{
+        width: size,
+        height: size,
+        background: `color-mix(in srgb, ${color} 16%, transparent)`
+      }}
+      aria-hidden
+    >
+      <Icon size={Math.round(size * 0.48)} style={{ color }} strokeWidth={1.75} />
+    </div>
+  )
 }

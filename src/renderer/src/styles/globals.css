@@ -2,53 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Dark (default) — matches mockup ── */
+/*
+ * Stash "Ray" design: a shelf rail on the left, content on the right.
+ * Neutral Fluent-style surfaces; the accent color comes from settings.
+ */
+
 :root,
 .dark {
-  --bg: #111827;
-  --bg-glass: rgba(17, 24, 39, 0.97);
-  --card: #1a2233;
-  --card-hover: #222b3d;
+  --bg: rgba(30, 30, 34, 0.97);
+  --bg-solid: #1e1e22;
+  --rail: rgba(0, 0, 0, 0.2);
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-hover: rgba(255, 255, 255, 0.075);
+  --surface-pressed: rgba(255, 255, 255, 0.11);
+  --flyout: #2a2a2f;
+  --field: rgba(255, 255, 255, 0.055);
+  --stroke: rgba(255, 255, 255, 0.075);
+  --stroke-strong: rgba(255, 255, 255, 0.14);
+  --fg: #f4f4f5;
+  --fg-2: #b6b6bf;
+  --fg-3: #80808b;
   --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.16);
-  --accent-glow: 0 6px 18px rgba(37, 99, 235, 0.35);
-  --foreground: #ffffff;
-  --muted-foreground: #9ca3af;
-  --border: rgba(255, 255, 255, 0.08);
-  --card-border: rgba(255, 255, 255, 0.05);
-  --pill: #1a2233;
-  --pill-hover: #222b3d;
-  --drop-bg: rgba(255, 255, 255, 0.02);
-  --drop-border: rgba(255, 255, 255, 0.12);
-  --shadow: none;
-  --hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
-  --destructive: #f87171;
-  --preview-bg: #1a2233;
-  --scrollbar: rgba(156, 163, 175, 0.4);
+  --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-faint: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-text: color-mix(in srgb, var(--accent) 62%, white);
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --scrollbar: rgba(255, 255, 255, 0.22);
+  --thumb-bg: rgba(255, 255, 255, 0.04);
+  --scrim: rgba(0, 0, 0, 0.5);
 }
 
-/* ── Light ── */
 .light {
-  --bg: #f3f4f6;
-  --bg-glass: rgba(243, 244, 246, 0.98);
-  --card: #ffffff;
-  --card-hover: #f8fafc;
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.12);
-  --accent-glow: 0 6px 18px rgba(37, 99, 235, 0.28);
-  --foreground: #111827;
-  --muted-foreground: #6b7280;
-  --border: rgba(0, 0, 0, 0.08);
-  --card-border: rgba(0, 0, 0, 0.06);
-  --pill: #e5e7eb;
-  --pill-hover: #d1d5db;
-  --drop-bg: rgba(0, 0, 0, 0.02);
-  --drop-border: rgba(0, 0, 0, 0.14);
-  --shadow: none;
-  --hover-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-  --destructive: #dc2626;
-  --preview-bg: #ffffff;
-  --scrollbar: rgba(107, 114, 128, 0.45);
+  --bg: rgba(249, 249, 251, 0.98);
+  --bg-solid: #f9f9fb;
+  --rail: rgba(0, 0, 0, 0.035);
+  --surface: #ffffff;
+  --surface-hover: #f1f1f4;
+  --surface-pressed: #e8e8ee;
+  --flyout: #ffffff;
+  --field: rgba(0, 0, 0, 0.04);
+  --stroke: rgba(0, 0, 0, 0.08);
+  --stroke-strong: rgba(0, 0, 0, 0.15);
+  --fg: #18181b;
+  --fg-2: #4f4f58;
+  --fg-3: #8b8b95;
+  --accent-text: color-mix(in srgb, var(--accent) 88%, black);
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.07);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.055);
+  --scrollbar: rgba(0, 0, 0, 0.22);
+  --thumb-bg: rgba(0, 0, 0, 0.035);
+  --scrim: rgba(20, 20, 24, 0.35);
 }
 
 * {
@@ -69,18 +79,21 @@ body,
   width: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: 'Segoe UI Variable', 'Segoe UI', Inter, system-ui, sans-serif;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
-  color: var(--foreground);
+  color: var(--fg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   user-select: none;
 }
 
 input,
-textarea {
+textarea,
+select {
   user-select: text;
   -webkit-user-select: text;
+  font-family: inherit;
+  color: inherit;
 }
 
 button,
@@ -92,27 +105,9 @@ input {
   outline: none;
 }
 
-.scroll-autohide {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-.scroll-autohide.is-scrolling,
-.scroll-autohide:hover {
-  scrollbar-color: var(--scrollbar) transparent;
-}
-.scroll-autohide::-webkit-scrollbar {
-  width: 4px;
-}
-.scroll-autohide::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scroll-autohide::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 99px;
-}
-.scroll-autohide.is-scrolling::-webkit-scrollbar-thumb,
-.scroll-autohide:hover::-webkit-scrollbar-thumb {
-  background: var(--scrollbar);
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* Idle fade: the window is transparent, so fading the page fades the panel. */
@@ -125,45 +120,183 @@ input {
   position: relative;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  border-radius: 24px;
   overflow: hidden;
-  background: var(--bg-glass);
-  border: 1px solid var(--border);
-  box-shadow: none;
+  border-radius: 14px;
+  background: var(--bg);
+  border: 1px solid var(--stroke-strong);
 }
 
-.truncate-path {
+.display-font {
+  font-family: 'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+}
+
+@layer components {
+  .btn-icon {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--fg-2)] transition-colors duration-100;
+  }
+  .btn-icon:hover {
+    background: var(--surface-hover);
+    color: var(--fg);
+  }
+  .btn-icon:active {
+    background: var(--surface-pressed);
+  }
+  .btn-icon[aria-pressed='true'] {
+    background: var(--accent-faint);
+    color: var(--accent-text);
+  }
+
+  .btn {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[12.5px] font-medium transition-colors duration-100 disabled:opacity-40;
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--stroke);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+  .btn-primary {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[12.5px] font-semibold text-white transition-[filter] duration-100 disabled:opacity-40;
+    background: var(--accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .btn-danger {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[12.5px] font-semibold text-white;
+    background: var(--danger);
+  }
+
+  .field {
+    @apply h-8 w-full rounded-lg px-2.5 text-[12.5px] outline-none transition-colors;
+    background: var(--field);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--stroke);
+  }
+  .field:focus {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      inset 0 -2px 0 var(--accent);
+  }
+  .field::placeholder {
+    color: var(--fg-3);
+  }
+  select.field {
+    @apply pr-7;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  select.field option {
+    background: var(--bg-solid);
+    color: var(--fg);
+  }
+
+  .flyout {
+    @apply rounded-xl py-1;
+    background: var(--flyout);
+    box-shadow: var(--shadow-flyout);
+  }
+  .menu-item {
+    @apply mx-1 flex w-[calc(100%-8px)] items-center gap-2.5 rounded-md px-2.5 py-[7px] text-left text-[12.5px] transition-colors duration-75;
+    color: var(--fg);
+  }
+  .menu-item:hover:not(:disabled),
+  .menu-item:focus-visible {
+    background: var(--surface-hover);
+    outline: none;
+  }
+  .menu-item:disabled {
+    opacity: 0.4;
+  }
+
+  .chip {
+    @apply inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium transition-colors duration-100;
+    color: var(--fg-2);
+    box-shadow: inset 0 0 0 1px var(--stroke);
+  }
+  .chip:hover {
+    background: var(--surface-hover);
+    color: var(--fg);
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  .card {
+    @apply rounded-xl;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .segmented {
+    @apply inline-flex rounded-lg p-0.5;
+    background: var(--field);
+    box-shadow: inset 0 0 0 1px var(--stroke);
+  }
+  .segmented > button {
+    @apply h-7 rounded-md px-2.5 text-[12px] font-medium transition-colors duration-100;
+    color: var(--fg-2);
+  }
+  .segmented > button[aria-pressed='true'] {
+    background: var(--surface-pressed);
+    color: var(--fg);
+    box-shadow: var(--shadow-card);
+  }
+  .light .segmented > button[aria-pressed='true'] {
+    background: #fff;
+  }
+}
+
+.scroll-autohide {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-autohide.is-scrolling,
+.scroll-autohide:hover {
+  scrollbar-color: var(--scrollbar) transparent;
+}
+.scroll-autohide::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-autohide::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-autohide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.scroll-autohide.is-scrolling::-webkit-scrollbar-thumb,
+.scroll-autohide:hover::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  color: var(--muted-foreground);
-  transition: background 150ms ease, color 150ms ease;
-}
-.icon-btn:hover {
-  background: var(--pill-hover);
-  color: var(--foreground);
-}
-.icon-btn.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-/* Range slider — visible track in dark + light */
+/* Range slider */
 .stash-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 18px;
+  height: 20px;
   background: transparent;
   cursor: pointer;
 }
@@ -171,38 +304,40 @@ input {
   outline: none;
 }
 .stash-range::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-html.light .stash-range::-webkit-slider-runnable-track {
-  background: rgba(0, 0, 0, 0.14);
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--fill, 50%),
+    var(--stroke-strong) var(--fill, 50%)
+  );
 }
 .stash-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -5px;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-  border: 2px solid #fff;
+  border: 4px solid var(--bg-solid);
+  box-shadow: 0 0 0 1px var(--stroke-strong);
 }
-.stash-range::-moz-range-track {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  border: none;
+
+/* The edge handle window and widgets are their own pages. */
+.edge-page,
+.edge-page body {
+  background: transparent;
 }
-html.light .stash-range::-moz-range-track {
-  background: rgba(0, 0, 0, 0.14);
-}
-.stash-range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+
+@keyframes stash-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

@@ -17,7 +17,14 @@ export default defineConfig({
       // Pure frontend logic; the Rust backend has its own tests (npm run test:rust)
       // and the UI wiring is exercised by the Playwright suite.
       include: ['src/shared/**', 'src/renderer/src/lib/**'],
-      exclude: ['src/renderer/src/lib/i18n.ts', 'src/renderer/src/lib/api.ts', 'src/shared/ipc.ts'],
+      // Wiring to Tauri and the DOM; covered by the Playwright suite.
+      exclude: [
+        'src/renderer/src/lib/i18n.ts',
+        'src/renderer/src/lib/api.ts',
+        'src/renderer/src/lib/file-drop.ts',
+        'src/renderer/src/lib/file-actions.ts',
+        'src/shared/ipc.ts'
+      ],
       thresholds: { lines: 70, branches: 70 }
     }
   }

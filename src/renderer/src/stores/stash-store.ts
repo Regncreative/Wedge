@@ -1,11 +1,5 @@
 import { create } from 'zustand'
-import type {
-  AppSettings,
-  FileFilter,
-  Shelf,
-  ShelfStats,
-  StashFile
-} from '@shared/types'
+import type { AppSettings, FileFilter, Shelf, ShelfStats, StashFile } from '@shared/types'
 import { matchesFilter, normalizeSettings } from '@shared/types'
 
 function pickShelfId(
@@ -16,6 +10,18 @@ function pickShelfId(
   if (preferred && shelves.some((s) => s.id === preferred)) return preferred
   if (fallback && shelves.some((s) => s.id === fallback)) return fallback
   return shelves[0]?.id ?? null
+}
+
+export type ViewMode = 'list' | 'grid'
+
+const VIEW_KEY = 'stash.viewMode'
+
+function storedViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'
+  } catch {
+    return 'list'
+  }
 }
 
 export interface ConfirmRequest {
@@ -33,6 +39,13 @@ interface PendingConfirm extends ConfirmRequest {
   resolve: (value: string | boolean | null) => void
 }
 
+export interface Toast {
+  id: number
+  message: string
+  /** Shows a spinner and stays until replaced. */
+  busy?: boolean
+}
+
 interface StashState {
   ready: boolean
   shelves: Shelf[]
@@ -41,26 +54,29 @@ interface StashState {
   settings: AppSettings | null
   appVersion: string
   activeShelfId: string | null
+  /** The "All" view: every shelf at once. */
+  allFiles: boolean
+  viewMode: ViewMode
   searchQuery: string
   /** Files whose contents match the search (from the backend index). */
   contentMatches: Set<string>
   /** File shown in the Quick Look overlay. */
   quickLookId: string | null
   shelfMenu: { x: number; y: number; shelfId: string } | null
+  addMenu: { x: number; y: number } | null
+  sharedDialog: boolean
   phoneOpen: boolean
   /** File whose note and tags are being edited. */
   noteFileId: string | null
   filter: FileFilter
-  pinned: boolean
   showSettings: boolean
   theme: 'light' | 'dark'
-  toast: { message: string; id: number } | null
-  contextMenu: {
-    x: number
-    y: number
-    fileId: string
-  } | null
+  toast: Toast | null
+  contextMenu: { x: number; y: number; fileId: string } | null
+  /** Files from outside are being dragged over the panel. */
   dropActive: boolean
+  /** Rail shelf under the cursor during a drag (outside files or our own). */
+  dropTarget: string | null
   confirm: PendingConfirm | null
   /** Multi-selection (Ctrl/Shift+click, keyboard), in selection order. */
   selectedIds: string[]
@@ -71,26 +87,33 @@ interface StashState {
 
   init: () => Promise<void>
   refresh: () => Promise<void>
-  setActiveShelf: (id: string | null) => void
+  setActiveShelf: (id: string) => void
+  showAll: () => void
+  setViewMode: (mode: ViewMode) => void
   setSearch: (q: string) => void
   openQuickLook: (id: string | null) => void
   openShelfMenu: (x: number, y: number, shelfId: string) => void
   closeShelfMenu: () => void
+  openAddMenu: (x: number, y: number) => void
+  closeAddMenu: () => void
+  setSharedDialog: (open: boolean) => void
   setPhoneOpen: (open: boolean) => void
   editNote: (id: string | null) => void
   setFilter: (f: FileFilter) => void
-  setPinned: (p: boolean) => Promise<void>
   setShowSettings: (v: boolean) => void
   resetPanelUi: () => void
   setTheme: (t: 'light' | 'dark') => void
-  showToast: (message: string) => void
+  showToast: (message: string, busy?: boolean) => void
   clearToast: () => void
   openContextMenu: (x: number, y: number, fileId: string) => void
   closeContextMenu: () => void
   setDropActive: (v: boolean) => void
-  /** Resolves false when the main process rejected the change (it is rolled back). */
+  setDropTarget: (id: string | null) => void
+  /** Resolves false when the backend rejected the change (it is rolled back). */
   updateSettings: (partial: Partial<AppSettings>) => Promise<boolean>
   getVisibleFiles: () => StashFile[]
+  /** The shelf new files go to from the current view. */
+  dropShelfId: () => string | null
   askConfirm: (req: ConfirmRequest) => Promise<boolean>
   askPrompt: (req: ConfirmRequest) => Promise<string | null>
   resolveConfirm: (value: string | boolean | null) => void
@@ -119,6 +142,11 @@ function scheduleContentSearch(q: string, done: (ids: string[]) => void): void {
 
 const NO_SELECTION = { selectedIds: [] as string[], anchorId: null, focusedId: null }
 
+function applyTheme(theme: 'light' | 'dark'): void {
+  document.documentElement.classList.toggle('light', theme === 'light')
+  document.documentElement.classList.toggle('dark', theme === 'dark')
+}
+
 export const useStashStore = create<StashState>((set, get) => ({
   ready: false,
   shelves: [],
@@ -127,39 +155,39 @@ export const useStashStore = create<StashState>((set, get) => ({
   settings: null,
   appVersion: '',
   activeShelfId: null,
+  allFiles: false,
+  viewMode: storedViewMode(),
   searchQuery: '',
   contentMatches: new Set<string>(),
   quickLookId: null,
   shelfMenu: null,
+  addMenu: null,
+  sharedDialog: false,
   phoneOpen: false,
   noteFileId: null,
   filter: 'all',
-  pinned: false,
   showSettings: false,
   theme: 'dark',
   toast: null,
   contextMenu: null,
   dropActive: false,
+  dropTarget: null,
   confirm: null,
   selectedIds: [],
   anchorId: null,
   focusedId: null,
 
   init: async () => {
-    const [shelves, settings, systemTheme, pinned, appVersion] = await Promise.all([
+    const [shelves, settings, systemTheme, appVersion] = await Promise.all([
       window.stash.listShelves(),
       window.stash.getSettings(),
       window.stash.getSystemTheme(),
-      window.stash.isPinned(),
       window.stash.getAppVersion()
     ])
 
-    const theme =
-      settings.theme === 'system' ? systemTheme : (settings.theme as 'light' | 'dark')
-
+    const theme = settings.theme === 'system' ? systemTheme : settings.theme
     document.documentElement.style.setProperty('--accent', settings.accentColor)
-    document.documentElement.classList.toggle('light', theme === 'light')
-    document.documentElement.classList.toggle('dark', theme === 'dark')
+    applyTheme(theme)
     document.documentElement.lang = settings.language
 
     const activeShelfId = pickShelfId(settings.lastShelfId, shelves, settings.defaultShelfId)
@@ -176,10 +204,10 @@ export const useStashStore = create<StashState>((set, get) => ({
       settings: normalizeSettings(settings),
       appVersion,
       activeShelfId,
-      pinned,
       theme,
       showSettings: false
     })
+    void window.stash.appReady()
   },
 
   refresh: async () => {
@@ -210,8 +238,17 @@ export const useStashStore = create<StashState>((set, get) => ({
   },
 
   setActiveShelf: (id) => {
-    set({ activeShelfId: id, showSettings: false, ...NO_SELECTION })
-    if (id) void get().updateSettings({ lastShelfId: id })
+    set({ activeShelfId: id, allFiles: false, showSettings: false, filter: 'all', ...NO_SELECTION })
+    void get().updateSettings({ lastShelfId: id })
+  },
+  showAll: () => set({ allFiles: true, showSettings: false, filter: 'all', ...NO_SELECTION }),
+  setViewMode: (mode) => {
+    try {
+      localStorage.setItem(VIEW_KEY, mode)
+    } catch {
+      // Private mode or blocked storage: the choice just isn't remembered.
+    }
+    set({ viewMode: mode })
   },
   setSearch: (q) => {
     set({ searchQuery: q, ...NO_SELECTION })
@@ -221,63 +258,60 @@ export const useStashStore = create<StashState>((set, get) => ({
     })
   },
   openQuickLook: (id) => set({ quickLookId: id, contextMenu: null }),
-  openShelfMenu: (x, y, shelfId) => set({ shelfMenu: { x, y, shelfId }, contextMenu: null }),
+  openShelfMenu: (x, y, shelfId) =>
+    set({ shelfMenu: { x, y, shelfId }, contextMenu: null, addMenu: null }),
   closeShelfMenu: () => set({ shelfMenu: null }),
+  openAddMenu: (x, y) => set({ addMenu: { x, y }, contextMenu: null, shelfMenu: null }),
+  closeAddMenu: () => set({ addMenu: null }),
+  setSharedDialog: (open) => set({ sharedDialog: open, addMenu: null }),
   setPhoneOpen: (open) => set({ phoneOpen: open }),
   editNote: (id) => set({ noteFileId: id, contextMenu: null }),
   setFilter: (f) => set({ filter: f, ...NO_SELECTION }),
 
-  setPinned: async (p) => {
-    await window.stash.setPinned(p)
-    set({ pinned: p })
-  },
-
-  setShowSettings: (v) => set({ showSettings: v }),
+  setShowSettings: (v) => set({ showSettings: v, contextMenu: null, shelfMenu: null }),
   resetPanelUi: () => {
     const pending = get().confirm
     set({
-      showSettings: false,
       contextMenu: null,
+      shelfMenu: null,
+      addMenu: null,
       confirm: null,
       searchQuery: '',
       dropActive: false,
+      dropTarget: null,
       ...NO_SELECTION
     })
     pending?.resolve(false)
   },
   setTheme: (t) => {
-    document.documentElement.classList.toggle('light', t === 'light')
-    document.documentElement.classList.toggle('dark', t === 'dark')
+    applyTheme(t)
     set({ theme: t })
   },
 
-  showToast: (message) => set({ toast: { message, id: Date.now() } }),
+  showToast: (message, busy) => set({ toast: { message, busy, id: Date.now() } }),
   clearToast: () => set({ toast: null }),
 
-  openContextMenu: (x, y, fileId) => set({ contextMenu: { x, y, fileId } }),
+  openContextMenu: (x, y, fileId) =>
+    set({ contextMenu: { x, y, fileId }, shelfMenu: null, addMenu: null }),
   closeContextMenu: () => set({ contextMenu: null }),
-  setDropActive: (v) => set({ dropActive: v }),
+  setDropActive: (v) => set(v ? { dropActive: true } : { dropActive: false, dropTarget: null }),
+  setDropTarget: (id) => {
+    if (get().dropTarget !== id) set({ dropTarget: id })
+  },
 
   updateSettings: async (partial) => {
     const prev = get().settings
-    // Optimistic update so toggles/sort apply immediately (even before IPC).
-    if (prev) {
-      set({ settings: normalizeSettings({ ...prev, ...partial }) })
-    }
+    // Optimistic update so toggles apply immediately.
+    if (prev) set({ settings: normalizeSettings({ ...prev, ...partial }) })
     try {
       const next = normalizeSettings(await window.stash.setSettings(partial))
       set({ settings: next })
-      if (partial.language) {
-        document.documentElement.lang = next.language
-      }
       if (partial.accentColor) {
         document.documentElement.style.setProperty('--accent', partial.accentColor)
       }
       if (partial.theme) {
         const systemTheme = await window.stash.getSystemTheme()
-        const theme =
-          partial.theme === 'system' ? systemTheme : (partial.theme as 'light' | 'dark')
-        get().setTheme(theme)
+        get().setTheme(partial.theme === 'system' ? systemTheme : partial.theme)
       }
       return true
     } catch {
@@ -288,12 +322,7 @@ export const useStashStore = create<StashState>((set, get) => ({
 
   askConfirm: (req) =>
     new Promise<boolean>((resolve) => {
-      set({
-        confirm: {
-          ...req,
-          resolve: (v) => resolve(v === true)
-        }
-      })
+      set({ confirm: { ...req, resolve: (v) => resolve(v === true) } })
     }),
 
   askPrompt: (req) =>
@@ -348,16 +377,23 @@ export const useStashStore = create<StashState>((set, get) => ({
 
   setFocused: (id) => set({ focusedId: id }),
 
+  dropShelfId: () => {
+    const { allFiles, activeShelfId, settings, shelves } = get()
+    if (!allFiles && activeShelfId) return activeShelfId
+    return pickShelfId(settings?.defaultShelfId, shelves)
+  },
+
   getVisibleFiles: () => {
-    const { files, activeShelfId, searchQuery, filter, settings, contentMatches } = get()
+    const { files, activeShelfId, allFiles, searchQuery, filter, settings, contentMatches } = get()
+    const q = searchQuery.trim().toLowerCase()
     let result = files
 
-    if (activeShelfId) {
+    // Search looks across every shelf.
+    if (!q && !allFiles && activeShelfId) {
       result = result.filter((f) => f.shelfId === activeShelfId)
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (q) {
       result = result.filter(
         (f) =>
           f.name.toLowerCase().includes(q) ||
@@ -365,8 +401,7 @@ export const useStashStore = create<StashState>((set, get) => ({
           f.absolutePath.toLowerCase().includes(q) ||
           f.note.toLowerCase().includes(q) ||
           f.tags.toLowerCase().includes(q) ||
-          contentMatches.has(f.id) ||
-          (q === 'pinned' && f.isPinned)
+          contentMatches.has(f.id)
       )
     }
 
@@ -375,11 +410,11 @@ export const useStashStore = create<StashState>((set, get) => ({
     }
 
     const sort = settings?.fileSort ?? 'added'
-    result = [...result].sort((a, b) => {
+    return [...result].sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
       switch (sort) {
         case 'name':
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
         case 'recent':
           return (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0) || b.addedAt - a.addedAt
         case 'size':
@@ -389,7 +424,5 @@ export const useStashStore = create<StashState>((set, get) => ({
           return b.addedAt - a.addedAt
       }
     })
-
-    return result
   }
 }))

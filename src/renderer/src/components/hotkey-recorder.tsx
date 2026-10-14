@@ -6,9 +6,11 @@ import { formatDisplay, isModifier, mapKey, toAccelerator } from '@/lib/hotkey'
 interface HotkeyRecorderProps {
   value: string
   onChange: (accelerator: string) => void
+  label: string
 }
 
-export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps) {
+/** Click, then press up to three keys; Esc cancels. */
+export function HotkeyRecorder({ value, onChange, label }: HotkeyRecorderProps) {
   const t = useT()
   const [recording, setRecording] = useState(false)
   const [draft, setDraft] = useState<string[]>([])
@@ -20,20 +22,16 @@ export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps) {
 
   useEffect(() => {
     if (!recording) return
-
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
       e.preventDefault()
       e.stopPropagation()
-
       if (e.key === 'Escape') {
         stop()
         return
       }
-
       const part = mapKey(e)
       if (!part) return
-
       setDraft((prev) => {
         if (prev.includes(part)) return prev
         const next = [...prev, part].slice(0, 3)
@@ -44,46 +42,51 @@ export function HotkeyRecorder({ value, onChange }: HotkeyRecorderProps) {
             onChange(accel)
             stop()
           })
-        } else if (done && next.every(isModifier)) {
-          // Wait for a non-modifier if we somehow got 3 modifiers
         }
         return next
       })
     }
-
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [recording, onChange, stop])
 
-  const label = recording
+  const keys = recording
     ? draft.length
-      ? formatDisplay(toAccelerator(draft))
-      : t.hotkeyRecording
-    : formatDisplay(value || t.hotkeyEmpty)
+      ? formatDisplay(toAccelerator(draft)).split('+')
+      : []
+    : value
+      ? formatDisplay(value).split('+')
+      : []
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => {
-          setDraft([])
-          setRecording(true)
-        }}
-        className={cn(
-          'flex h-10 w-full items-center justify-between rounded-[12px] border px-3 text-left text-[13px] transition-colors',
-          recording
-            ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--foreground)]'
-            : 'border-[var(--border)] bg-[var(--bg)] text-[var(--foreground)] hover:border-[var(--accent)]'
-        )}
-      >
-        <span className={cn(!value && !recording && 'text-[var(--muted-foreground)]')}>
-          {label}
-        </span>
-        <span className="text-[11px] text-[var(--muted-foreground)]">
-          {recording ? t.hotkeyMax : t.hotkeyClick}
-        </span>
-      </button>
-      <p className="mt-1.5 text-[11px] text-[var(--muted-foreground)]">{t.hotkeyHint}</p>
-    </div>
+    <button
+      type="button"
+      aria-label={label}
+      title={t.hotkeyHint}
+      onClick={() => {
+        setDraft([])
+        setRecording(true)
+      }}
+      onBlur={stop}
+      className={cn(
+        'flex h-8 min-w-[120px] items-center justify-center gap-1 rounded-lg px-2 text-[12px] transition-colors',
+        recording
+          ? 'bg-[var(--accent-faint)] shadow-[inset_0_0_0_1px_var(--accent)]'
+          : 'bg-[var(--field)] shadow-[inset_0_0_0_1px_var(--stroke)] hover:shadow-[inset_0_0_0_1px_var(--stroke-strong)]'
+      )}
+    >
+      {keys.length === 0 ? (
+        <span className="text-[var(--fg-3)]">{recording ? t.hotkeyRecording : t.hotkeyEmpty}</span>
+      ) : (
+        keys.map((k, i) => (
+          <kbd
+            key={`${k}-${i}`}
+            className="rounded-[5px] bg-[var(--surface-pressed)] px-1.5 py-0.5 font-sans text-[11.5px] font-medium text-[var(--fg)]"
+          >
+            {k.trim()}
+          </kbd>
+        ))
+      )}
+    </button>
   )
 }

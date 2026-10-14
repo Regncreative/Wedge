@@ -1,191 +1,180 @@
 import type { DragEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
 import {
   Archive,
-  ChevronRight,
   Clock,
   ExternalLink,
+  FolderOpen,
+  FolderPlus,
   MonitorUp,
   Pencil,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react'
+import { Menu, type MenuEntry } from './menu'
+import { dragOut } from '@/lib/file-drop'
 import { useStashStore } from '@/stores/stash-store'
-import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
 const EXPIRY_OPTIONS: (number | null)[] = [null, 24, 24 * 7, 24 * 30]
 
-/** Right-click menu for a shelf tab. */
+/** New shelves take the next color, so the rail stays easy to scan. */
+const SHELF_COLORS = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#06b6d4',
+  '#ec4899',
+  '#84cc16'
+]
+
+/** Right-click menu for a shelf (rail) and the header's shelf options. */
 export function ShelfMenu() {
   const t = useT()
   const menu = useStashStore((s) => s.shelfMenu)
   const close = useStashStore((s) => s.closeShelfMenu)
   const shelves = useStashStore((s) => s.shelves)
   const files = useStashStore((s) => s.files)
-  const refresh = useStashStore((s) => s.refresh)
-  const askPrompt = useStashStore((s) => s.askPrompt)
-  const askConfirm = useStashStore((s) => s.askConfirm)
-  const showToast = useStashStore((s) => s.showToast)
-  const ref = useRef<HTMLDivElement>(null)
-  const [expiryOpen, setExpiryOpen] = useState(false)
-
-  useEffect(() => {
-    setExpiryOpen(false)
-    if (!menu) return
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) close()
-    }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
-    window.addEventListener('mousedown', onDown)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('mousedown', onDown)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [menu, close])
 
   const shelf = shelves.find((s) => s.id === menu?.shelfId)
   if (!menu || !shelf) return null
 
+  const { refresh, askPrompt, askConfirm, showToast } = useStashStore.getState()
   const ids = files.filter((f) => f.shelfId === shelf.id && f.exists).map((f) => f.id)
   const expiryLabel = (h: number | null) =>
     h === null ? t.expiryOff : h === 24 ? t.expiry24h : h === 24 * 7 ? t.expiry7d : t.expiry30d
 
-  const run = async (fn: () => Promise<void>) => {
-    close()
-    await fn()
-  }
-
   const onDragZip = (e: DragEvent) => {
     e.preventDefault()
     if (ids.length === 0) return
-    document.body.dataset.stashDragging = '1'
     close()
-    void window.stash.startDragZip(ids, shelf.name).finally(() => {
-      delete document.body.dataset.stashDragging
-    })
+    void dragOut(() => window.stash.startDragZip(ids, shelf.name))
   }
 
-  const row = 'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--pill)]'
-  const x = Math.min(menu.x, window.innerWidth - 240)
-
-  return (
-    <div
-      ref={ref}
-      role="menu"
-      className="fixed z-50 min-w-[230px] overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--card)] py-1"
-      style={{ left: x, top: menu.y, boxShadow: 'var(--hover-shadow)' }}
-    >
-      <button
-        type="button"
-        role="menuitem"
-        className={row}
-        onClick={() =>
-          void run(async () => {
-            const next = await askPrompt({
-              title: t.renameShelf,
-              message: t.renameShelfHint,
-              promptDefault: shelf.name,
-              promptPlaceholder: t.shelfName,
-              confirmLabel: t.save
-            })
-            if (next && next.trim() && next.trim() !== shelf.name) {
-              await window.stash.renameShelf(shelf.id, next.trim())
-              await refresh()
-            }
-          })
+  const items: MenuEntry[] = [
+    {
+      label: t.renameShelf,
+      icon: Pencil,
+      action: async () => {
+        const next = await askPrompt({
+          title: t.renameShelf,
+          message: t.renameShelfHint,
+          promptDefault: shelf.name,
+          promptPlaceholder: t.shelfName,
+          confirmLabel: t.save
+        })
+        if (next && next.trim() && next.trim() !== shelf.name) {
+          await window.stash.renameShelf(shelf.id, next.trim())
+          await refresh()
         }
-      >
-        <Pencil className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        {t.renameShelf}
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className={cn(row, ids.length === 0 && 'opacity-40')}
-        disabled={ids.length === 0}
-        onClick={() => void run(async () => void (await window.stash.openFiles(ids)))}
-      >
-        <ExternalLink className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        {t.openAll}
-      </button>
-      <div
-        role="menuitem"
-        draggable={ids.length > 0}
-        onDragStart={onDragZip}
-        className={cn(row, 'cursor-grab', ids.length === 0 && 'opacity-40')}
-      >
-        <Archive className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        {t.dragAsZip}
-      </div>
-      <button
-        type="button"
-        role="menuitem"
-        aria-expanded={expiryOpen}
-        className={row}
-        onClick={() => setExpiryOpen((v) => !v)}
-      >
-        <Clock className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        <span className="flex-1">{t.tempShelf}</span>
-        <ChevronRight
-          className={cn('h-3.5 w-3.5 opacity-60 transition-transform', expiryOpen && 'rotate-90')}
-          strokeWidth={1.75}
-        />
-      </button>
-      {expiryOpen &&
-        EXPIRY_OPTIONS.map((h) => (
-          <button
-            key={String(h)}
-            type="button"
-            role="menuitemradio"
-            aria-checked={shelf.expireHours === h}
-            className={cn(row, 'pl-9', shelf.expireHours === h && 'font-semibold text-[var(--accent)]')}
-            onClick={() =>
-              void run(async () => {
+      }
+    },
+    ...(shelf.folder
+      ? [
+          {
+            label: t.openFolder,
+            icon: FolderOpen,
+            action: async () => {
+              const res = await window.stash.openShelfFolder(shelf.id)
+              if (!res.ok) showToast(t.folderUnavailable)
+            }
+          }
+        ]
+      : []),
+    {
+      label: t.openAll,
+      icon: ExternalLink,
+      disabled: ids.length === 0,
+      action: () => window.stash.openFiles(ids)
+    },
+    { label: t.dragAsZip, icon: Archive, disabled: ids.length === 0, onDragStart: onDragZip },
+    ...(shelf.folder
+      ? []
+      : [
+          {
+            label: t.tempShelf,
+            icon: Clock,
+            children: EXPIRY_OPTIONS.map((h) => ({
+              label: expiryLabel(h),
+              checked: shelf.expireHours === h,
+              action: async () => {
                 await window.stash.setShelfExpiry(shelf.id, h)
                 await refresh()
-              })
-            }
-          >
-            {expiryLabel(h)}
-          </button>
-        ))}
-      <button
-        type="button"
-        role="menuitem"
-        className={row}
-        onClick={() => void run(async () => void (await window.stash.openWidget(shelf.id)))}
-      >
-        <MonitorUp className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        {t.pinToDesktop}
-      </button>
-      <div className="my-1 border-t border-[var(--border)]" />
-      <button
-        type="button"
-        role="menuitem"
-        disabled={shelves.length <= 1}
-        className={cn(row, 'text-[var(--destructive)] disabled:opacity-40')}
-        onClick={() =>
-          void run(async () => {
-            const ok = await askConfirm({
-              title: t.deleteShelf(shelf.name),
-              message: t.deleteShelfConfirm(shelf.name),
-              confirmLabel: t.delete,
-              danger: true
-            })
-            if (!ok) return
-            try {
-              await window.stash.deleteShelf(shelf.id)
-              await refresh()
-            } catch {
-              showToast(t.cannotDeleteLast)
-            }
-          })
+              }
+            }))
+          }
+        ]),
+    {
+      label: t.pinToDesktop,
+      icon: MonitorUp,
+      action: () => window.stash.openWidget(shelf.id)
+    },
+    {
+      label: t.deleteShelf(shelf.name),
+      icon: Trash2,
+      danger: true,
+      separated: true,
+      disabled: shelves.length <= 1,
+      action: async () => {
+        const ok = await askConfirm({
+          title: t.deleteShelf(shelf.name),
+          message: shelf.folder
+            ? t.deleteSharedShelfConfirm(shelf.name)
+            : t.deleteShelfConfirm(shelf.name),
+          confirmLabel: t.delete,
+          danger: true
+        })
+        if (!ok) return
+        try {
+          await window.stash.deleteShelf(shelf.id)
+          await refresh()
+        } catch {
+          showToast(t.cannotDeleteLast)
         }
-      >
-        <Trash2 className="h-3.5 w-3.5 opacity-70" strokeWidth={1.75} />
-        {t.deleteShelf(shelf.name)}
-      </button>
-    </div>
+      }
+    }
+  ]
+
+  return (
+    <Menu
+      key={`${shelf.id}:${menu.x}:${menu.y}`}
+      x={menu.x}
+      y={menu.y}
+      items={items}
+      onClose={close}
+      caption={shelf.name}
+    />
   )
+}
+
+/** The rail's "+" menu: a plain shelf or a shared (folder) shelf. */
+export function AddShelfMenu() {
+  const t = useT()
+  const menu = useStashStore((s) => s.addMenu)
+  const close = useStashStore((s) => s.closeAddMenu)
+  if (!menu) return null
+  const { askPrompt, refresh, setActiveShelf, setSharedDialog } = useStashStore.getState()
+
+  const items: MenuEntry[] = [
+    {
+      label: t.newShelf,
+      icon: FolderPlus,
+      action: async () => {
+        const name = await askPrompt({
+          title: t.newShelf,
+          message: '',
+          promptPlaceholder: t.shelfName,
+          confirmLabel: t.createShelf
+        })
+        if (!name?.trim()) return
+        const color = SHELF_COLORS[useStashStore.getState().shelves.length % SHELF_COLORS.length]
+        const shelf = await window.stash.createShelf({ name: name.trim(), icon: 'folder', color })
+        await refresh()
+        setActiveShelf(shelf.id)
+      }
+    },
+    { label: t.newSharedShelf, icon: Users, action: () => setSharedDialog(true) }
+  ]
+  return <Menu x={menu.x} y={menu.y} items={items} onClose={close} width={210} />
 }

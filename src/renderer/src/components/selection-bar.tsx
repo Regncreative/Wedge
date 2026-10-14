@@ -1,83 +1,83 @@
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Archive, MoreHorizontal, Pin, Trash2, X } from 'lucide-react'
+import { pinFiles, removeFiles, zipFiles } from '@/lib/file-actions'
 import { useStashStore } from '@/stores/stash-store'
-import { useSelectionActions } from '@/hooks/use-selection-actions'
 import { useT } from '@/lib/i18n'
 
-/** Shown while two or more files are selected. */
+/** Floating actions while two or more files are selected. */
 export function SelectionBar() {
   const t = useT()
   const count = useStashStore((s) => s.selectedIds.length)
   const clearSelection = useStashStore((s) => s.clearSelection)
   const openContextMenu = useStashStore((s) => s.openContextMenu)
-  const refresh = useStashStore((s) => s.refresh)
-  const showToast = useStashStore((s) => s.showToast)
-  const { removeSelected, pinSelected } = useSelectionActions()
-
-  if (count < 2) return null
+  const ids = () => useStashStore.getState().selectedIds
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
-      className="mx-5 mb-2 mt-1 flex h-11 shrink-0 items-center gap-1 rounded-[14px] border border-[var(--accent)] bg-[var(--accent-soft)] pl-3.5 pr-1.5"
-      role="toolbar"
-      aria-label={t.selectedCount(count)}
-    >
-      <span className="flex-1 text-[13px] font-medium text-[var(--foreground)]">
-        {t.selectedCount(count)}
-      </span>
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]"
-        onClick={() => void pinSelected()}
-      >
-        <Pin size={14} strokeWidth={1.75} />
-        {t.pinSelected}
-      </button>
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]"
-        onClick={async () => {
-          const res = await window.stash.zipFiles(useStashStore.getState().selectedIds)
-          await refresh()
-          if (res.ok) showToast(t.zipDone)
-        }}
-      >
-        <Archive size={14} strokeWidth={1.75} />
-        ZIP
-      </button>
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium text-[var(--destructive)] transition-colors hover:bg-[var(--pill-hover)]"
-        onClick={() => void removeSelected()}
-      >
-        <Trash2 size={14} strokeWidth={1.75} />
-        {t.remove}
-      </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label={t.more}
-        title={t.more}
-        onClick={(e) => {
-          const first = useStashStore.getState().selectedIds[0]
-          const rect = e.currentTarget.getBoundingClientRect()
-          // Open upwards from the bar.
-          if (first) openContextMenu(rect.left - 180, Math.max(8, rect.top - 420), first)
-        }}
-      >
-        <MoreHorizontal size={16} strokeWidth={1.75} />
-      </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label={t.clearSelection}
-        onClick={clearSelection}
-      >
-        <X size={16} strokeWidth={1.75} />
-      </button>
-    </motion.div>
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-40 flex justify-center">
+      <AnimatePresence>
+        {count >= 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 520, damping: 36 }}
+            className="flyout pointer-events-auto flex items-center gap-0.5 rounded-xl px-1.5 py-1.5"
+            role="toolbar"
+            aria-label={t.selectedCount(count)}
+          >
+            <span className="px-2 text-[12.5px] font-semibold tabular-nums text-[var(--fg)]">
+              {t.selectedCount(count)}
+            </span>
+            <div className="mx-0.5 h-5 w-px bg-[var(--stroke-strong)]" />
+            <button
+              type="button"
+              className="menu-item mx-0 w-auto"
+              onClick={() => void pinFiles(ids())}
+            >
+              <Pin size={14} strokeWidth={1.75} />
+              {t.pinSelected}
+            </button>
+            <button
+              type="button"
+              className="menu-item mx-0 w-auto"
+              onClick={() => void zipFiles(ids())}
+            >
+              <Archive size={14} strokeWidth={1.75} />
+              ZIP
+            </button>
+            <button
+              type="button"
+              className="menu-item mx-0 w-auto text-[var(--danger)]"
+              onClick={() => void removeFiles(ids())}
+            >
+              <Trash2 size={14} strokeWidth={1.75} />
+              {t.remove}
+            </button>
+            <button
+              type="button"
+              className="btn-icon h-8 w-8"
+              aria-label={t.more}
+              title={t.more}
+              onClick={(e) => {
+                const first = ids()[0]
+                const r = e.currentTarget.getBoundingClientRect()
+                if (first) openContextMenu(r.left - 100, r.top - 8, first)
+              }}
+            >
+              <MoreHorizontal size={16} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className="btn-icon h-8 w-8"
+              aria-label={t.clearSelection}
+              title={t.clearSelection}
+              onClick={clearSelection}
+            >
+              <X size={16} strokeWidth={1.75} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

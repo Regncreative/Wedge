@@ -5,15 +5,13 @@ import { tr } from './locales/tr'
 export type { AppLanguage }
 
 export type Messages = {
-  shelves: string
+  // Common
   shelvesCap: string
-  files: string
   filesCap: string
   search: string
   searchPlaceholder: string
   clearSearch: string
   settings: string
-  settingsSubtitle: string
   close: string
   back: string
   cancel: string
@@ -21,44 +19,178 @@ export type Messages = {
   save: string
   delete: string
   remove: string
-  language: string
-  languageTr: string
-  languageEn: string
+  more: string
 
-  dropHere: string
-  releaseToStash: string
+  // Rail and header
+  allFiles: string
+  railLabel: string
+  newShelf: string
+  newSharedShelf: string
+  shelfName: string
+  createShelf: string
+  filesCount: (n: number) => string
+  viewList: string
+  viewGrid: string
+  shelfOptions: string
+  sharedBadge: string
+  tempShelf: string
+  expiresBadge: (label: string) => string
+
+  // Filters
+  filterImages: string
+  filterVideos: string
+  filterAudio: string
+  filterPdf: string
+  filterOffice: string
+  filterArchives: string
+  filterFolders: string
+  filterCode: string
+  filterExecutables: string
+  filterOther: string
+  filtersLabel: string
+
+  // Dropping
+  dropTo: (shelf: string) => string
+  filesAdded: (n: number, shelf: string) => string
+  alreadyOnShelf: string
+  copying: string
+
+  // Empty states
   emptyTitle: string
   emptyHint: string
+  emptySharedHint: string
+  emptyAllTitle: string
   noMatch: string
   trySearch: string
 
+  // Files
   folder: string
   fileNotFound: string
   pin: string
   unpin: string
-
   open: string
+  preview: string
   reveal: string
   copyPath: string
   properties: string
   removeFromShelf: string
   removeFileConfirm: (name: string) => string
-  moveToShelf: string
-  pathCopied: string
+  removeSelectedConfirm: (n: number) => string
+  removeSharedConfirm: (name: string) => string
+  removeSharedManyConfirm: (n: number) => string
   removedKept: string
+  removedMany: (n: number) => string
+  recycled: (n: number) => string
+  recycleFailed: string
+  moveToShelf: string
   movedTo: (name: string) => string
+  copiedToShared: (name: string) => string
+  pathCopied: string
+  pathsCopied: (n: number) => string
   couldNotOpen: string
   missingOnDisk: string
-  sizeBytes: (n: number) => string
-  addedAt: (s: string) => string
+  filesListLabel: string
+  selectedCount: (n: number) => string
+  clearSelection: string
+  pinSelected: string
+  noPreview: string
 
-  appearance: string
+  // Notes and reminders
+  noteAndTags: string
+  noteTitle: string
+  notePlaceholder: string
+  tagsPlaceholder: string
+  remind: string
+  remindIn1h: string
+  remindTomorrow: string
+  remindNextWeek: string
+  remindClear: string
+  reminderSet: (when: string) => string
+  reminderCleared: string
+
+  // Quick actions
+  convert: string
+  toFormat: (format: string) => string
+  shrink: string
+  convertedOne: (name: string, before: string, after: string) => string
+  convertedMany: (n: number, before: string, after: string) => string
+  alreadySmall: string
+  convertFailed: string
+  makeZip: string
+  zipDone: string
+  copyToFolder: string
+  copiedTo: (n: number) => string
+  openAll: string
+  dragAsZip: string
+
+  // Clipboard
+  pastedFiles: (n: number) => string
+  pastedImage: string
+  pastedLink: string
+  pastedText: string
+  clipboardEmpty: string
+
+  // Shelf menu
+  renameShelf: string
+  renameShelfHint: string
+  expiryOff: string
+  expiry24h: string
+  expiry7d: string
+  expiry30d: string
+  pinToDesktop: string
+  unpinFromDesktop: string
+  openFolder: string
+  deleteShelf: (name: string) => string
+  deleteShelfConfirm: (name: string) => string
+  deleteSharedShelfConfirm: (name: string) => string
+  cannotDeleteLast: string
+
+  // Shared shelves
+  sharedTitle: string
+  sharedIntro: string
+  sharedHowCopy: string
+  sharedHowSee: string
+  sharedHowRemove: string
+  sharedHowFriend: string
+  sharedHowPrivate: string
+  chooseFolder: string
+  sharedCreated: (name: string) => string
+  folderUnavailable: string
+
+  // Phone
+  phoneButton: string
+  phoneTitle: string
+  phoneHint: string
+  phoneExpires: (min: number) => string
+  phoneFirewall: string
+  phoneError: string
+  phoneReceived: (n: number) => string
+
+  // Automatic arrivals
+  autoAdded: (n: number, shelf: string) => string
+  sharedArrived: (n: number, shelf: string) => string
+
+  // Edge handle and widget
+  edgeDropTitle: string
+  edgeAdded: (n: number, shelf: string) => string
+  edgeOpen: string
+  widgetEmpty: string
+
+  // Settings
+  generalSection: string
+  captureSection: string
+  sharedSection: string
+  sharedSectionHint: string
+  noSharedShelves: string
+  rulesSection: string
+  rulesHint: string
+  maintenanceSection: string
+  updatesSection: string
   theme: string
   themeSystem: string
   themeLight: string
   themeDark: string
   accentColor: string
-  behavior: string
   startWithWindows: string
   startWithWindowsHint: string
   notifications: string
@@ -72,12 +204,8 @@ export type Messages = {
   sortName: string
   sortRecent: string
   sortSize: string
-  clearMissing: string
-  clearMissingHint: string
-  clearMissingConfirm: (n: number) => string
-  clearMissingDone: (n: number) => string
-  clearMissingNone: string
   defaultShelf: string
+  defaultShelfHint: string
   openHotkey: string
   hotkeyHint: string
   hotkeyClick: string
@@ -85,17 +213,47 @@ export type Messages = {
   hotkeyEmpty: string
   hotkeyMax: string
   hotkeyUnavailable: string
-  shelvesSection: string
-  updatesSection: string
-  deleteShelf: (name: string) => string
-  deleteShelfConfirm: (name: string) => string
-  cannotDeleteLast: string
-  createShelf: string
-  shelfName: string
-  renameShelf: string
-  renameShelfHint: string
-  footer: string
-
+  edgeHandle: string
+  edgeHandleHint: string
+  edgeOff: string
+  edgeLeft: string
+  edgeRight: string
+  contextMenuToggle: string
+  contextMenuHint: string
+  watchDownloads: string
+  watchDownloadsHint: string
+  watchScreenshots: string
+  watchScreenshotsHint: string
+  ruleExtensions: string
+  ruleAllFiles: string
+  ruleSourceAny: string
+  ruleSource: string
+  ruleShelf: string
+  sourceManual: string
+  sourceDownloads: string
+  sourceScreenshots: string
+  sourcePhone: string
+  sourceClipboard: string
+  addRule: string
+  noRules: string
+  clearMissing: string
+  clearMissingHint: string
+  clearMissingConfirm: (n: number) => string
+  clearMissingDone: (n: number) => string
+  clearMissingNone: string
+  exportData: string
+  importData: string
+  dataHint: string
+  exportDone: string
+  importDone: (shelves: number, files: number) => string
+  importFailed: string
+  openLogs: string
+  openLogsHint: string
+  betaUpdates: string
+  betaUpdatesHint: string
+  checkUpdates: string
+  installAndRestart: string
+  currentVersion: (v: string) => string
   updateChecking: string
   updateAvailable: (v: string) => string
   updateDownloading: (n: number) => string
@@ -105,150 +263,19 @@ export type Messages = {
   updateError: string
   updateErrorHint: string
   downloadManually: string
-  checkUpdates: string
-  installAndRestart: string
-  currentVersion: (v: string) => string
 
-  filesAdded: (n: number, shelf: string) => string
-  alreadyOnShelf: string
-
-  openPanel: string
-  quit: string
-
-  filterAll: string
-  filterImages: string
-  filterVideos: string
-  filterPdf: string
-  filterOffice: string
-  filterFolders: string
-  filterArchives: string
-  filterCode: string
-  filterAudio: string
-
-  trayOpen: string
-  traySettings: string
-  trayCheckUpdates: string
-  trayQuit: string
-
-  updateNotifyTitle: string
-  updateNotifyBody: (v: string) => string
-  updateReadyNotifyTitle: string
-  updateReadyNotifyBody: (v: string) => string
-  updateUpToDateNotify: (v: string) => string
-
-  filesListLabel: string
-  selectedCount: (n: number) => string
-  clearSelection: string
-  pinSelected: string
-  removeSelectedConfirm: (n: number) => string
-  removedMany: (n: number) => string
+  // Welcome
   welcomeTitle: string
+  welcomeSubtitle: string
   welcomeDropTitle: string
   welcomeDropBody: string
+  welcomeEdgeTitle: string
+  welcomeEdgeBody: string
   welcomeDragTitle: string
   welcomeDragBody: string
   welcomeHotkeyTitle: string
   welcomeHotkeyBody: (hotkey: string) => string
   welcomeStart: string
-  betaUpdates: string
-  betaUpdatesHint: string
-  dataSection: string
-  exportData: string
-  importData: string
-  dataHint: string
-  exportDone: string
-  importDone: (shelves: number, files: number) => string
-  importFailed: string
-  openLogs: string
-  openLogsHint: string
-  preview: string
-  noteAndTags: string
-  noteTitle: string
-  notePlaceholder: string
-  tagsPlaceholder: string
-  remind: string
-  remindIn1h: string
-  remindTomorrow: string
-  remindNextWeek: string
-  remindClear: string
-  reminderSet: (when: string) => string
-  reminderCleared: string
-  convert: string
-  toFormat: (format: string) => string
-  shrinkTo: (px: number) => string
-  converted: (n: number) => string
-  convertFailed: string
-  makeZip: string
-  zipDone: string
-  copyToFolder: string
-  copiedTo: (n: number) => string
-  pathsCopied: (n: number) => string
-  openAll: string
-  more: string
-  dragAsZip: string
-  pastedFiles: (n: number) => string
-  pastedImage: string
-  pastedLink: string
-  pastedText: string
-  clipboardEmpty: string
-  tempShelf: string
-  expiryOff: string
-  expiry24h: string
-  expiry7d: string
-  expiry30d: string
-  expiresBadge: (label: string) => string
-  pinToDesktop: string
-  unpinFromDesktop: string
-  phoneButton: string
-  phoneTitle: string
-  phoneHint: string
-  phoneExpires: (min: number) => string
-  phoneFirewall: string
-  phoneError: string
-  phoneReceived: (n: number) => string
-  noPreview: string
-  dropShelfHint: string
-  dragAll: string
-  clearShelf: string
-  widgetEmpty: string
-  autoAdded: (n: number, shelf: string) => string
-  autoShelves: string
-  watchDownloads: string
-  watchDownloadsHint: string
-  watchScreenshots: string
-  watchScreenshotsHint: string
-  gestures: string
-  shakeToOpen: string
-  shakeToOpenHint: string
-  edgeReveal: string
-  edgeRevealHint: string
-  edgeOff: string
-  edgeLeft: string
-  edgeRight: string
-  windowsSection: string
-  contextMenuToggle: string
-  contextMenuHint: string
-  pasteHotkey: string
-  pasteHotkeyHint: string
-  rulesSection: string
-  rulesHint: string
-  ruleExtensions: string
-  ruleAllFiles: string
-  ruleSourceAny: string
-  sourceManual: string
-  sourceDownloads: string
-  sourceScreenshots: string
-  sourcePhone: string
-  sourceClipboard: string
-  addRule: string
-  noRules: string
-  syncSection: string
-  syncHint: string
-  syncChoose: string
-  syncOff: string
-  syncNow: string
-  syncThisPc: string
-  syncFailed: string
 }
 
 export const dictionaries: Record<AppLanguage, Messages> = { tr, en }

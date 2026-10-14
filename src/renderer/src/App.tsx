@@ -1,19 +1,24 @@
-import { useIdleOpacity } from '@/hooks/use-idle-opacity'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Header } from './components/header'
-import { ShelfBar } from './components/shelf-bar'
-import { FileList } from './components/file-list'
-import { DropZone } from './components/drop-zone'
+import { useIdleOpacity } from '@/hooks/use-idle-opacity'
+import { Rail } from './components/rail'
+import { ShelfHeader } from './components/shelf-header'
+import { FilterChips } from './components/filter-chips'
+import { FileView } from './components/file-view'
+import { SelectionBar } from './components/selection-bar'
+import { DropOverlay } from './components/drop-overlay'
 import { ContextMenu } from './components/context-menu'
+import { AddShelfMenu, ShelfMenu } from './components/shelf-menu'
+import { SettingsView } from './components/settings-view'
 import { Toast } from './components/toast'
 import { ConfirmDialog } from './components/confirm-dialog'
-import { SettingsPanel } from './components/settings-panel'
-import { Welcome } from './components/welcome'
 import { NoteDialog } from './components/note-dialog'
 import { QuickLook } from './components/quick-look'
-import { ShelfMenu } from './components/shelf-menu'
 import { PhoneSheet } from './components/phone-sheet'
+import { SharedShelfDialog } from './components/shared-dialog'
+import { Welcome } from './components/welcome'
+import { addPaths } from './lib/file-actions'
+import { shelfAt } from './lib/file-drop'
 import { useStashStore } from './stores/stash-store'
 import { useT } from './lib/i18n'
 
@@ -22,9 +27,6 @@ export default function App() {
   const ready = useStashStore((s) => s.ready)
   const init = useStashStore((s) => s.init)
   const showSettings = useStashStore((s) => s.showSettings)
-  const setShowSettings = useStashStore((s) => s.setShowSettings)
-  const setTheme = useStashStore((s) => s.setTheme)
-  const showToast = useStashStore((s) => s.showToast)
   const idleOpacity = useStashStore((s) => s.settings?.idleOpacity ?? 0.4)
   const idleTimeoutSec = useStashStore((s) => s.settings?.idleTimeoutSec ?? 10)
 
@@ -34,16 +36,37 @@ export default function App() {
     void init()
   }, [init])
 
-  // The backend uses the selection for the paste-into-dialog shortcut.
+  // Files dragged in from Explorer: onto the current shelf, or onto a shelf in the rail.
   useEffect(
     () =>
-      useStashStore.subscribe((s, prev) => {
-        if (s.selectedIds !== prev.selectedIds) void window.stash.setSelection(s.selectedIds)
+      window.stash.onFileDrop((event) => {
+        const store = useStashStore.getState()
+        switch (event.type) {
+          case 'enter':
+            store.setDropActive(true)
+            store.setDropTarget(shelfAt(event.x, event.y))
+            break
+          case 'over':
+            store.setDropTarget(shelfAt(event.x, event.y))
+            break
+          case 'leave':
+            store.setDropActive(false)
+            break
+          case 'internal-over':
+            store.setDropTarget(event.shelfId)
+            break
+          case 'drop': {
+            store.setDropActive(false)
+            const target = shelfAt(event.x, event.y) ?? store.dropShelfId()
+            void addPaths(event.paths, target)
+            break
+          }
+        }
       }),
     []
   )
 
-  // Files arriving from watchers, the phone, sync or expiry.
+  // Files arriving from watchers, the phone, shared folders or expiry.
   useEffect(
     () =>
       window.stash.onFilesChanged((change) => {
@@ -51,6 +74,8 @@ export default function App() {
         void refresh()
         if (change.added === 0) return
         if (change.source === 'phone') showToast(t.phoneReceived(change.added))
+        else if (change.source === 'shared')
+          showToast(t.sharedArrived(change.added, change.shelfName))
         else if (change.source === 'downloads' || change.source === 'screenshots') {
           showToast(t.autoAdded(change.added, change.shelfName))
         }
@@ -63,12 +88,15 @@ export default function App() {
     const onKey = async (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'v') return
       const target = e.target as HTMLElement | null
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
         return
       }
       e.preventDefault()
-      const { activeShelfId, refresh, showToast } = useStashStore.getState()
-      const res = await window.stash.pasteClipboard(activeShelfId)
+      const { dropShelfId, refresh, showToast } = useStashStore.getState()
+      const res = await window.stash.pasteClipboard(dropShelfId())
       await refresh()
       const messages = {
         files: t.pastedFiles(res.added),
@@ -84,25 +112,23 @@ export default function App() {
   }, [t])
 
   useEffect(() => {
-    const unsubTheme = window.stash.onThemeChanged((theme) => {
-      const mode = useStashStore.getState().settings?.theme
-      if (mode === 'system' || !mode) {
-        setTheme(theme)
-      }
+    const store = () => useStashStore.getState()
+    const offTheme = window.stash.onThemeChanged((theme) => {
+      const mode = store().settings?.theme
+      if (mode === 'system' || !mode) store().setTheme(theme)
     })
-    const unsubNav = window.stash.onNavigateSettings(() => setShowSettings(true))
-    const resetPanelUi = () => useStashStore.getState().resetPanelUi()
-    const unsubShown = window.stash.onPanelShown(resetPanelUi)
-    const unsubHidden = window.stash.onPanelHidden(resetPanelUi)
-    const unsubUpdate = window.stash.onUpdateStatus((status) => {
+    const offNav = window.stash.onNavigateSettings(() => store().setShowSettings(true))
+    const reset = () => store().resetPanelUi()
+    const offShown = window.stash.onPanelShown(() => {
+      reset()
+      void store().refresh()
+    })
+    const offHidden = window.stash.onPanelHidden(reset)
+    const offUpdate = window.stash.onUpdateStatus((status) => {
+      const { showToast } = store()
       switch (status.state) {
         case 'available':
           showToast(t.updateAvailable(status.version))
-          break
-        case 'downloading':
-          if (status.percent === 0 || status.percent % 25 === 0 || status.percent >= 99) {
-            showToast(t.updateDownloading(status.percent))
-          }
           break
         case 'downloaded':
           showToast(t.updateReady(status.version))
@@ -118,17 +144,17 @@ export default function App() {
       }
     })
     return () => {
-      unsubTheme()
-      unsubNav()
-      unsubShown()
-      unsubHidden()
-      unsubUpdate()
+      offTheme()
+      offNav()
+      offShown()
+      offHidden()
+      offUpdate()
     }
-  }, [setShowSettings, setTheme, showToast, t])
+  }, [t])
 
   if (!ready) {
     return (
-      <div className="app-shell flex items-center justify-center">
+      <div className="app-shell items-center justify-center">
         <div className="h-5 w-5 animate-pulse rounded-full bg-[var(--accent)] opacity-70" />
       </div>
     )
@@ -136,30 +162,35 @@ export default function App() {
 
   return (
     <motion.div
-      className="app-shell relative"
-      initial={{ opacity: 0, y: 18, scale: 0.97 }}
+      className="app-shell"
+      initial={{ opacity: 0, y: 14, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 34 }}
     >
-      <DropZone>
-        <Header />
+      <Rail />
+      <main className="relative flex min-w-0 flex-1 flex-col">
         {showSettings ? (
-          <SettingsPanel />
+          <SettingsView />
         ) : (
           <>
-            <ShelfBar />
-            <FileList />
+            <ShelfHeader />
+            <FilterChips />
+            <FileView />
+            <SelectionBar />
+            <DropOverlay />
           </>
         )}
-        <ContextMenu />
         <Toast />
-        <ShelfMenu />
-        <NoteDialog />
-        <QuickLook />
-        <PhoneSheet />
-        <ConfirmDialog />
-        <Welcome />
-      </DropZone>
+      </main>
+      <ContextMenu />
+      <ShelfMenu />
+      <AddShelfMenu />
+      <NoteDialog />
+      <QuickLook />
+      <PhoneSheet />
+      <SharedShelfDialog />
+      <ConfirmDialog />
+      <Welcome />
     </motion.div>
   )
 }
