@@ -1,5 +1,6 @@
 //! Stash — a file shelf in the Windows system tray.
 
+pub mod actions;
 pub mod commands;
 pub mod db;
 pub mod files;
@@ -7,7 +8,9 @@ pub mod hotkey;
 pub mod i18n;
 pub mod models;
 pub mod panel;
+pub mod services;
 pub mod state;
+pub mod textract;
 pub mod transfer;
 pub mod tray;
 pub mod updater;
@@ -82,6 +85,8 @@ pub fn run() {
             }
             commands::sync_autostart(handle, settings.start_with_windows);
             updater::schedule_startup_check(handle);
+            services::restart_watchers(handle);
+            services::start_background_jobs(handle);
             // Silent launch: the panel stays hidden until tray click / hotkey.
             // (End-to-end tests ask for it to be shown right away.)
             if std::env::var_os("STASH_SHOW_ON_START").is_some() {

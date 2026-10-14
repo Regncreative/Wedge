@@ -12,6 +12,10 @@ pub struct Shelf {
     pub color: String,
     pub created_at: i64,
     pub sort_order: i64,
+    /// "normal", or an automatic shelf: "downloads", "screenshots", "phone", "clipboard".
+    pub kind: String,
+    /// Files older than this many hours are removed automatically (temporary shelf).
+    pub expire_hours: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -28,6 +32,13 @@ pub struct StashFile {
     pub added_at: i64,
     pub last_accessed: Option<i64>,
     pub is_pinned: bool,
+    pub note: String,
+    /// Comma-separated tags.
+    pub tags: String,
+    /// When to show a reminder notification (ms since epoch).
+    pub remind_at: Option<i64>,
+    /// How it got here: "manual", "downloads", "screenshots", "phone", "clipboard", "sync".
+    pub source: String,
     /// Filled in by the command layer after an (async) existence check.
     pub exists: bool,
 }
@@ -88,6 +99,14 @@ pub enum FileSort {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+pub enum EdgeReveal {
+    Off,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum UpdateChannel {
     Stable,
     Beta,
@@ -113,6 +132,20 @@ pub struct AppSettings {
     pub update_channel: UpdateChannel,
     /// First-run welcome has been dismissed.
     pub onboarding_done: bool,
+    /// New files in Downloads land on the Downloads shelf.
+    pub watch_downloads: bool,
+    /// New screenshots land on the Screenshots shelf.
+    pub watch_screenshots: bool,
+    /// Shaking the mouse while dragging a file opens a drop shelf at the cursor.
+    pub shake_to_open: bool,
+    /// Pushing the cursor against this screen edge opens the panel.
+    pub edge_reveal: EdgeReveal,
+    /// "Add to Stash" in Explorer's right-click menu.
+    pub context_menu: bool,
+    /// Fills the selected file's path into an Open/Save dialog.
+    pub paste_hotkey: String,
+    /// Folder (e.g. in OneDrive) used to sync shelves between PCs; empty = off.
+    pub sync_folder: String,
 }
 
 /// A partial settings update from the panel. Unknown keys are rejected.
@@ -133,6 +166,13 @@ pub struct SettingsPatch {
     pub idle_timeout_sec: Option<f64>,
     pub update_channel: Option<UpdateChannel>,
     pub onboarding_done: Option<bool>,
+    pub watch_downloads: Option<bool>,
+    pub watch_screenshots: Option<bool>,
+    pub shake_to_open: Option<bool>,
+    pub edge_reveal: Option<EdgeReveal>,
+    pub context_menu: Option<bool>,
+    pub paste_hotkey: Option<String>,
+    pub sync_folder: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]

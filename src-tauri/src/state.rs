@@ -20,6 +20,7 @@ pub struct AppState {
     pub update: Mutex<UpdateStatus>,
     pub pending_update: Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>>,
     pub hotkey: Mutex<Option<String>>,
+    pub watcher: Mutex<Option<notify::RecommendedWatcher>>,
 }
 
 impl AppState {
@@ -34,6 +35,7 @@ impl AppState {
             update: Mutex::new(UpdateStatus::Idle),
             pending_update: Mutex::new(None),
             hotkey: Mutex::new(None),
+            watcher: Mutex::new(None),
         }
     }
 

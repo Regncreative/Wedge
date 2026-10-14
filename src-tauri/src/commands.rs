@@ -75,9 +75,14 @@ pub fn check_settings_patch(p: &SettingsPatch) -> CmdResult<()> {
             return bad("accentColor");
         }
     }
-    if let Some(h) = &p.open_hotkey {
+    for h in [&p.open_hotkey, &p.paste_hotkey].into_iter().flatten() {
         if h.is_empty() || h.len() > 100 {
-            return bad("openHotkey");
+            return bad("hotkey");
+        }
+    }
+    if let Some(dir) = &p.sync_folder {
+        if dir.chars().count() > MAX_PATH_CHARS || (!dir.is_empty() && !std::path::Path::new(dir).is_absolute()) {
+            return bad("syncFolder");
         }
     }
     for id in [&p.default_shelf_id, &p.last_shelf_id]
@@ -481,6 +486,9 @@ pub fn set_settings(
     let next = db::set_settings(&state.db(), &patch, state.language).map_err(err)?;
     if patch.start_with_windows.is_some() {
         sync_autostart(&app, next.start_with_windows);
+    }
+    if patch.watch_downloads.is_some() || patch.watch_screenshots.is_some() {
+        crate::services::restart_watchers(&app);
     }
     Ok(next)
 }

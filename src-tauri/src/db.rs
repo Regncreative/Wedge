@@ -50,6 +50,36 @@ const MIGRATIONS: &[&str] = &[
     CREATE INDEX IF NOT EXISTS idx_files_pinned ON files(is_pinned);
     CREATE INDEX IF NOT EXISTS idx_files_added ON files(added_at DESC);
     "#,
+    // 2 — notes, tags, reminders, automatic and temporary shelves, sorting
+    // rules, and a full-text index of file contents.
+    r#"
+    ALTER TABLE files ADD COLUMN note TEXT NOT NULL DEFAULT '';
+    ALTER TABLE files ADD COLUMN tags TEXT NOT NULL DEFAULT '';
+    ALTER TABLE files ADD COLUMN remind_at INTEGER;
+    ALTER TABLE files ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
+    CREATE INDEX IF NOT EXISTS idx_files_remind ON files(remind_at) WHERE remind_at IS NOT NULL;
+
+    ALTER TABLE shelves ADD COLUMN kind TEXT NOT NULL DEFAULT 'normal';
+    ALTER TABLE shelves ADD COLUMN expire_hours INTEGER;
+
+    CREATE TABLE IF NOT EXISTS rules (
+      id TEXT PRIMARY KEY,
+      shelf_id TEXT NOT NULL,
+      extensions TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'any',
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (shelf_id) REFERENCES shelves(id) ON DELETE CASCADE
+    );
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS file_text USING fts5(
+      file_id UNINDEXED,
+      content,
+      tokenize = 'unicode61 remove_diacritics 2'
+    );
+    CREATE TRIGGER IF NOT EXISTS files_text_cleanup AFTER DELETE ON files BEGIN
+      DELETE FROM file_text WHERE file_id = old.id;
+    END;
+    "#,
 ];
 
 pub const SCHEMA_VERSION: i64 = MIGRATIONS.len() as i64;
@@ -175,6 +205,8 @@ fn map_shelf(row: &Row) -> Result<Shelf> {
         color: row.get("color")?,
         created_at: row.get("created_at")?,
         sort_order: row.get("sort_order")?,
+        kind: row.get("kind")?,
+        expire_hours: row.get("expire_hours")?,
     })
 }
 
@@ -199,6 +231,8 @@ pub fn create_shelf(
         color: color.unwrap_or("#0078D4").to_string(),
         created_at: now_ms(),
         sort_order: max.map_or(0, |m| m + 1),
+        kind: "normal".into(),
+        expire_hours: None,
     };
     conn.execute(
         "INSERT INTO shelves (id, name, icon, color, created_at, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -249,6 +283,10 @@ fn map_file(row: &Row) -> Result<StashFile> {
         added_at: row.get("added_at")?,
         last_accessed: row.get("last_accessed")?,
         is_pinned: row.get::<_, i64>("is_pinned")? != 0,
+        note: row.get("note")?,
+        tags: row.get("tags")?,
+        remind_at: row.get("remind_at")?,
+        source: row.get("source")?,
         exists: true,
     })
 }
@@ -277,14 +315,24 @@ pub fn get_file(conn: &Connection, id: &str) -> Result<Option<StashFile>> {
 
 /// Insert files into a shelf; paths already on that shelf are skipped.
 pub fn add_files(conn: &Connection, files: &[FileInput], shelf_id: &str) -> Result<(usize, usize)> {
+    add_files_from(conn, files, shelf_id, "manual")
+}
+
+/// Like [`add_files`], recording where the files came from.
+pub fn add_files_from(
+    conn: &Connection,
+    files: &[FileInput],
+    shelf_id: &str,
+    source: &str,
+) -> Result<(usize, usize)> {
     in_tx(conn, |tx| {
         let now = now_ms();
         let (mut added, mut skipped) = (0, 0);
         let mut insert = tx.prepare(
             "INSERT OR IGNORE INTO files
                (id, shelf_id, absolute_path, name, extension, size, is_directory,
-                created_at, added_at, last_accessed, is_pinned)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)",
+                created_at, added_at, last_accessed, is_pinned, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10, ?11)",
         )?;
         for f in files {
             let changed = insert.execute(params![
@@ -298,6 +346,7 @@ pub fn add_files(conn: &Connection, files: &[FileInput], shelf_id: &str) -> Resu
                 f.created_at,
                 now,
                 f.is_pinned as i64,
+                source,
             ])?;
             if changed > 0 {
                 added += 1
@@ -381,6 +430,7 @@ pub fn set_raw(conn: &Connection, key: &str, value: &Value) -> Result<()> {
 }
 
 pub const DEFAULT_HOTKEY: &str = "CommandOrControl+Shift+Space";
+pub const DEFAULT_PASTE_HOTKEY: &str = "Control+Alt+V";
 
 fn defaults() -> Map<String, Value> {
     serde_json::json!({
@@ -395,7 +445,14 @@ fn defaults() -> Map<String, Value> {
         "idleOpacity": 0.4,
         "idleTimeoutSec": 10,
         "updateChannel": "stable",
-        "onboardingDone": false
+        "onboardingDone": false,
+        "watchDownloads": true,
+        "watchScreenshots": true,
+        "shakeToOpen": true,
+        "edgeReveal": "off",
+        "contextMenu": true,
+        "pasteHotkey": DEFAULT_PASTE_HOTKEY,
+        "syncFolder": ""
     })
     .as_object()
     .cloned()
@@ -462,6 +519,7 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
 
     let accent = str_of("accentColor");
     let hotkey = str_of("openHotkey");
+    let paste_hotkey = str_of("pasteHotkey");
     let mut s = AppSettings {
         theme: enum_or(stored.get("theme"), Theme::Dark),
         accent_color: if is_hex_color(&accent) {
@@ -484,6 +542,17 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         idle_timeout_sec: clamp_timeout(num_of("idleTimeoutSec")),
         update_channel: enum_or(stored.get("updateChannel"), UpdateChannel::Stable),
         onboarding_done: bool_of("onboardingDone", false),
+        watch_downloads: bool_of("watchDownloads", true),
+        watch_screenshots: bool_of("watchScreenshots", true),
+        shake_to_open: bool_of("shakeToOpen", true),
+        edge_reveal: enum_or(stored.get("edgeReveal"), EdgeReveal::Off),
+        context_menu: bool_of("contextMenu", true),
+        paste_hotkey: if paste_hotkey.is_empty() {
+            DEFAULT_PASTE_HOTKEY.into()
+        } else {
+            paste_hotkey
+        },
+        sync_folder: str_of("syncFolder"),
     };
 
     // Heal shelf references after a shelf was deleted.
@@ -556,7 +625,223 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     if let Some(v) = patch.onboarding_done {
         put("onboardingDone", Value::Bool(v))?;
     }
+    if let Some(v) = patch.watch_downloads {
+        put("watchDownloads", Value::Bool(v))?;
+    }
+    if let Some(v) = patch.watch_screenshots {
+        put("watchScreenshots", Value::Bool(v))?;
+    }
+    if let Some(v) = patch.shake_to_open {
+        put("shakeToOpen", Value::Bool(v))?;
+    }
+    if let Some(v) = patch.edge_reveal {
+        put("edgeReveal", serde_json::to_value(v).unwrap_or_default())?;
+    }
+    if let Some(v) = patch.context_menu {
+        put("contextMenu", Value::Bool(v))?;
+    }
+    if let Some(v) = &patch.paste_hotkey {
+        put("pasteHotkey", Value::String(v.clone()))?;
+    }
+    if let Some(v) = &patch.sync_folder {
+        put("syncFolder", Value::String(v.clone()))?;
+    }
     Ok(())
+}
+
+// ── Notes, tags, reminders ────────────────────────────────
+
+pub fn set_file_meta(conn: &Connection, id: &str, note: &str, tags: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE files SET note = ?1, tags = ?2 WHERE id = ?3",
+        params![note, tags, id],
+    )?;
+    Ok(())
+}
+
+pub fn set_reminder(conn: &Connection, id: &str, at: Option<i64>) -> Result<()> {
+    conn.execute("UPDATE files SET remind_at = ?1 WHERE id = ?2", params![at, id])?;
+    Ok(())
+}
+
+/// Reminders that are due, cleared so each fires once.
+pub fn take_due_reminders(conn: &Connection, now: i64) -> Result<Vec<StashFile>> {
+    in_tx(conn, |tx| {
+        let due: Vec<StashFile> = {
+            let mut stmt = tx.prepare(
+                "SELECT * FROM files WHERE remind_at IS NOT NULL AND remind_at <= ?1 ORDER BY remind_at",
+            )?;
+            let rows = stmt.query_map([now], map_file)?;
+            rows.collect::<Result<_>>()?
+        };
+        for f in &due {
+            tx.execute("UPDATE files SET remind_at = NULL WHERE id = ?1", [&f.id])?;
+        }
+        Ok(due)
+    })
+}
+
+// ── Automatic and temporary shelves ───────────────────────
+
+pub fn shelf_of_kind(conn: &Connection, kind: &str) -> Result<Option<Shelf>> {
+    conn.query_row(
+        "SELECT * FROM shelves WHERE kind = ?1 ORDER BY created_at LIMIT 1",
+        [kind],
+        map_shelf,
+    )
+    .optional()
+}
+
+/// The shelf for an automatic source, created on first use.
+pub fn ensure_kind_shelf(
+    conn: &Connection,
+    kind: &str,
+    name: &str,
+    icon: &str,
+    color: &str,
+) -> Result<Shelf> {
+    if let Some(shelf) = shelf_of_kind(conn, kind)? {
+        return Ok(shelf);
+    }
+    let mut shelf = create_shelf(conn, name, Some(icon), Some(color))?;
+    conn.execute(
+        "UPDATE shelves SET kind = ?1 WHERE id = ?2",
+        params![kind, shelf.id],
+    )?;
+    shelf.kind = kind.to_string();
+    Ok(shelf)
+}
+
+pub fn set_shelf_expiry(conn: &Connection, id: &str, hours: Option<i64>) -> Result<()> {
+    conn.execute(
+        "UPDATE shelves SET expire_hours = ?1 WHERE id = ?2",
+        params![hours, id],
+    )?;
+    Ok(())
+}
+
+/// Remove files that outlived their shelf's expiry. Pinned files stay.
+pub fn expire_files(conn: &Connection, now: i64) -> Result<usize> {
+    conn.execute(
+        "DELETE FROM files
+         WHERE is_pinned = 0
+           AND EXISTS (
+             SELECT 1 FROM shelves s
+             WHERE s.id = files.shelf_id
+               AND s.expire_hours IS NOT NULL
+               AND files.added_at < ?1 - s.expire_hours * 3600000
+           )",
+        [now],
+    )
+}
+
+// ── Sorting rules ─────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Rule {
+    pub id: String,
+    pub shelf_id: String,
+    /// Comma-separated lowercase extensions; empty matches every file.
+    pub extensions: String,
+    /// "any" or a source such as "downloads".
+    pub source: String,
+}
+
+pub fn normalize_extensions(raw: &str) -> String {
+    let mut out: Vec<String> = raw
+        .split([',', ' ', ';'])
+        .map(|e| e.trim().trim_start_matches('.').to_lowercase())
+        .filter(|e| !e.is_empty())
+        .collect();
+    out.dedup();
+    out.join(",")
+}
+
+pub fn list_rules(conn: &Connection) -> Result<Vec<Rule>> {
+    let mut stmt =
+        conn.prepare("SELECT id, shelf_id, extensions, source FROM rules ORDER BY created_at")?;
+    let rows = stmt.query_map([], |r| {
+        Ok(Rule {
+            id: r.get(0)?,
+            shelf_id: r.get(1)?,
+            extensions: r.get(2)?,
+            source: r.get(3)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn add_rule(conn: &Connection, shelf_id: &str, extensions: &str, source: &str) -> Result<Rule> {
+    let rule = Rule {
+        id: uuid::Uuid::new_v4().to_string(),
+        shelf_id: shelf_id.to_string(),
+        extensions: normalize_extensions(extensions),
+        source: source.to_string(),
+    };
+    conn.execute(
+        "INSERT INTO rules (id, shelf_id, extensions, source, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![rule.id, rule.shelf_id, rule.extensions, rule.source, now_ms()],
+    )?;
+    Ok(rule)
+}
+
+pub fn delete_rule(conn: &Connection, id: &str) -> Result<()> {
+    conn.execute("DELETE FROM rules WHERE id = ?1", [id])?;
+    Ok(())
+}
+
+/// The first rule matching a file's extension and source decides its shelf.
+pub fn shelf_for(conn: &Connection, extension: &str, source: &str) -> Result<Option<String>> {
+    let ext = extension.to_lowercase();
+    Ok(list_rules(conn)?
+        .into_iter()
+        .find(|r| {
+            (r.source == "any" || r.source == source)
+                && (r.extensions.is_empty() || r.extensions.split(',').any(|e| e == ext))
+        })
+        .map(|r| r.shelf_id))
+}
+
+// ── Content index ─────────────────────────────────────────
+
+pub fn index_text(conn: &Connection, file_id: &str, text: &str) -> Result<()> {
+    in_tx(conn, |tx| {
+        tx.execute("DELETE FROM file_text WHERE file_id = ?1", [file_id])?;
+        tx.execute(
+            "INSERT INTO file_text (file_id, content) VALUES (?1, ?2)",
+            params![file_id, text],
+        )?;
+        Ok(())
+    })
+}
+
+/// Files whose contents match every word of `query` (prefix match).
+pub fn search_content(conn: &Connection, query: &str) -> Result<Vec<String>> {
+    let terms: Vec<String> = query
+        .split_whitespace()
+        .map(|t| t.replace('"', ""))
+        .filter(|t| !t.is_empty())
+        .map(|t| format!("\"{t}\"*"))
+        .collect();
+    if terms.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut stmt =
+        conn.prepare("SELECT DISTINCT file_id FROM file_text WHERE file_text MATCH ?1 LIMIT 500")?;
+    let rows = stmt.query_map([terms.join(" AND ")], |r| r.get(0))?;
+    rows.collect()
+}
+
+/// Files on the shelves that have no text indexed yet.
+pub fn files_without_text(conn: &Connection, limit: i64) -> Result<Vec<StashFile>> {
+    let mut stmt = conn.prepare(
+        "SELECT * FROM files f WHERE is_directory = 0
+           AND NOT EXISTS (SELECT 1 FROM file_text t WHERE t.file_id = f.id)
+         ORDER BY added_at DESC LIMIT ?1",
+    )?;
+    let rows = stmt.query_map([limit], map_file)?;
+    rows.collect()
 }
 
 #[cfg(test)]
@@ -771,6 +1056,94 @@ mod tests {
         let s = get_settings(&conn, Language::En).unwrap();
         assert_eq!(s.theme, Theme::Light);
         assert!(s.onboarding_done, "upgrading users skip the welcome");
+    }
+
+    #[test]
+    fn notes_tags_and_reminders() {
+        let conn = db();
+        let work = list_shelves(&conn).unwrap()[0].id.clone();
+        add_files(&conn, &[file("C:\\a.txt"), file("C:\\b.txt")], &work).unwrap();
+        let files = list_files(&conn, None).unwrap();
+        set_file_meta(&conn, &files[0].id, "for the tax office", "finance, 2026").unwrap();
+        set_reminder(&conn, &files[0].id, Some(1_000)).unwrap();
+        set_reminder(&conn, &files[1].id, Some(5_000)).unwrap();
+
+        let due = take_due_reminders(&conn, 2_000).unwrap();
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].note, "for the tax office");
+        assert_eq!(due[0].tags, "finance, 2026");
+        assert!(take_due_reminders(&conn, 2_000).unwrap().is_empty(), "fires once");
+        assert_eq!(take_due_reminders(&conn, 9_000).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn automatic_shelves_are_created_once() {
+        let conn = db();
+        let a = ensure_kind_shelf(&conn, "downloads", "Downloads", "download", "#0078D4").unwrap();
+        let b = ensure_kind_shelf(&conn, "downloads", "Downloads", "download", "#0078D4").unwrap();
+        assert_eq!(a.id, b.id);
+        assert_eq!(a.kind, "downloads");
+        assert_eq!(list_shelves(&conn).unwrap().len(), 4);
+    }
+
+    #[test]
+    fn temporary_shelves_expire_unpinned_files() {
+        let conn = db();
+        let temp = list_shelves(&conn).unwrap()[2].id.clone();
+        let work = list_shelves(&conn).unwrap()[0].id.clone();
+        set_shelf_expiry(&conn, &temp, Some(24)).unwrap();
+        add_files(&conn, &[file("C:\\old.txt"), file("C:\\keep.txt")], &temp).unwrap();
+        add_files(&conn, &[file("C:\\work.txt")], &work).unwrap();
+        let keep = list_files(&conn, Some(&temp))
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == "keep.txt")
+            .unwrap();
+        set_files_pinned(&conn, &[keep.id], true).unwrap();
+
+        let two_days = now_ms() + 48 * 3_600_000;
+        assert_eq!(expire_files(&conn, now_ms()).unwrap(), 0, "nothing is old yet");
+        assert_eq!(expire_files(&conn, two_days).unwrap(), 1);
+        let left: Vec<_> = list_files(&conn, None).unwrap().into_iter().map(|f| f.name).collect();
+        assert_eq!(left.len(), 2);
+        assert!(left.contains(&"keep.txt".to_string()) && left.contains(&"work.txt".to_string()));
+    }
+
+    #[test]
+    fn rules_route_files_by_extension_and_source() {
+        let conn = db();
+        let shelves = list_shelves(&conn).unwrap();
+        add_rule(&conn, &shelves[1].id, ".PDF, docx", "downloads").unwrap();
+        add_rule(&conn, &shelves[2].id, "", "screenshots").unwrap();
+        assert_eq!(list_rules(&conn).unwrap()[0].extensions, "pdf,docx");
+
+        assert_eq!(shelf_for(&conn, "pdf", "downloads").unwrap(), Some(shelves[1].id.clone()));
+        assert_eq!(shelf_for(&conn, "PDF", "downloads").unwrap(), Some(shelves[1].id.clone()));
+        assert_eq!(shelf_for(&conn, "pdf", "manual").unwrap(), None);
+        assert_eq!(shelf_for(&conn, "png", "screenshots").unwrap(), Some(shelves[2].id.clone()));
+
+        // Deleting a shelf removes its rules.
+        delete_shelf(&conn, &shelves[1].id).unwrap();
+        assert_eq!(list_rules(&conn).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn full_text_search_over_contents() {
+        let conn = db();
+        let work = list_shelves(&conn).unwrap()[0].id.clone();
+        add_files(&conn, &[file("C:\\inv.pdf"), file("C:\\notes.txt")], &work).unwrap();
+        let files = list_files(&conn, None).unwrap();
+        let inv = files.iter().find(|f| f.name == "inv.pdf").unwrap().id.clone();
+        index_text(&conn, &inv, "Fatura No 2026-114 Toplam tutar: 4.250 TL Ödeme").unwrap();
+        assert_eq!(files_without_text(&conn, 10).unwrap().len(), 1);
+
+        assert_eq!(search_content(&conn, "fatura").unwrap(), std::slice::from_ref(&inv));
+        assert_eq!(search_content(&conn, "odeme tut").unwrap(), std::slice::from_ref(&inv), "diacritics + prefixes");
+        assert!(search_content(&conn, "fatura kira").unwrap().is_empty(), "all words must match");
+        assert!(search_content(&conn, "\"").unwrap().is_empty());
+
+        remove_files(&conn, &[inv]).unwrap();
+        assert!(search_content(&conn, "fatura").unwrap().is_empty(), "index follows deletes");
     }
 
     #[test]

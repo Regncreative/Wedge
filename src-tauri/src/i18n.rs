@@ -26,6 +26,7 @@ pub struct Strings {
     pub update_ready_title: &'static str,
     pub update_error: &'static str,
     pub hotkey_taken: &'static str,
+    pub reminder_title: &'static str,
 }
 
 const TR: Strings = Strings {
@@ -37,6 +38,7 @@ const TR: Strings = Strings {
     update_ready_title: "Stash hazır",
     update_error: "Güncelleme başarısız",
     hotkey_taken: "Panel kısayolu başka bir uygulama tarafından kullanılıyor. Ayarlar’dan yeni bir kısayol seçebilirsin.",
+    reminder_title: "Stash hatırlatma",
 };
 
 const EN: Strings = Strings {
@@ -48,12 +50,25 @@ const EN: Strings = Strings {
     update_ready_title: "Stash is ready",
     update_error: "Update failed",
     hotkey_taken: "The panel shortcut is used by another app. Pick a new one in Settings.",
+    reminder_title: "Stash reminder",
 };
 
 pub fn strings(lang: Language) -> &'static Strings {
     match lang {
         Language::Tr => &TR,
         Language::En => &EN,
+    }
+}
+
+/// Name, icon and color of an automatic shelf.
+pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'static str) {
+    let tr = lang == Language::Tr;
+    match kind {
+        "downloads" => (if tr { "İndirilenler" } else { "Downloads" }, "download", "#0078D4"),
+        "screenshots" => (if tr { "Ekran görüntüleri" } else { "Screenshots" }, "camera", "#8764B8"),
+        "phone" => (if tr { "Telefondan" } else { "From phone" }, "smartphone", "#038387"),
+        "clipboard" => (if tr { "Pano" } else { "Clipboard" }, "clipboard", "#CA5010"),
+        _ => (if tr { "Gelen kutusu" } else { "Inbox" }, "inbox", "#2563EB"),
     }
 }
 
