@@ -55,16 +55,17 @@ test('flags a file that disappeared from disk', async () => {
   }
 })
 
-test('rejects malformed IPC calls from the renderer', async () => {
+test('rejects malformed commands from the panel', async () => {
   const stash = await launchApp()
   try {
     const error = await stash.page.evaluate(() =>
       window.stash
         .setSettings({ isAdmin: true } as never)
         .then(() => null)
-        .catch((e: Error) => e.message)
+        .catch((e: unknown) => String(e))
     )
-    expect(error).toContain('Invalid arguments')
+    // Rejected by serde (deny_unknown_fields) before reaching any code.
+    expect(error).toContain('isAdmin')
   } finally {
     await stash.close()
     removeProfile(stash.userData)

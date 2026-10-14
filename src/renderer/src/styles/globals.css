@@ -115,6 +115,12 @@ input {
   background: var(--scrollbar);
 }
 
+/* Idle fade: the window is transparent, so fading the page fades the panel. */
+#root {
+  opacity: var(--panel-opacity, 1);
+  transition: opacity var(--panel-fade, 0ms) cubic-bezier(0.33, 1, 0.68, 1);
+}
+
 .app-shell {
   position: relative;
   height: 100%;

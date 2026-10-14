@@ -1,4 +1,4 @@
-import type { StashApi } from '../../preload/index'
+import type { StashApi } from './lib/api'
 
 declare global {
   interface Window {

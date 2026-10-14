@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
-// End-to-end tests drive the built app (npm run build) through Electron.
+// End-to-end tests drive the real stash.exe (npm run build:e2e) through
+// WebView2's DevTools protocol; see tests/e2e/app.ts.
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 60_000,

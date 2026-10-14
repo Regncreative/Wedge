@@ -102,7 +102,6 @@ export const tr: Messages = {
   updateReady: (v) => `${v} hazır — yeniden başlatınca kurulur`,
   updateLatest: 'Güncelsiniz',
   updateDev: 'Güncelleme yalnızca kurulu sürümde çalışır',
-  updateStore: 'Güncellemeler Microsoft Store üzerinden yapılır',
   updateError: 'Güncelleme başarısız',
   updateErrorHint: '1.0.1 ve öncesi otomatik güncellenemiyor. En son kurucuyu indir.',
   downloadManually: 'Manuel indir',

@@ -7,12 +7,13 @@ import type { StashFile } from '@shared/types'
 import { FileTypeIcon } from './file-icon'
 import { formatBytes, formatClock } from '@/lib/format'
 import { useStashStore } from '@/stores/stash-store'
-import { cn, toFileUrl } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { IMAGE_EXTS } from '@shared/types'
 import { useT } from '@/lib/i18n'
 
 /** Process-wide cache so icons persist across virtualized mount/unmount. */
 const iconMemo = new Map<string, string | null>()
+const previewMemo = new Map<string, string | null>()
 
 interface FileCardProps {
   file: StashFile
@@ -42,6 +43,9 @@ export const FileCard = memo(function FileCard({
   )
   const [preview, setPreview] = useState(false)
   const [previewPos, setPreviewPos] = useState<{ left: number; top: number } | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    () => previewMemo.get(file.id) ?? null
+  )
   const cardRef = useRef<HTMLDivElement>(null)
   const [icon, setIcon] = useState<string | null>(() => iconMemo.get(file.id) ?? null)
 
@@ -74,7 +78,7 @@ export const FileCard = memo(function FileCard({
         e.preventDefault()
         return
       }
-      // Required for Electron native file drag-out
+      // The native drag (started in Rust) replaces the browser's own.
       e.preventDefault()
       // Mark outbound so DropZone doesn't treat this as an inbound drop
       document.body.dataset.stashDragging = '1'
@@ -84,14 +88,10 @@ export const FileCard = memo(function FileCard({
         selectedIds.length > 1 && selectedIds.includes(file.id)
           ? selectedIds.filter((id) => files.find((f) => f.id === id)?.exists)
           : [file.id]
-      window.stash.startDrag(ids)
-      const clear = () => {
+      // Resolves when the native drag ends (dropped or cancelled).
+      void window.stash.startDrag(ids).finally(() => {
         delete document.body.dataset.stashDragging
-        window.removeEventListener('dragend', clear)
-        window.removeEventListener('mouseup', clear)
-      }
-      window.addEventListener('dragend', clear)
-      window.addEventListener('mouseup', clear)
+      })
     },
     [file]
   )
@@ -123,6 +123,18 @@ export const FileCard = memo(function FileCard({
     file.exists &&
     !file.isDirectory &&
     IMAGE_EXTS.has(file.extension)
+
+  useEffect(() => {
+    if (!showImagePreview || previewMemo.has(file.id)) return
+    let alive = true
+    void window.stash.getPreview(file.id).then((url) => {
+      previewMemo.set(file.id, url)
+      if (alive) setPreviewUrl(url)
+    })
+    return () => {
+      alive = false
+    }
+  }, [showImagePreview, file.id])
 
   const openPreview = () => {
     if (!allowPreview) return
@@ -249,13 +261,14 @@ export const FileCard = memo(function FileCard({
 
       {showImagePreview &&
         previewPos &&
+        previewUrl &&
         createPortal(
           <div
             className="pointer-events-none fixed z-[90] overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--preview-bg)] shadow-[var(--hover-shadow)]"
             style={{ left: previewPos.left, top: previewPos.top }}
           >
             <img
-              src={toFileUrl(file.absolutePath)}
+              src={previewUrl}
               alt=""
               className="max-h-36 max-w-[200px] object-contain"
               draggable={false}

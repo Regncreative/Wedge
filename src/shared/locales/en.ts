@@ -102,7 +102,6 @@ export const en: Messages = {
   updateReady: (v) => `${v} ready — restarts to install`,
   updateLatest: 'You’re up to date',
   updateDev: 'Updates only work in the installed app',
-  updateStore: 'Updates are installed by the Microsoft Store',
   updateError: 'Update failed',
   updateErrorHint: '1.0.1 and earlier can’t auto-update. Download the latest installer.',
   downloadManually: 'Download manually',

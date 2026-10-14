@@ -1,52 +1,55 @@
 {
   "name": "stash",
-  "version": "1.0.4",
-  "description": "Stash",
-  "main": "./out/main/index.js",
+  "version": "2.0.0-alpha.0",
+  "description": "A modern file shelf for Windows",
   "author": "Regncreative",
   "license": "MIT",
   "private": true,
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Regncreative/Stash.git"
   },
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "dist": "npm run build && electron-builder",
-    "dist:dir": "npm run build && electron-builder --dir",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc -p tsconfig.test.json",
-    "test": "node scripts/run-vitest.cjs run",
-    "test:watch": "node scripts/run-vitest.cjs",
-    "test:coverage": "node scripts/run-vitest.cjs run --coverage",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "typecheck": "tsc -p tsconfig.web.json && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "build:e2e": "tauri build --debug --no-bundle",
     "test:e2e": "playwright test",
-    "lint": "eslint -c eslint.config.cjs .",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "brand:electron": "node scripts/brand-electron.cjs",
-    "postinstall": "electron-builder install-app-deps && node scripts/brand-electron.cjs"
+    "lint": "eslint -c eslint.config.cjs . && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" && cargo fmt --manifest-path src-tauri/Cargo.toml",
+    "tauri": "tauri"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
+    "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/plugin-autostart": "^2.7.0",
+    "@tauri-apps/plugin-dialog": "^2.8.2",
+    "@tauri-apps/plugin-global-shortcut": "^2.4.1",
+    "@tauri-apps/plugin-notification": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2.7.1",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "electron-log": "^5.4.4",
-    "electron-updater": "^6.8.9",
     "framer-motion": "^11.18.2",
-    "koffi": "^3.1.2",
     "lucide-react": "^0.474.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.6.0",
-    "zod": "^3.25.76",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
-    "@types/better-sqlite3": "^7.6.12",
+    "@tauri-apps/cli": "^2.12.2",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
@@ -54,59 +57,15 @@
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.20",
-    "electron": "^34.0.2",
-    "electron-builder": "^25.1.8",
-    "electron-vite": "^2.3.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
     "postcss": "^8.5.1",
     "prettier": "^3.4.2",
-    "rcedit": "^5.0.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vite": "^5.4.14",
     "vitest": "^2.1.9"
-  },
-  "build": {
-    "appId": "com.stash.app",
-    "productName": "Stash",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "out/**/*",
-      "resources/**/*"
-    ],
-    "asar": true,
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "Regncreative",
-        "repo": "Stash",
-        "releaseType": "draft"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "resources/icon.ico",
-      "executableName": "Stash",
-      "verifyUpdateCodeSignature": false
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Stash",
-      "installerIcon": "resources/icon.ico",
-      "uninstallerIcon": "resources/icon.ico",
-      "artifactName": "Stash-Setup-${version}.${ext}",
-      "include": "build/installer.nsh",
-      "deleteAppDataOnUninstall": false
-    }
   }
 }

@@ -14,7 +14,8 @@ module.exports = [
       'dist/**',
       'coverage/**',
       'test-results/**',
-      'playwright-report/**'
+      'playwright-report/**',
+      'src-tauri/**'
     ]
   },
   {

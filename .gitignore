@@ -30,3 +30,9 @@ Thumbs.db
 coverage
 test-results/
 playwright-report/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+test-results/
+playwright-report/

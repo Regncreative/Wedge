@@ -14,16 +14,10 @@ export default defineConfig({
     pool: 'forks',
     coverage: {
       provider: 'v8',
-      // Core logic only; Electron-bound modules (window, tray, IPC wiring)
-      // are exercised by the Playwright suite instead.
-      include: [
-        'src/main/database/**',
-        'src/main/file-exists.ts',
-        'src/main/ipc-schemas.ts',
-        'src/shared/**',
-        'src/renderer/src/lib/**'
-      ],
-      exclude: ['src/renderer/src/lib/i18n.ts', 'src/shared/ipc.ts'],
+      // Pure frontend logic; the Rust backend has its own tests (npm run test:rust)
+      // and the UI wiring is exercised by the Playwright suite.
+      include: ['src/shared/**', 'src/renderer/src/lib/**'],
+      exclude: ['src/renderer/src/lib/i18n.ts', 'src/renderer/src/lib/api.ts', 'src/shared/ipc.ts'],
       thresholds: { lines: 70, branches: 70 }
     }
   }
