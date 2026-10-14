@@ -11,10 +11,15 @@
   ${AndIf} ${FileExists} "$R2\Uninstall Stash.exe"
     DetailPrint "Removing Stash 1.x from $R2"
     ; _?= runs the uninstaller in place so ExecWait really waits for it.
-    ; --updated makes it keep shortcuts settings and user data (%APPDATA%\Stash),
-    ; which this version reuses.
-    ExecWait '"$R2\Uninstall Stash.exe" /S --updated _?=$R2' $R3
+    ; (Not --updated: in that mode it tries to move its own, locked, folder
+    ; and aborts.) 1.x never deletes %APPDATA%\Stash, which this version reuses.
+    ExecWait '"$R2\Uninstall Stash.exe" /S _?=$R2' $R3
+    DetailPrint "Stash 1.x uninstaller exit code: $R3"
     Delete "$R2\Uninstall Stash.exe"
+    ; If anything is left, remove it, but only if it really is the Electron app.
+    ${If} ${FileExists} "$R2\LICENSE.electron.txt"
+      RMDir /r "$R2"
+    ${EndIf}
     RMDir "$R2"
     DeleteRegKey ${ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\${STASH_V1_GUID}"
     DeleteRegKey ${ROOT} "Software\${STASH_V1_GUID}"

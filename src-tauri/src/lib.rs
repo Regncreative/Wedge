@@ -70,7 +70,16 @@ pub fn run() {
 
             let handle = app.handle();
             tray::create(handle)?;
-            hotkey::reregister(handle, &settings.open_hotkey);
+            if !hotkey::reregister(handle, &settings.open_hotkey) && settings.notifications {
+                // Another app owns the shortcut; tell the user instead of failing silently.
+                use tauri_plugin_notification::NotificationExt;
+                let _ = handle
+                    .notification()
+                    .builder()
+                    .title("Stash")
+                    .body(i18n::strings(language).hotkey_taken)
+                    .show();
+            }
             commands::sync_autostart(handle, settings.start_with_windows);
             updater::schedule_startup_check(handle);
             // Silent launch: the panel stays hidden until tray click / hotkey.

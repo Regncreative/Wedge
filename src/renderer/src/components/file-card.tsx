@@ -57,7 +57,7 @@ export const FileCard = memo(function FileCard({
     }
     let alive = true
     void window.stash.getFileIcon(file.id).then((url) => {
-      iconMemo.set(file.id, url)
+      if (url) iconMemo.set(file.id, url)
       if (alive) setIcon(url)
     })
     return () => {

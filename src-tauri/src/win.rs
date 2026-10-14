@@ -1,11 +1,43 @@
 //! Windows shell integration: file icons, thumbnails and the Properties sheet.
 
+use std::sync::{mpsc, Mutex, OnceLock};
+
 use base64::Engine;
+
+type Rgba = (u32, u32, Vec<u8>);
+type Job = (String, i32, bool, mpsc::Sender<Option<Rgba>>);
+
+/// The shell's icon/thumbnail extraction misbehaves when called from many
+/// threads at once (most calls fail), so all of it runs on one long-lived
+/// single-threaded-apartment worker, one request at a time.
+fn worker() -> Option<mpsc::Sender<Job>> {
+    static WORKER: OnceLock<Mutex<mpsc::Sender<Job>>> = OnceLock::new();
+    let sender = WORKER.get_or_init(|| {
+        let (tx, rx) = mpsc::channel::<Job>();
+        let spawned = std::thread::Builder::new()
+            .name("shell-images".into())
+            .spawn(move || {
+                imp::init_sta();
+                for (path, size, thumbnail, reply) in rx {
+                    let _ = reply.send(imp::shell_image(&path, size, thumbnail));
+                }
+            });
+        if let Err(e) = spawned {
+            log::error!("shell image worker: {e}");
+        }
+        Mutex::new(tx)
+    });
+    sender.lock().ok().map(|s| s.clone())
+}
 
 /// PNG of the shell icon (`thumbnail = false`) or image thumbnail
 /// (`thumbnail = true`) for a file, as Explorer would show it. Blocking.
 pub fn shell_image_png(path: &str, size: i32, thumbnail: bool) -> Option<Vec<u8>> {
-    let (width, height, rgba) = imp::shell_image(path, size, thumbnail)?;
+    let (reply, response) = mpsc::channel();
+    worker()?
+        .send((path.to_owned(), size, thumbnail, reply))
+        .ok()?;
+    let (width, height, rgba) = response.recv().ok()??;
     let mut png_bytes = Vec::new();
     {
         let mut encoder = png::Encoder::new(&mut png_bytes, width, height);
@@ -67,10 +99,15 @@ mod imp {
     };
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOW;
 
-    pub fn shell_image(path: &str, size: i32, thumbnail: bool) -> Option<(u32, u32, Vec<u8>)> {
+    /// Called once on the worker thread, which lives for the whole session.
+    pub fn init_sta() {
         unsafe {
-            // Harmless if COM is already initialized on this thread.
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        }
+    }
+
+    pub fn shell_image(path: &str, size: i32, thumbnail: bool) -> Option<super::Rgba> {
+        unsafe {
             let factory: IShellItemImageFactory =
                 SHCreateItemFromParsingName(&HSTRING::from(path), None).ok()?;
             let flags = if thumbnail {
@@ -137,7 +174,8 @@ mod imp {
 
 #[cfg(not(windows))]
 mod imp {
-    pub fn shell_image(_: &str, _: i32, _: bool) -> Option<(u32, u32, Vec<u8>)> {
+    pub fn init_sta() {}
+    pub fn shell_image(_: &str, _: i32, _: bool) -> Option<super::Rgba> {
         None
     }
     pub fn show_properties(_: &str) -> bool {
@@ -160,6 +198,34 @@ mod tests {
     fn treats_alphaless_bitmaps_as_opaque() {
         let px = bgra_premultiplied_to_rgba(vec![10, 20, 30, 0]);
         assert_eq!(px, [30, 20, 10, 255]);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn renders_icons_concurrently() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths: Vec<String> = [
+            "a.mp3", "b.png", "c.png", "d.txt", "e.pdf", "f.zip", "g.svg", "h.docx",
+        ]
+        .iter()
+        .map(|n| {
+            let p = dir.path().join(n);
+            std::fs::write(&p, b"x").unwrap();
+            p.to_string_lossy().into_owned()
+        })
+        .collect();
+        let handles: Vec<_> = paths
+            .iter()
+            .cloned()
+            .map(|p| std::thread::spawn(move || (shell_image_png(&p, 48, false).is_some(), p)))
+            .collect();
+        let failed: Vec<String> = handles
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .filter(|(ok, _)| !ok)
+            .map(|(_, p)| p)
+            .collect();
+        assert!(failed.is_empty(), "no icon for {failed:?}");
     }
 
     #[cfg(windows)]

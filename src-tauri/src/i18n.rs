@@ -25,6 +25,7 @@ pub struct Strings {
     pub update_title: &'static str,
     pub update_ready_title: &'static str,
     pub update_error: &'static str,
+    pub hotkey_taken: &'static str,
 }
 
 const TR: Strings = Strings {
@@ -35,6 +36,7 @@ const TR: Strings = Strings {
     update_title: "Stash güncellemesi",
     update_ready_title: "Stash hazır",
     update_error: "Güncelleme başarısız",
+    hotkey_taken: "Panel kısayolu başka bir uygulama tarafından kullanılıyor. Ayarlar’dan yeni bir kısayol seçebilirsin.",
 };
 
 const EN: Strings = Strings {
@@ -45,6 +47,7 @@ const EN: Strings = Strings {
     update_title: "Stash update",
     update_ready_title: "Stash is ready",
     update_error: "Update failed",
+    hotkey_taken: "The panel shortcut is used by another app. Pick a new one in Settings.",
 };
 
 pub fn strings(lang: Language) -> &'static Strings {

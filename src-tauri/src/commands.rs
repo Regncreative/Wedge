@@ -340,11 +340,14 @@ async fn shell_image(
     })
     .await
     .map_err(err)?;
-    let mut cache = state.icon_cache.lock().map_err(err)?;
-    if cache.len() > 2_000 {
-        cache.clear(); // simple bound; icons are cheap to recreate
+    // Cache successes only, so a transient failure doesn't stick.
+    if url.is_some() {
+        let mut cache = state.icon_cache.lock().map_err(err)?;
+        if cache.len() > 2_000 {
+            cache.clear(); // simple bound; icons are cheap to recreate
+        }
+        cache.insert(key, url.clone());
     }
-    cache.insert(key, url.clone());
     Ok(url)
 }
 
