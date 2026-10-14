@@ -1,11 +1,11 @@
 //! Commands for notes, reminders, rules, content search, quick actions,
-//! clipboard and the preview overlay.
+//! clipboard, shared shelves and the preview overlay.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
@@ -141,15 +141,6 @@ pub fn search_content(state: State<'_, AppState>, query: String) -> CmdResult<Ve
     db::search_content(&state.db(), &query).map_err(err)
 }
 
-#[tauri::command]
-pub fn set_selection(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<()> {
-    if ids.len() > crate::commands::MAX_ITEMS {
-        return Err("Invalid arguments: ids".into());
-    }
-    *state.selection.lock().map_err(err)? = ids;
-    Ok(())
-}
-
 // ── Quick actions ─────────────────────────────────────────
 
 #[tauri::command]
@@ -183,29 +174,54 @@ pub async fn convert_images(
     state: State<'_, AppState>,
     ids: Vec<String>,
     format: ImageFormat,
-    max_side: Option<u32>,
 ) -> CmdResult<Value> {
-    if max_side.is_some_and(|m| !(16..=20_000).contains(&m)) {
-        return Err("Invalid arguments: maxSide".into());
-    }
     let files = files_by_ids(&state, &ids)?;
     let paths = existing_paths(&files);
     let results = tauri::async_runtime::spawn_blocking(move || {
         paths
             .iter()
-            .map(|p| actions::convert_image(p, format, max_side))
+            .map(|p| actions::convert_image(p, format))
             .collect::<Vec<_>>()
     })
     .await
     .map_err(err)?;
-    let made: Vec<PathBuf> = results
-        .iter()
-        .filter_map(|r| r.as_ref().ok().cloned())
-        .collect();
+    let done: Vec<actions::Converted> = results.iter().filter_map(|r| r.clone().ok()).collect();
     if let Some(first) = files.first() {
+        let made: Vec<PathBuf> = done.iter().map(|c| c.path.clone()).collect();
         shelve_new(&state, &made, &first.shelf_id);
     }
-    Ok(json!({ "converted": made.len(), "failed": results.len() - made.len() }))
+    Ok(json!({ "results": done, "failed": results.len() - done.len() }))
+}
+
+/// "Reduce size": a smaller copy of each image next to it. Images that
+/// can't get smaller are reported as `alreadySmall` and left alone.
+#[tauri::command]
+pub async fn shrink_images(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<Value> {
+    let files = files_by_ids(&state, &ids)?;
+    let paths = existing_paths(&files);
+    let suffix = crate::i18n::strings(state.language).shrunk_suffix;
+    let results = tauri::async_runtime::spawn_blocking(move || {
+        paths
+            .iter()
+            .map(|p| actions::shrink_image(p, suffix))
+            .collect::<Vec<_>>()
+    })
+    .await
+    .map_err(err)?;
+    let mut done = Vec::new();
+    let (mut already_small, mut failed) = (0, 0);
+    for r in results {
+        match r {
+            Ok(actions::Shrunk::Done(c)) => done.push(c),
+            Ok(actions::Shrunk::AlreadySmall) => already_small += 1,
+            Err(_) => failed += 1,
+        }
+    }
+    if let Some(first) = files.first() {
+        let made: Vec<PathBuf> = done.iter().map(|c| c.path.clone()).collect();
+        shelve_new(&state, &made, &first.shelf_id);
+    }
+    Ok(json!({ "results": done, "alreadySmall": already_small, "failed": failed }))
 }
 
 #[tauri::command]
@@ -461,36 +477,6 @@ pub async fn paste_clipboard(
     std::fs::write(&dest, body).map_err(err)?;
     let n = added_to(vec![dest.to_string_lossy().into_owned()], "clipboard");
     Ok(PasteResult { kind, added: n })
-}
-
-// ── Paste into an Open/Save dialog (global shortcut) ──────
-
-pub fn paste_into_dialog(app: &AppHandle) {
-    let state = app.state::<AppState>();
-    let selected = state
-        .selection
-        .lock()
-        .map(|s| s.clone())
-        .unwrap_or_default();
-    let conn = state.db();
-    let mut paths: Vec<String> = selected
-        .iter()
-        .filter_map(|id| db::get_file(&conn, id).ok().flatten())
-        .map(|f| f.absolute_path)
-        .collect();
-    if paths.is_empty() {
-        // Nothing selected: the most recently used or added file.
-        paths = db::list_files(&conn, None)
-            .unwrap_or_default()
-            .into_iter()
-            .max_by_key(|f| f.last_accessed.unwrap_or(f.added_at))
-            .map(|f| vec![f.absolute_path])
-            .unwrap_or_default();
-    }
-    drop(conn);
-    if !paths.is_empty() && !shell::fill_file_dialog(&shell::dialog_text(&paths)) {
-        log::info!("paste hotkey: no file dialog in front");
-    }
 }
 
 // ── Preview ───────────────────────────────────────────────

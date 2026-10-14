@@ -75,16 +75,9 @@ pub fn check_settings_patch(p: &SettingsPatch) -> CmdResult<()> {
             return bad("accentColor");
         }
     }
-    for h in [&p.open_hotkey, &p.paste_hotkey].into_iter().flatten() {
+    if let Some(h) = &p.open_hotkey {
         if h.is_empty() || h.len() > 100 {
             return bad("hotkey");
-        }
-    }
-    if let Some(dir) = &p.sync_folder {
-        if dir.chars().count() > MAX_PATH_CHARS
-            || (!dir.is_empty() && !std::path::Path::new(dir).is_absolute())
-        {
-            return bad("syncFolder");
         }
     }
     for id in [&p.default_shelf_id, &p.last_shelf_id]
@@ -153,7 +146,25 @@ pub async fn add_files(
     if let Some(id) = &shelf_id {
         check_id(id)?;
     }
+    let (target, notify) = {
+        let conn = state.db();
+        let settings = db::get_settings(&conn, state.language).map_err(err)?;
+        let shelves = db::list_shelves(&conn).map_err(err)?;
+        let target = shelf_id
+            .and_then(|id| shelves.iter().find(|s| s.id == id))
+            .or_else(|| shelves.iter().find(|s| s.id == settings.default_shelf_id))
+            .or_else(|| shelves.first())
+            .cloned()
+            .ok_or("No shelf available")?;
+        (target, settings.notifications)
+    };
+    let folder = target.folder.clone();
     let metas = tauri::async_runtime::spawn_blocking(move || {
+        // A shared shelf gets copies in its folder.
+        let paths = match &folder {
+            Some(folder) => crate::shared::copy_in(folder, &paths),
+            None => paths,
+        };
         paths
             .iter()
             .filter_map(|p| files::collect_meta(p))
@@ -162,30 +173,12 @@ pub async fn add_files(
     .await
     .map_err(err)?;
 
-    let (result, notify) = {
-        let conn = state.db();
-        let settings = db::get_settings(&conn, state.language).map_err(err)?;
-        let shelves = db::list_shelves(&conn).map_err(err)?;
-        let target = shelf_id
-            .filter(|id| shelves.iter().any(|s| &s.id == id))
-            .or_else(|| Some(settings.default_shelf_id.clone()).filter(|id| !id.is_empty()))
-            .or_else(|| shelves.first().map(|s| s.id.clone()))
-            .ok_or("No shelf available")?;
-        let (added, skipped) = db::add_files(&conn, &metas, &target).map_err(err)?;
-        let shelf_name = shelves
-            .iter()
-            .find(|s| s.id == target)
-            .map(|s| s.name.clone())
-            .unwrap_or_default();
-        (
-            AddFilesResult {
-                added,
-                skipped,
-                shelf_id: target,
-                shelf_name,
-            },
-            settings.notifications,
-        )
+    let (added, skipped) = db::add_files(&state.db(), &metas, &target.id).map_err(err)?;
+    let result = AddFilesResult {
+        added,
+        skipped,
+        shelf_id: target.id,
+        shelf_name: target.name,
     };
 
     if result.added > 0 {
@@ -209,24 +202,60 @@ pub async fn add_files(
 }
 
 #[tauri::command]
-pub fn remove_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<bool> {
+pub async fn remove_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<bool> {
     check_ids(&ids)?;
-    // Clips and phone uploads live in Stash's own folder; removing them from
-    // the shelf deletes the file too, unless another shelf still uses it.
-    let owned: Vec<String> = {
+    let (owned, shared) = {
         let conn = state.db();
-        ids.iter()
+        let shelves = db::list_shelves(&conn).map_err(err)?;
+        let files: Vec<StashFile> = ids
+            .iter()
             .filter_map(|id| db::get_file(&conn, id).ok().flatten())
-            .map(|f| f.absolute_path)
+            .collect();
+        // Clips and phone uploads live in Stash's own folder; removing them
+        // from the shelf deletes the file too, unless another shelf uses it.
+        let owned: Vec<String> = files
+            .iter()
+            .map(|f| f.absolute_path.clone())
             .filter(|p| crate::commands_extra::is_owned(&state, p))
-            .collect()
+            .collect();
+        // Files of a shared shelf go to the Recycle Bin: they leave the
+        // folder for everyone it is shared with.
+        let shared: Vec<(String, String)> = files
+            .iter()
+            .filter(|f| {
+                shelves.iter().any(|s| {
+                    s.id == f.shelf_id
+                        && s.folder
+                            .as_deref()
+                            .is_some_and(|dir| crate::shared::is_inside(&f.absolute_path, dir))
+                })
+            })
+            .map(|f| (f.id.clone(), f.absolute_path.clone()))
+            .collect();
+        (owned, shared)
     };
+    let failed: Vec<String> = tauri::async_runtime::spawn_blocking(move || {
+        shared
+            .into_iter()
+            .filter(|(_, path)| {
+                let path = std::path::Path::new(path);
+                path.exists() && crate::shared::recycle(path).is_err()
+            })
+            .map(|(id, _)| id)
+            .collect()
+    })
+    .await
+    .map_err(err)?;
+    let ids: Vec<String> = ids.into_iter().filter(|id| !failed.contains(id)).collect();
     db::remove_files(&state.db(), &ids).map_err(err)?;
     let still_used = db::list_files(&state.db(), None).unwrap_or_default();
     for path in owned {
         if !still_used.iter().any(|f| f.absolute_path == path) {
             let _ = std::fs::remove_file(&path);
         }
+    }
+    if !failed.is_empty() {
+        return Err("recycle_failed".into());
     }
     Ok(true)
 }
@@ -256,11 +285,47 @@ pub fn pin_files(state: State<'_, AppState>, ids: Vec<String>, pinned: bool) -> 
     Ok(true)
 }
 
+/// Move a file to another shelf. Onto a shared shelf this copies the file
+/// into the shared folder; files can't leave a shared shelf this way (they
+/// live in the shared folder; drag them out instead).
 #[tauri::command]
-pub fn move_file(state: State<'_, AppState>, id: String, shelf_id: String) -> CmdResult<bool> {
+pub async fn move_file(
+    state: State<'_, AppState>,
+    id: String,
+    shelf_id: String,
+) -> CmdResult<bool> {
     check_id(&id)?;
     check_id(&shelf_id)?;
-    db::move_file(&state.db(), &id, &shelf_id).map_err(err)?;
+    let (file, from, to) = {
+        let conn = state.db();
+        let file = db::get_file(&conn, &id)
+            .map_err(err)?
+            .ok_or("Unknown file")?;
+        let from = db::get_shelf(&conn, &file.shelf_id).map_err(err)?;
+        let to = db::get_shelf(&conn, &shelf_id)
+            .map_err(err)?
+            .ok_or("Unknown shelf")?;
+        (file, from, to)
+    };
+    if from.as_ref().is_some_and(|s| s.folder.is_some()) {
+        return Err("shared_move".into());
+    }
+    let Some(folder) = to.folder else {
+        db::move_file(&state.db(), &id, &shelf_id).map_err(err)?;
+        return Ok(true);
+    };
+    let source = file.absolute_path.clone();
+    let copy = tauri::async_runtime::spawn_blocking(move || {
+        crate::shared::copy_in(&folder, &[source]).pop()
+    })
+    .await
+    .map_err(err)?
+    .ok_or("copy_failed")?;
+    let name = std::path::Path::new(&copy)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or(file.name);
+    db::relocate_file(&state.db(), &id, &shelf_id, &copy, &name).map_err(err)?;
     Ok(true)
 }
 
@@ -298,6 +363,29 @@ pub async fn reveal_file(
         return Ok(OpResult::err("missing"));
     }
     Ok(match app.opener().reveal_item_in_dir(&file.absolute_path) {
+        Ok(()) => OpResult::ok(),
+        Err(e) => OpResult::err(e.to_string()),
+    })
+}
+
+/// Open a shared shelf's folder in Explorer.
+#[tauri::command]
+pub async fn open_shelf_folder(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> CmdResult<OpResult> {
+    check_id(&id)?;
+    let folder = db::get_shelf(&state.db(), &id)
+        .map_err(err)?
+        .and_then(|s| s.folder);
+    let Some(folder) = folder else {
+        return Ok(OpResult::err("not_shared"));
+    };
+    if !files::is_reachable(&folder).await {
+        return Ok(OpResult::err("missing"));
+    }
+    Ok(match app.opener().open_path(&folder, None::<&str>) {
         Ok(()) => OpResult::ok(),
         Err(e) => OpResult::err(e.to_string()),
     })
@@ -384,7 +472,7 @@ pub async fn file_icon(state: State<'_, AppState>, id: String) -> CmdResult<Opti
 
 #[tauri::command]
 pub async fn file_preview(state: State<'_, AppState>, id: String) -> CmdResult<Option<String>> {
-    shell_image(&state, &id, 200, true).await
+    shell_image(&state, &id, 256, true).await
 }
 
 /// Start a native drag of the given files into other apps. Runs on the UI
@@ -464,14 +552,72 @@ pub fn rename_shelf(state: State<'_, AppState>, id: String, name: String) -> Cmd
     Ok(true)
 }
 
+/// Link a folder (e.g. one shared in Google Drive or OneDrive) as a shared
+/// shelf. A folder that is already linked returns its shelf.
 #[tauri::command]
-pub fn delete_shelf(state: State<'_, AppState>, id: String) -> CmdResult<bool> {
+pub async fn create_shared_shelf(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder: String,
+    name: Option<String>,
+) -> CmdResult<Shelf> {
+    if folder.chars().count() > MAX_PATH_CHARS || !std::path::Path::new(&folder).is_absolute() {
+        return Err("Invalid arguments: folder".into());
+    }
+    let name = match name {
+        Some(n) => check_shelf_name(&n)?,
+        None => check_shelf_name(
+            &std::path::Path::new(&folder)
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| folder.clone()),
+        )?,
+    };
+    let probe = folder.clone();
+    let is_dir =
+        tauri::async_runtime::spawn_blocking(move || std::path::Path::new(&probe).is_dir())
+            .await
+            .map_err(err)?;
+    if !is_dir {
+        return Err("folder_unavailable".into());
+    }
+    let shelf = {
+        let conn = state.db();
+        if let Some(existing) = db::shelf_by_folder(&conn, &folder).map_err(err)? {
+            return Ok(existing);
+        }
+        let shelf = db::create_shelf(&conn, &name, Some("users"), Some("#0F9D58")).map_err(err)?;
+        db::set_shelf_folder(&conn, &shelf.id, &folder).map_err(err)?;
+        db::get_shelf(&conn, &shelf.id)
+            .map_err(err)?
+            .ok_or("Unknown shelf")?
+    };
+    let handle = app.clone();
+    let id = shelf.id.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::shared::refresh(&handle, Some(&id)))
+        .await
+        .map_err(err)?;
+    crate::shared::restart_watcher(&app);
+    Ok(shelf)
+}
+
+/// Delete a shelf (its files stay on disk; a shared folder is left as is).
+#[tauri::command]
+pub fn delete_shelf(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<bool> {
     check_id(&id)?;
     let conn = state.db();
+    let was_shared = db::get_shelf(&conn, &id)
+        .ok()
+        .flatten()
+        .is_some_and(|s| s.folder.is_some());
     match db::delete_shelf(&conn, &id) {
         Ok(()) => {
             // Heal default/last shelf references.
             db::get_settings(&conn, state.language).map_err(err)?;
+            drop(conn);
+            if was_shared {
+                crate::shared::restart_watcher(&app);
+            }
             Ok(true)
         }
         Err(DeleteShelfError::LastShelf) => Err("Cannot delete the last shelf".into()),
@@ -504,11 +650,6 @@ pub fn set_settings(
             return Err("hotkey_unavailable".into());
         }
     }
-    if let Some(h) = &patch.paste_hotkey {
-        if !hotkey::reregister_action(&app, h, hotkey::Action::PasteIntoDialog) {
-            return Err("hotkey_unavailable".into());
-        }
-    }
     let next = db::set_settings(&state.db(), &patch, state.language).map_err(err)?;
     if patch.start_with_windows.is_some() {
         sync_autostart(&app, next.start_with_windows);
@@ -519,8 +660,10 @@ pub fn set_settings(
     if patch.context_menu.is_some() {
         sync_context_menu(&app, next.context_menu);
     }
-    if patch.shake_to_open.is_some() || patch.edge_reveal.is_some() {
-        crate::input::configure(&app, next.shake_to_open, next.edge_reveal);
+    if patch.edge_handle.is_some() {
+        let (handle, side) = (app.clone(), next.edge_handle);
+        // May create a window, which must not happen inside this command.
+        crate::edge::on_main_thread(&app, move || crate::edge::apply(&handle, side));
     }
     Ok(next)
 }
@@ -556,6 +699,25 @@ pub fn sync_autostart(app: &AppHandle, enabled: bool) {
     if let Err(e) = result {
         log::warn!("autostart: {e}");
     }
+}
+
+/// The panel's page has loaded: now the extra windows (edge handle, desktop
+/// widgets) can be created. Runs once.
+#[tauri::command]
+pub async fn app_ready(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if STARTED.swap(true, Ordering::SeqCst) {
+        return Ok(());
+    }
+    let side = db::get_settings(&state.db(), state.language)
+        .map_err(err)?
+        .edge_handle;
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        crate::edge::apply(&handle, side);
+        crate::widget::restore(&handle);
+    })
+    .map_err(err)
 }
 
 #[tauri::command]

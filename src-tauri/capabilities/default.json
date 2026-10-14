@@ -1,10 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Stash's windows (panel, drop shelf, desktop widgets): own commands plus events and theme.",
+  "description": "Stash's windows (panel, edge handle, desktop widgets): own commands plus events and theme.",
   "windows": [
     "panel",
-    "dropshelf",
+    "edge",
     "widget-*"
   ],
   "permissions": [

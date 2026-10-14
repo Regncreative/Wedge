@@ -73,11 +73,12 @@ pub fn show(app: &AppHandle) {
     let _ = win.show();
     let _ = win.unminimize();
     let _ = win.set_focus();
+    crate::edge::panel_visible(app, true);
     let _ = app.emit("panel-shown", ());
 }
 
-/// Slide the panel in at the left or right edge of the screen the cursor is
-/// on, vertically centred on the cursor (edge reveal).
+/// Open the panel at the left or right edge of the screen, vertically
+/// centred on `y` (clicking the edge handle).
 pub fn show_at_edge(app: &AppHandle, left: bool, y: i32) {
     let Some(win) = window(app) else { return };
     let cursor_x = app.cursor_position().map(|p| p.x).unwrap_or(0.0);
@@ -98,6 +99,7 @@ pub fn show_at_edge(app: &AppHandle, left: bool, y: i32) {
     let _ = win.set_always_on_top(true);
     let _ = win.show();
     let _ = win.set_focus();
+    crate::edge::panel_visible(app, true);
     let _ = app.emit("panel-shown", ());
 }
 
@@ -105,6 +107,7 @@ pub fn hide(app: &AppHandle) {
     let Some(win) = window(app) else { return };
     let _ = app.emit("panel-hidden", ());
     let _ = win.hide();
+    crate::edge::panel_visible(app, false);
 }
 
 pub fn toggle(app: &AppHandle) {

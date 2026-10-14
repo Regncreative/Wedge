@@ -50,8 +50,8 @@ const MIGRATIONS: &[&str] = &[
     CREATE INDEX IF NOT EXISTS idx_files_pinned ON files(is_pinned);
     CREATE INDEX IF NOT EXISTS idx_files_added ON files(added_at DESC);
     "#,
-    // 2 — notes, tags, reminders, automatic and temporary shelves, sorting
-    // rules, and a full-text index of file contents.
+    // 2 — notes, tags, reminders, automatic, temporary and shared shelves,
+    // sorting rules, and a full-text index of file contents.
     r#"
     ALTER TABLE files ADD COLUMN note TEXT NOT NULL DEFAULT '';
     ALTER TABLE files ADD COLUMN tags TEXT NOT NULL DEFAULT '';
@@ -80,18 +80,8 @@ const MIGRATIONS: &[&str] = &[
       DELETE FROM file_text WHERE file_id = old.id;
     END;
 
-    -- Removals, so PC-to-PC sync can carry deletions over.
-    CREATE TABLE IF NOT EXISTS tombstones (
-      shelf_name TEXT NOT NULL,
-      path TEXT NOT NULL,
-      at INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_tombstones_at ON tombstones(at);
-    CREATE TRIGGER IF NOT EXISTS files_tombstone AFTER DELETE ON files BEGIN
-      INSERT INTO tombstones (shelf_name, path, at)
-        SELECT name, old.absolute_path, CAST(strftime('%s', 'now') AS INTEGER) * 1000
-        FROM shelves WHERE id = old.shelf_id;
-    END;
+    -- Shared shelves mirror a folder (e.g. in Google Drive or OneDrive).
+    ALTER TABLE shelves ADD COLUMN folder TEXT;
     "#,
 ];
 
@@ -220,6 +210,7 @@ fn map_shelf(row: &Row) -> Result<Shelf> {
         sort_order: row.get("sort_order")?,
         kind: row.get("kind")?,
         expire_hours: row.get("expire_hours")?,
+        folder: row.get("folder")?,
     })
 }
 
@@ -246,12 +237,36 @@ pub fn create_shelf(
         sort_order: max.map_or(0, |m| m + 1),
         kind: "normal".into(),
         expire_hours: None,
+        folder: None,
     };
     conn.execute(
         "INSERT INTO shelves (id, name, icon, color, created_at, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![shelf.id, shelf.name, shelf.icon, shelf.color, shelf.created_at, shelf.sort_order],
     )?;
     Ok(shelf)
+}
+
+pub fn get_shelf(conn: &Connection, id: &str) -> Result<Option<Shelf>> {
+    conn.query_row("SELECT * FROM shelves WHERE id = ?1", [id], map_shelf)
+        .optional()
+}
+
+/// Turn a shelf into a shared shelf mirroring `folder`.
+pub fn set_shelf_folder(conn: &Connection, id: &str, folder: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE shelves SET kind = 'shared', folder = ?1, expire_hours = NULL WHERE id = ?2",
+        params![folder, id],
+    )?;
+    Ok(())
+}
+
+/// The shared shelf already linked to `folder` (compared case-insensitively).
+pub fn shelf_by_folder(conn: &Connection, folder: &str) -> Result<Option<Shelf>> {
+    let norm = |p: &str| p.trim_end_matches(['\\', '/']).to_lowercase();
+    let wanted = norm(folder);
+    Ok(list_shelves(conn)?
+        .into_iter()
+        .find(|s| s.folder.as_deref().is_some_and(|f| norm(f) == wanted)))
 }
 
 pub fn rename_shelf(conn: &Connection, id: &str, name: &str) -> Result<()> {
@@ -399,6 +414,21 @@ pub fn move_file(conn: &Connection, id: &str, shelf_id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Point a file at a new copy on another shelf (moving onto a shared shelf).
+pub fn relocate_file(
+    conn: &Connection,
+    id: &str,
+    shelf_id: &str,
+    path: &str,
+    name: &str,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE files SET shelf_id = ?1, absolute_path = ?2, name = ?3 WHERE id = ?4",
+        params![shelf_id, path, name, id],
+    )?;
+    Ok(())
+}
+
 pub fn touch_file(conn: &Connection, id: &str) -> Result<()> {
     conn.execute(
         "UPDATE files SET last_accessed = ?1 WHERE id = ?2",
@@ -443,7 +473,6 @@ pub fn set_raw(conn: &Connection, key: &str, value: &Value) -> Result<()> {
 }
 
 pub const DEFAULT_HOTKEY: &str = "CommandOrControl+Shift+Space";
-pub const DEFAULT_PASTE_HOTKEY: &str = "Control+Alt+V";
 
 fn defaults() -> Map<String, Value> {
     serde_json::json!({
@@ -461,11 +490,8 @@ fn defaults() -> Map<String, Value> {
         "onboardingDone": false,
         "watchDownloads": true,
         "watchScreenshots": true,
-        "shakeToOpen": true,
-        "edgeReveal": "off",
-        "contextMenu": true,
-        "pasteHotkey": DEFAULT_PASTE_HOTKEY,
-        "syncFolder": ""
+        "edgeHandle": "right",
+        "contextMenu": true
     })
     .as_object()
     .cloned()
@@ -532,7 +558,6 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
 
     let accent = str_of("accentColor");
     let hotkey = str_of("openHotkey");
-    let paste_hotkey = str_of("pasteHotkey");
     let mut s = AppSettings {
         theme: enum_or(stored.get("theme"), Theme::Dark),
         accent_color: if is_hex_color(&accent) {
@@ -557,15 +582,8 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         onboarding_done: bool_of("onboardingDone", false),
         watch_downloads: bool_of("watchDownloads", true),
         watch_screenshots: bool_of("watchScreenshots", true),
-        shake_to_open: bool_of("shakeToOpen", true),
-        edge_reveal: enum_or(stored.get("edgeReveal"), EdgeReveal::Off),
+        edge_handle: enum_or(stored.get("edgeHandle"), EdgeHandle::Right),
         context_menu: bool_of("contextMenu", true),
-        paste_hotkey: if paste_hotkey.is_empty() {
-            DEFAULT_PASTE_HOTKEY.into()
-        } else {
-            paste_hotkey
-        },
-        sync_folder: str_of("syncFolder"),
     };
 
     // Heal shelf references after a shelf was deleted.
@@ -644,25 +662,16 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     if let Some(v) = patch.watch_screenshots {
         put("watchScreenshots", Value::Bool(v))?;
     }
-    if let Some(v) = patch.shake_to_open {
-        put("shakeToOpen", Value::Bool(v))?;
-    }
-    if let Some(v) = patch.edge_reveal {
-        put("edgeReveal", serde_json::to_value(v).unwrap_or_default())?;
+    if let Some(v) = patch.edge_handle {
+        put("edgeHandle", serde_json::to_value(v).unwrap_or_default())?;
     }
     if let Some(v) = patch.context_menu {
         put("contextMenu", Value::Bool(v))?;
     }
-    if let Some(v) = &patch.paste_hotkey {
-        put("pasteHotkey", Value::String(v.clone()))?;
-    }
-    if let Some(v) = &patch.sync_folder {
-        put("syncFolder", Value::String(v.clone()))?;
-    }
     Ok(())
 }
 
-/// A random id for this installation (sync device id, rollout bucket).
+/// A random id for this installation (staged-rollout bucket).
 pub fn install_id(conn: &Connection) -> Result<String> {
     if let Some(Value::String(id)) = get_raw(conn, "installId")? {
         return Ok(id);
@@ -754,6 +763,7 @@ pub fn expire_files(conn: &Connection, now: i64) -> Result<usize> {
            AND EXISTS (
              SELECT 1 FROM shelves s
              WHERE s.id = files.shelf_id
+               AND s.folder IS NULL
                AND s.expire_hours IS NOT NULL
                AND files.added_at < ?1 - s.expire_hours * 3600000
            )",

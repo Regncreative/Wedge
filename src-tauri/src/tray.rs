@@ -17,24 +17,12 @@ pub const ID: &str = "main";
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let t = i18n::strings(app.state::<AppState>().language);
     let open = MenuItem::with_id(app, "open", t.tray_open, true, None::<&str>)?;
-    let drop_shelf = MenuItem::with_id(app, "drop", t.tray_drop_shelf, true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", t.tray_settings, true, None::<&str>)?;
     let updates = MenuItem::with_id(app, "updates", t.tray_check_updates, true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", t.tray_quit, true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(
-        app,
-        &[
-            &open,
-            &drop_shelf,
-            &sep1,
-            &settings,
-            &updates,
-            &sep2,
-            &quit_item,
-        ],
-    )?;
+    let menu = Menu::with_items(app, &[&open, &sep1, &settings, &updates, &sep2, &quit_item])?;
 
     TrayIconBuilder::with_id(ID)
         .icon(Image::from_bytes(include_bytes!("../icons/tray.png"))?)
@@ -53,7 +41,6 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         })
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => panel::show(app),
-            "drop" => crate::dropshelf::show_at_cursor(app),
             "settings" => {
                 panel::show(app);
                 let app = app.clone();

@@ -1,5 +1,5 @@
-//! Explorer integration: the "Add to Stash" context-menu entry, files on the
-//! clipboard, and filling a path into an Open/Save dialog.
+//! Explorer integration: the "Add to Stash" context-menu entry and files on
+//! the clipboard.
 
 /// Paths passed as `stash.exe --add <path>...` (Explorer's context menu).
 pub fn paths_from_args(args: &[String]) -> Vec<String> {
@@ -17,30 +17,13 @@ pub fn paths_from_args(args: &[String]) -> Vec<String> {
     out
 }
 
-/// Text to put into a file dialog's name box: one path as is, several quoted.
-pub fn dialog_text(paths: &[String]) -> String {
-    match paths {
-        [one] => one.clone(),
-        many => many
-            .iter()
-            .map(|p| format!("\"{p}\""))
-            .collect::<Vec<_>>()
-            .join(" "),
-    }
-}
-
 #[cfg(windows)]
 mod imp {
     use std::path::Path;
 
-    use windows::core::{w, HSTRING, PCWSTR};
-    use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::System::DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard};
     use windows::Win32::System::Ole::CF_HDROP;
     use windows::Win32::UI::Shell::{DragQueryFileW, HDROP};
-    use windows::Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, GetClassNameW, GetDlgItem, GetForegroundWindow, SendMessageW, WM_SETTEXT,
-    };
     use winreg::enums::HKEY_CURRENT_USER;
     use winreg::RegKey;
 
@@ -94,40 +77,6 @@ mod imp {
         }
         out
     }
-
-    fn class_of(hwnd: HWND) -> String {
-        let mut buf = [0u16; 64];
-        let n = unsafe { GetClassNameW(hwnd, &mut buf) } as usize;
-        String::from_utf16_lossy(&buf[..n])
-    }
-
-    /// Put `text` into the file name box of the focused Open/Save dialog.
-    pub fn fill_file_dialog(text: &str) -> bool {
-        unsafe {
-            let dialog = GetForegroundWindow();
-            if dialog.0.is_null() || class_of(dialog) != "#32770" {
-                return false;
-            }
-            // The common file dialog's name box: ComboBoxEx32 (id 1148) → ComboBox → Edit,
-            // or a plain Edit in older/Save variants.
-            let Ok(combo) = GetDlgItem(Some(dialog), 0x47C) else {
-                return false;
-            };
-            let inner = FindWindowExW(Some(combo), None, w!("ComboBox"), PCWSTR::null()).ok();
-            let edit = inner
-                .and_then(|cb| FindWindowExW(Some(cb), None, w!("Edit"), PCWSTR::null()).ok())
-                .or_else(|| FindWindowExW(Some(combo), None, w!("Edit"), PCWSTR::null()).ok())
-                .unwrap_or(combo);
-            let wide = HSTRING::from(text);
-            SendMessageW(
-                edit,
-                WM_SETTEXT,
-                Some(WPARAM(0)),
-                Some(LPARAM(wide.as_ptr() as isize)),
-            );
-            true
-        }
-    }
 }
 
 #[cfg(not(windows))]
@@ -142,12 +91,9 @@ mod imp {
     pub fn clipboard_files() -> Vec<String> {
         Vec::new()
     }
-    pub fn fill_file_dialog(_: &str) -> bool {
-        false
-    }
 }
 
-pub use imp::{clipboard_files, context_menu_registered, fill_file_dialog, set_context_menu};
+pub use imp::{clipboard_files, context_menu_registered, set_context_menu};
 
 #[cfg(test)]
 mod tests {
@@ -174,15 +120,6 @@ mod tests {
                 "x"
             ])),
             ["C:\\q.txt"]
-        );
-    }
-
-    #[test]
-    fn quotes_several_paths_for_a_file_dialog() {
-        assert_eq!(dialog_text(&args(&["C:\\a b.txt"])), "C:\\a b.txt");
-        assert_eq!(
-            dialog_text(&args(&["C:\\a.txt", "C:\\b.txt"])),
-            "\"C:\\a.txt\" \"C:\\b.txt\""
         );
     }
 

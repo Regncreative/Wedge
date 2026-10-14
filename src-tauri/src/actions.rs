@@ -1,4 +1,4 @@
-//! Quick actions on shelf files: zip, convert/resize images, copy into a folder.
+//! Quick actions on shelf files: zip, convert or shrink images, copy into a folder.
 //! All blocking; call from a worker thread.
 
 use std::fs::File;
@@ -94,40 +94,130 @@ impl ImageFormat {
     }
 }
 
-/// Convert (and optionally shrink so the longest side is `max_side`) an image,
-/// writing a new file next to the original. Returns the new file's path.
-pub fn convert_image(
-    src: &Path,
-    format: ImageFormat,
-    max_side: Option<u32>,
-) -> Result<PathBuf, String> {
-    let img = image::open(src).map_err(|e| e.to_string())?;
-    let img = match max_side {
-        Some(max) if img.width().max(img.height()) > max => {
-            img.resize(max, max, image::imageops::FilterType::Lanczos3)
-        }
-        _ => img,
-    };
-    let stem = src
-        .file_stem()
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let stem = match max_side {
-        Some(max) => format!("{stem}-{max}px"),
-        None => stem,
-    };
-    let dir = src.parent().unwrap_or(Path::new("."));
-    let dest = unique_path(dir, &stem, format.ext());
+/// JPEG and WebP quality: visually indistinguishable from the original for
+/// photos and screenshots, at a fraction of the size.
+const JPEG_QUALITY: u8 = 82;
+const WEBP_QUALITY: f32 = 80.0;
+/// "Reduce size" scales anything larger than this (longest side) down.
+const SHRINK_MAX_SIDE: u32 = 2560;
+
+/// A converted image: where it went and the sizes before and after.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Converted {
+    #[serde(skip)]
+    pub path: PathBuf,
+    pub name: String,
+    pub before: u64,
+    pub after: u64,
+}
+
+fn has_transparency(img: &image::DynamicImage) -> bool {
+    img.color().has_alpha() && img.to_rgba8().pixels().any(|p| p.0[3] < 255)
+}
+
+fn encode(img: &image::DynamicImage, format: ImageFormat, dest: &Path) -> Result<(), String> {
+    use image::codecs::{jpeg::JpegEncoder, png};
+    let file = File::create(dest).map_err(|e| e.to_string())?;
+    let mut out = io::BufWriter::new(file);
     let result = match format {
         // JPEG has no alpha channel.
-        ImageFormat::Jpg => image::DynamicImage::ImageRgb8(img.to_rgb8())
-            .save_with_format(&dest, image::ImageFormat::Jpeg),
-        ImageFormat::Png => img.save_with_format(&dest, image::ImageFormat::Png),
-        ImageFormat::Webp => image::DynamicImage::ImageRgba8(img.to_rgba8())
-            .save_with_format(&dest, image::ImageFormat::WebP),
+        ImageFormat::Jpg => img
+            .to_rgb8()
+            .write_with_encoder(JpegEncoder::new_with_quality(&mut out, JPEG_QUALITY))
+            .map_err(|e| e.to_string()),
+        ImageFormat::Png => img
+            .write_with_encoder(png::PngEncoder::new_with_quality(
+                &mut out,
+                png::CompressionType::Best,
+                png::FilterType::Adaptive,
+            ))
+            .map_err(|e| e.to_string()),
+        // The image crate only writes lossless WebP, which is often larger
+        // than the source; libwebp's lossy mode is what people expect.
+        ImageFormat::Webp => {
+            let rgba = img.to_rgba8();
+            let encoded = webp::Encoder::from_rgba(&rgba, rgba.width(), rgba.height())
+                .encode_simple(false, WEBP_QUALITY)
+                .map_err(|e| format!("webp: {e:?}"))?;
+            out.write_all(&encoded).map_err(|e| e.to_string())
+        }
     };
-    result.map_err(|e| e.to_string())?;
-    Ok(dest)
+    let result = result.and_then(|_| out.flush().map_err(|e| e.to_string()));
+    drop(out);
+    if result.is_err() {
+        let _ = std::fs::remove_file(dest);
+    }
+    result
+}
+
+fn stem_of(src: &Path) -> String {
+    src.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+fn converted(src: &Path, dest: PathBuf) -> Converted {
+    let size = |p: &Path| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0);
+    Converted {
+        name: dest
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        before: size(src),
+        after: size(&dest),
+        path: dest,
+    }
+}
+
+/// Convert an image to another format, writing a new file next to it.
+pub fn convert_image(src: &Path, format: ImageFormat) -> Result<Converted, String> {
+    let img = image::open(src).map_err(|e| e.to_string())?;
+    let dir = src.parent().unwrap_or(Path::new("."));
+    let dest = unique_path(dir, &stem_of(src), format.ext());
+    encode(&img, format, &dest)?;
+    Ok(converted(src, dest))
+}
+
+/// What "reduce size" made of an image.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Shrunk {
+    Done(Converted),
+    /// The result wasn't smaller than the original; nothing was kept.
+    AlreadySmall,
+}
+
+/// Write a smaller copy next to the image (`<stem>-<suffix>.<ext>`): scaled
+/// to at most 2560 px, JPEG for photos and WebP when there is transparency
+/// (WebP sources stay WebP). Never keeps a result that isn't smaller.
+pub fn shrink_image(src: &Path, suffix: &str) -> Result<Shrunk, String> {
+    let img = image::open(src).map_err(|e| e.to_string())?;
+    let img = if img.width().max(img.height()) > SHRINK_MAX_SIDE {
+        img.resize(
+            SHRINK_MAX_SIDE,
+            SHRINK_MAX_SIDE,
+            image::imageops::FilterType::Lanczos3,
+        )
+    } else {
+        img
+    };
+    let is_webp = src
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("webp"));
+    let format = if is_webp || has_transparency(&img) {
+        ImageFormat::Webp
+    } else {
+        ImageFormat::Jpg
+    };
+    let dir = src.parent().unwrap_or(Path::new("."));
+    let dest = unique_path(dir, &format!("{}-{suffix}", stem_of(src)), format.ext());
+    encode(&img, format, &dest)?;
+    let result = converted(src, dest);
+    if result.after >= result.before {
+        let _ = std::fs::remove_file(&result.path);
+        return Ok(Shrunk::AlreadySmall);
+    }
+    Ok(Shrunk::Done(result))
 }
 
 fn copy_dir(src: &Path, dest: &Path) -> io::Result<()> {
@@ -146,7 +236,12 @@ fn copy_dir(src: &Path, dest: &Path) -> io::Result<()> {
 
 /// Copy files and folders into `dest_dir` without overwriting. Returns how many were copied.
 pub fn copy_into(paths: &[PathBuf], dest_dir: &Path) -> io::Result<usize> {
-    let mut copied = 0;
+    copy_into_paths(paths, dest_dir).map(|c| c.len())
+}
+
+/// Like [`copy_into`], returning where each copy went.
+pub fn copy_into_paths(paths: &[PathBuf], dest_dir: &Path) -> io::Result<Vec<PathBuf>> {
+    let mut copied = Vec::with_capacity(paths.len());
     for p in paths {
         let stem = p
             .file_stem()
@@ -165,7 +260,7 @@ pub fn copy_into(paths: &[PathBuf], dest_dir: &Path) -> io::Result<usize> {
         } else {
             std::fs::copy(p, &target)?;
         }
-        copied += 1;
+        copied.push(target);
     }
     Ok(copied)
 }
@@ -222,25 +317,72 @@ mod tests {
         assert_eq!(read("sub/deep.txt"), "D");
     }
 
+    /// A noisy "photo": compresses like a real one, not like a flat colour.
+    fn photo(w: u32, h: u32, alpha: u8) -> image::RgbaImage {
+        image::RgbaImage::from_fn(w, h, |x, y| {
+            let n = (x.wrapping_mul(7919) ^ y.wrapping_mul(104_729)) % 61;
+            image::Rgba([(x % 256) as u8, (y % 256) as u8, (n * 4) as u8, alpha])
+        })
+    }
+
     #[test]
-    fn converts_and_resizes_images() {
+    fn converts_images_and_reports_sizes() {
         let dir = tempfile::tempdir().unwrap();
         let src = dir.path().join("photo.png");
-        image::RgbaImage::from_pixel(400, 200, image::Rgba([10, 200, 30, 128]))
-            .save(&src)
-            .unwrap();
+        photo(400, 200, 255).save(&src).unwrap();
 
-        let jpg = convert_image(&src, ImageFormat::Jpg, Some(100)).unwrap();
-        assert_eq!(jpg, dir.path().join("photo-100px.jpg"));
-        let out = image::open(&jpg).unwrap();
-        assert_eq!((out.width(), out.height()), (100, 50));
+        let jpg = convert_image(&src, ImageFormat::Jpg).unwrap();
+        assert_eq!(jpg.path, dir.path().join("photo.jpg"));
+        assert_eq!(jpg.name, "photo.jpg");
+        assert!(jpg.before > 0 && jpg.after > 0);
+        let out = image::open(&jpg.path).unwrap();
+        assert_eq!((out.width(), out.height()), (400, 200));
 
-        let webp = convert_image(&src, ImageFormat::Webp, None).unwrap();
-        assert_eq!(image::open(webp).unwrap().width(), 400);
+        // Lossy WebP: well under the lossless PNG it came from.
+        let webp = convert_image(&src, ImageFormat::Webp).unwrap();
+        assert!(webp.after < webp.before / 2, "{webp:?}");
+        assert_eq!(image::open(&webp.path).unwrap().width(), 400);
+
+        let png = convert_image(&jpg.path, ImageFormat::Png).unwrap();
+        assert_eq!(png.path, dir.path().join("photo (2).png"));
 
         let not_image = dir.path().join("x.txt");
         std::fs::write(&not_image, b"hi").unwrap();
-        assert!(convert_image(&not_image, ImageFormat::Png, None).is_err());
+        assert!(convert_image(&not_image, ImageFormat::Png).is_err());
+    }
+
+    #[test]
+    fn shrinking_scales_down_and_never_grows() {
+        let dir = tempfile::tempdir().unwrap();
+        let big = dir.path().join("big.png");
+        photo(3000, 1500, 255).save(&big).unwrap();
+        let Shrunk::Done(out) = shrink_image(&big, "small").unwrap() else {
+            panic!("expected a smaller file");
+        };
+        assert_eq!(out.path, dir.path().join("big-small.jpg"));
+        assert!(out.after < out.before);
+        let img = image::open(&out.path).unwrap();
+        assert_eq!((img.width(), img.height()), (2560, 1280));
+
+        // Transparency survives (WebP, not JPEG).
+        let logo = dir.path().join("logo.png");
+        photo(300, 300, 120).save(&logo).unwrap();
+        let Shrunk::Done(out) = shrink_image(&logo, "small").unwrap() else {
+            panic!("expected a smaller file");
+        };
+        assert_eq!(out.path, dir.path().join("logo-small.webp"));
+
+        // A tiny, already-compressed JPEG can't get smaller: nothing is kept.
+        let tiny = dir.path().join("tiny.jpg");
+        image::DynamicImage::ImageRgba8(photo(8, 8, 255))
+            .to_rgb8()
+            .write_with_encoder(image::codecs::jpeg::JpegEncoder::new_with_quality(
+                File::create(&tiny).unwrap(),
+                30,
+            ))
+            .unwrap();
+        assert_eq!(shrink_image(&tiny, "small").unwrap(), Shrunk::AlreadySmall);
+        assert!(!dir.path().join("tiny-small.jpg").exists());
     }
 
     #[test]

@@ -4,18 +4,18 @@ pub mod actions;
 pub mod commands;
 pub mod commands_extra;
 pub mod db;
-pub mod dropshelf;
+pub mod dragdrop;
+pub mod edge;
 pub mod files;
 pub mod hotkey;
 pub mod i18n;
-pub mod input;
 pub mod models;
 pub mod panel;
 pub mod phone;
 pub mod services;
+pub mod shared;
 pub mod shell;
 pub mod state;
-pub mod sync;
 pub mod textract;
 pub mod transfer;
 pub mod tray;
@@ -132,14 +132,12 @@ pub fn run() {
             app.manage(AppState::new(conn, data_dir.clone(), language));
 
             let handle = app.handle();
+            if let Some(panel) = panel::window(handle) {
+                dragdrop::attach(&panel);
+            }
             tray::create(handle)?;
-            let _ = hotkey::reregister_action(
-                handle,
-                &settings.paste_hotkey,
-                hotkey::Action::PasteIntoDialog,
-            );
             commands::sync_context_menu(handle, settings.context_menu);
-            input::configure(handle, settings.shake_to_open, settings.edge_reveal);
+            edge::start_monitor(handle);
             let launch_paths = shell::paths_from_args(&std::env::args().collect::<Vec<_>>());
             if !launch_paths.is_empty() {
                 add_from_explorer(handle, launch_paths);
@@ -158,8 +156,14 @@ pub fn run() {
             updater::schedule_startup_check(handle);
             services::restart_watchers(handle);
             services::start_background_jobs(handle);
-            sync::start(handle);
-            widget::restore(handle);
+            shared::restart_watcher(handle);
+            {
+                let handle = handle.clone();
+                std::thread::spawn(move || shared::refresh(&handle, None));
+            }
+            // The edge handle and widgets are created when the panel's page
+            // reports in (`app_ready`): a second webview started while the
+            // panel's is still starting never finishes loading.
             // Silent launch: the panel stays hidden until tray click / hotkey.
             // (End-to-end tests ask for it to be shown right away.)
             if std::env::var_os("STASH_SHOW_ON_START").is_some() {
@@ -198,6 +202,7 @@ pub fn run() {
             commands::move_file,
             commands::open_file,
             commands::reveal_file,
+            commands::open_shelf_folder,
             commands::copy_path,
             commands::show_properties,
             commands::file_icon,
@@ -207,10 +212,12 @@ pub fn run() {
             commands::create_shelf,
             commands::rename_shelf,
             commands::delete_shelf,
+            commands::create_shared_shelf,
             commands::get_stats,
             commands::get_settings,
             commands::set_settings,
             commands::app_version,
+            commands::app_ready,
             commands::open_releases,
             commands::open_logs_folder,
             commands::export_data,
@@ -225,9 +232,9 @@ pub fn run() {
             commands_extra::add_rule,
             commands_extra::delete_rule,
             commands_extra::search_content,
-            commands_extra::set_selection,
             commands_extra::zip_files,
             commands_extra::convert_images,
+            commands_extra::shrink_images,
             commands_extra::collect_files,
             commands_extra::copy_paths,
             commands_extra::open_files,
@@ -235,14 +242,13 @@ pub fn run() {
             commands_extra::paste_clipboard,
             commands_extra::quick_look,
             commands_extra::pick_folder,
-            dropshelf::drop_shelf,
-            dropshelf::hide_drop_shelf,
-            dropshelf::open_drop_shelf,
+            edge::edge_expand,
+            edge::edge_move,
+            edge::edge_click,
             phone::phone_start,
             phone::phone_stop,
             widget::open_widget,
             widget::close_widget,
-            sync::sync_now,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build Stash");

@@ -50,8 +50,10 @@ fn open_window(app: &AppHandle, shelf_id: &str, pos: Option<(i32, i32)>) -> Resu
         .skip_taskbar(true)
         .resizable(true)
         .visible(false)
+        .disable_drag_drop_handler()
         .build()
         .map_err(|e| e.to_string())?;
+    crate::dragdrop::attach(&win);
     if let Some((x, y)) = pos {
         let _ = win.set_position(PhysicalPosition::new(x, y));
     }

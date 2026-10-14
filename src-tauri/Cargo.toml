@@ -42,10 +42,13 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 notify = "8"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 tiny_http = "0.12"
+webp = { version = "0.3", default-features = false }
+trash = "5"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
-windows = { version = "0.61", features = [
+webview2-com = "0.39"
+windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
   "Win32_System_Com",

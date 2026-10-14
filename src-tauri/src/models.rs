@@ -16,6 +16,9 @@ pub struct Shelf {
     pub kind: String,
     /// Files older than this many hours are removed automatically (temporary shelf).
     pub expire_hours: Option<i64>,
+    /// Shared shelf: the folder it mirrors. Adding a file copies it there and
+    /// the folder's contents (from anyone sharing it) show up on the shelf.
+    pub folder: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -37,7 +40,7 @@ pub struct StashFile {
     pub tags: String,
     /// When to show a reminder notification (ms since epoch).
     pub remind_at: Option<i64>,
-    /// How it got here: "manual", "downloads", "screenshots", "phone", "clipboard", "sync".
+    /// How it got here: "manual", "downloads", "screenshots", "phone", "clipboard", "shared".
     pub source: String,
     /// Filled in by the command layer after an (async) existence check.
     pub exists: bool,
@@ -99,7 +102,7 @@ pub enum FileSort {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum EdgeReveal {
+pub enum EdgeHandle {
     Off,
     Left,
     Right,
@@ -136,16 +139,10 @@ pub struct AppSettings {
     pub watch_downloads: bool,
     /// New screenshots land on the Screenshots shelf.
     pub watch_screenshots: bool,
-    /// Shaking the mouse while dragging a file opens a drop shelf at the cursor.
-    pub shake_to_open: bool,
-    /// Pushing the cursor against this screen edge opens the panel.
-    pub edge_reveal: EdgeReveal,
+    /// A small handle on this screen edge: drop files on it, click to open the panel.
+    pub edge_handle: EdgeHandle,
     /// "Add to Stash" in Explorer's right-click menu.
     pub context_menu: bool,
-    /// Fills the selected file's path into an Open/Save dialog.
-    pub paste_hotkey: String,
-    /// Folder (e.g. in OneDrive) used to sync shelves between PCs; empty = off.
-    pub sync_folder: String,
 }
 
 /// A partial settings update from the panel. Unknown keys are rejected.
@@ -168,11 +165,8 @@ pub struct SettingsPatch {
     pub onboarding_done: Option<bool>,
     pub watch_downloads: Option<bool>,
     pub watch_screenshots: Option<bool>,
-    pub shake_to_open: Option<bool>,
-    pub edge_reveal: Option<EdgeReveal>,
+    pub edge_handle: Option<EdgeHandle>,
     pub context_menu: Option<bool>,
-    pub paste_hotkey: Option<String>,
-    pub sync_folder: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]

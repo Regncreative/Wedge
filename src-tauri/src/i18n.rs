@@ -28,7 +28,8 @@ pub struct Strings {
     pub hotkey_taken: &'static str,
     pub reminder_title: &'static str,
     pub context_menu_label: &'static str,
-    pub tray_drop_shelf: &'static str,
+    /// Appended to the name of a reduced-size image copy.
+    pub shrunk_suffix: &'static str,
 }
 
 const TR: Strings = Strings {
@@ -42,7 +43,7 @@ const TR: Strings = Strings {
     hotkey_taken: "Panel kısayolu başka bir uygulama tarafından kullanılıyor. Ayarlar’dan yeni bir kısayol seçebilirsin.",
     reminder_title: "Stash hatırlatma",
     context_menu_label: "Stash’e ekle",
-    tray_drop_shelf: "Bırakma rafı",
+    shrunk_suffix: "küçük",
 };
 
 const EN: Strings = Strings {
@@ -56,7 +57,7 @@ const EN: Strings = Strings {
     hotkey_taken: "The panel shortcut is used by another app. Pick a new one in Settings.",
     reminder_title: "Stash reminder",
     context_menu_label: "Add to Stash",
-    tray_drop_shelf: "Drop shelf",
+    shrunk_suffix: "small",
 };
 
 pub fn strings(lang: Language) -> &'static Strings {

@@ -95,6 +95,22 @@ pub fn ingest(
         by_shelf.entry(target).or_default().push(meta);
     }
     let shelves = db::list_shelves(&conn).ok()?;
+    drop(conn);
+    for (shelf_id, items) in &mut by_shelf {
+        // A shared shelf gets copies in its folder (outside the db lock).
+        let folder = shelves
+            .iter()
+            .find(|s| &s.id == shelf_id)
+            .and_then(|s| s.folder.clone());
+        if let Some(folder) = folder {
+            let paths: Vec<String> = items.iter().map(|m| m.absolute_path.clone()).collect();
+            *items = crate::shared::copy_in(&folder, &paths)
+                .iter()
+                .filter_map(|p| files::collect_meta(p))
+                .collect();
+        }
+    }
+    let conn = state.db();
     for (shelf_id, items) in by_shelf {
         if let Ok((added, _)) = db::add_files_from(&conn, &items, &shelf_id, source) {
             added_total += added;
@@ -284,10 +300,14 @@ fn run_periodic(app: &AppHandle, tick: u64) {
                 .show();
         }
     }
+    if tick.is_multiple_of(2) {
+        crate::shared::refresh(app, None);
+    }
     index_batch(app);
 }
 
-/// Every 15 s: index new files; every minute: expiry and reminders.
+/// Every 15 s: index new files; every 30 s: re-read shared folders (some
+/// cloud drives don't report changes); every minute: expiry and reminders.
 pub fn start_background_jobs(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
