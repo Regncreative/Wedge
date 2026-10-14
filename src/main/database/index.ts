@@ -199,6 +199,8 @@ export interface FileInput {
   size: number
   isDirectory: boolean
   createdAt: number
+  /** Used when restoring an export; new drops are never pinned. */
+  isPinned?: boolean
 }
 
 export function addFiles(
@@ -209,7 +211,7 @@ export function addFiles(
     `INSERT OR IGNORE INTO files
       (id, shelf_id, absolute_path, name, extension, size, is_directory,
        created_at, added_at, last_accessed, is_pinned)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
   )
 
   const now = Date.now()
@@ -229,7 +231,8 @@ export function addFiles(
         file.size,
         file.isDirectory ? 1 : 0,
         file.createdAt,
-        now
+        now,
+        file.isPinned ? 1 : 0
       )
       if (result.changes > 0) {
         added++
@@ -258,6 +261,13 @@ export function removeFiles(ids: string[]): void {
 
 export function setFilePinned(id: string, pinned: boolean): void {
   getDb().prepare('UPDATE files SET is_pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id)
+}
+
+export function setFilesPinned(ids: string[], pinned: boolean): void {
+  const update = getDb().prepare('UPDATE files SET is_pinned = ? WHERE id = ?')
+  getDb().transaction((items: string[]) => {
+    for (const id of items) update.run(pinned ? 1 : 0, id)
+  })(ids)
 }
 
 export function moveFile(id: string, shelfId: string): void {

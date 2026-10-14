@@ -1,4 +1,5 @@
-import { shell, clipboard, Notification, nativeImage, app, NativeImage } from 'electron'
+import { shell, clipboard, dialog, Notification, nativeImage, app, NativeImage } from 'electron'
+import { readFile, writeFile } from 'fs/promises'
 import { z } from 'zod'
 import { existsSync } from 'fs'
 import { stat } from 'fs/promises'
@@ -13,6 +14,7 @@ import { applyUpdateChannel, checkForUpdates, getUpdateStatus, installUpdateNow 
 import { checkPath, isReachable } from './file-exists'
 import { handle, on } from './ipc-validate'
 import { openLogsFolder } from './logging'
+import { applyImport, buildExport } from './data-transfer'
 import * as v from './ipc-schemas'
 import { getMessages } from '../shared/i18n'
 import type { FileInput } from './database'
@@ -206,6 +208,11 @@ export function registerIpcHandlers(): void {
     return true
   })
 
+  handle(IpcChannels.FILES_REMOVE_MANY, [v.fileIds], (ids) => {
+    db.removeFiles(ids)
+    return true
+  })
+
   handle(IpcChannels.FILES_CLEAR_MISSING, [], async () => {
     const all = db.listFiles(null)
     const states = await Promise.all(all.map((file) => checkPath(file.absolutePath)))
@@ -218,6 +225,11 @@ export function registerIpcHandlers(): void {
 
   handle(IpcChannels.FILES_PIN, [v.id, z.boolean()], (id, pinned) => {
     db.setFilePinned(id, pinned)
+    return true
+  })
+
+  handle(IpcChannels.FILES_PIN_MANY, [v.fileIds, z.boolean()], (ids, pinned) => {
+    db.setFilesPinned(ids, pinned)
     return true
   })
 
@@ -293,16 +305,22 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  on(IpcChannels.FILES_START_DRAG, [v.id], (event, id) => {
-    const file = db.getFileById(id)
-    if (!file || !existsSync(file.absolutePath)) return
+  // Drag must start synchronously while the mouse button is still down, so
+  // this uses existsSync; the renderer only offers files it saw as reachable.
+  on(IpcChannels.FILES_START_DRAG, [v.fileIds], (event, ids) => {
+    const files = ids
+      .map((id) => db.getFileById(id))
+      .filter((f): f is NonNullable<typeof f> => f !== null && existsSync(f.absolutePath))
+    if (files.length === 0) return
 
-    db.touchFileAccessed(id)
+    for (const file of files) db.touchFileAccessed(file.id)
 
+    const paths = files.map((f) => f.absolutePath)
     try {
       event.sender.startDrag({
-        file: file.absolutePath,
-        icon: getDragIcon(file.absolutePath)
+        file: paths[0],
+        files: paths,
+        icon: getDragIcon(paths[0])
       })
     } catch (err) {
       console.error('startDrag failed:', err)
@@ -366,6 +384,40 @@ export function registerIpcHandlers(): void {
   })
 
   handle(IpcChannels.OPEN_LOGS, [], () => openLogsFolder())
+
+  handle(IpcChannels.DATA_EXPORT, [], async () => {
+    const panel = getPanelWindow()
+    const stamp = new Date().toISOString().slice(0, 10)
+    const options = {
+      defaultPath: join(app.getPath('documents'), `stash-backup-${stamp}.json`),
+      filters: [{ name: 'Stash backup', extensions: ['json'] }]
+    }
+    const { canceled, filePath } = panel
+      ? await dialog.showSaveDialog(panel, options)
+      : await dialog.showSaveDialog(options)
+    if (canceled || !filePath) return { ok: false, canceled: true }
+    await writeFile(filePath, JSON.stringify(buildExport(), null, 2), 'utf8')
+    return { ok: true }
+  })
+
+  handle(IpcChannels.DATA_IMPORT, [], async () => {
+    const panel = getPanelWindow()
+    const options = {
+      properties: ['openFile' as const],
+      filters: [{ name: 'Stash backup', extensions: ['json'] }]
+    }
+    const { canceled, filePaths } = panel
+      ? await dialog.showOpenDialog(panel, options)
+      : await dialog.showOpenDialog(options)
+    if (canceled || filePaths.length === 0) return { ok: false, canceled: true }
+    try {
+      const raw: unknown = JSON.parse(await readFile(filePaths[0], 'utf8'))
+      return { ok: true, ...applyImport(raw) }
+    } catch (err) {
+      console.warn('[stash] import failed', err)
+      return { ok: false, canceled: false }
+    }
+  })
 
   handle(IpcChannels.UPDATE_CHECK, [], () => checkForUpdates(true))
   handle(IpcChannels.UPDATE_INSTALL, [], () => {

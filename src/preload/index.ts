@@ -23,15 +23,17 @@ export interface StashApi {
   listFiles: (shelfId?: string | null) => Promise<StashFile[]>
   addFiles: (paths: string[], shelfId?: string) => Promise<AddFilesResult>
   removeFile: (id: string) => Promise<boolean>
+  removeFiles: (ids: string[]) => Promise<boolean>
   clearMissingFiles: () => Promise<number>
   pinFile: (id: string, pinned: boolean) => Promise<boolean>
+  pinFiles: (ids: string[], pinned: boolean) => Promise<boolean>
   moveFile: (id: string, shelfId: string) => Promise<boolean>
   openFile: (id: string) => Promise<{ ok: boolean; error?: string }>
   revealFile: (id: string) => Promise<{ ok: boolean; error?: string }>
   copyPath: (id: string) => Promise<boolean>
   getProperties: (id: string) => Promise<{ ok: boolean; error?: string }>
   getFileIcon: (id: string) => Promise<string | null>
-  startDrag: (id: string) => void
+  startDrag: (ids: string[]) => void
   getPathForFile: (file: File) => string
 
   // Shelves
@@ -53,6 +55,10 @@ export interface StashApi {
   getAppVersion: () => Promise<string>
   openReleases: () => Promise<boolean>
   openLogsFolder: () => Promise<string>
+  exportData: () => Promise<{ ok: boolean; canceled?: boolean }>
+  importData: () => Promise<
+    { ok: true; shelves: number; files: number } | { ok: false; canceled: boolean }
+  >
 
   // Updates
   checkForUpdates: () => Promise<UpdateStatus>
@@ -77,15 +83,17 @@ const api: StashApi = {
   listFiles: (shelfId) => ipcRenderer.invoke(IpcChannels.FILES_LIST, shelfId),
   addFiles: (paths, shelfId) => ipcRenderer.invoke(IpcChannels.FILES_ADD, paths, shelfId),
   removeFile: (id) => ipcRenderer.invoke(IpcChannels.FILES_REMOVE, id),
+  removeFiles: (ids) => ipcRenderer.invoke(IpcChannels.FILES_REMOVE_MANY, ids),
   clearMissingFiles: () => ipcRenderer.invoke(IpcChannels.FILES_CLEAR_MISSING),
   pinFile: (id, pinned) => ipcRenderer.invoke(IpcChannels.FILES_PIN, id, pinned),
+  pinFiles: (ids, pinned) => ipcRenderer.invoke(IpcChannels.FILES_PIN_MANY, ids, pinned),
   moveFile: (id, shelfId) => ipcRenderer.invoke(IpcChannels.FILES_MOVE, id, shelfId),
   openFile: (id) => ipcRenderer.invoke(IpcChannels.FILES_OPEN, id),
   revealFile: (id) => ipcRenderer.invoke(IpcChannels.FILES_REVEAL, id),
   copyPath: (id) => ipcRenderer.invoke(IpcChannels.FILES_COPY_PATH, id),
   getProperties: (id) => ipcRenderer.invoke(IpcChannels.FILES_PROPERTIES, id),
   getFileIcon: (id) => ipcRenderer.invoke(IpcChannels.FILES_ICON, id),
-  startDrag: (id) => ipcRenderer.send(IpcChannels.FILES_START_DRAG, id),
+  startDrag: (ids) => ipcRenderer.send(IpcChannels.FILES_START_DRAG, ids),
   getPathForFile: (file) => webUtils.getPathForFile(file),
 
   listShelves: () => ipcRenderer.invoke(IpcChannels.SHELVES_LIST),
@@ -102,6 +110,8 @@ const api: StashApi = {
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.APP_GET_VERSION),
   openReleases: () => ipcRenderer.invoke(IpcChannels.OPEN_RELEASES),
   openLogsFolder: () => ipcRenderer.invoke(IpcChannels.OPEN_LOGS),
+  exportData: () => ipcRenderer.invoke(IpcChannels.DATA_EXPORT),
+  importData: () => ipcRenderer.invoke(IpcChannels.DATA_IMPORT),
 
   checkForUpdates: () => ipcRenderer.invoke(IpcChannels.UPDATE_CHECK),
   installUpdate: () => ipcRenderer.invoke(IpcChannels.UPDATE_INSTALL),

@@ -54,6 +54,12 @@ interface StashState {
   } | null
   dropActive: boolean
   confirm: PendingConfirm | null
+  /** Multi-selection (Ctrl/Shift+click, keyboard), in selection order. */
+  selectedIds: string[]
+  /** Fixed end of a Shift range. */
+  anchorId: string | null
+  /** Row with keyboard focus (roving tabindex). */
+  focusedId: string | null
 
   init: () => Promise<void>
   refresh: () => Promise<void>
@@ -75,7 +81,13 @@ interface StashState {
   askConfirm: (req: ConfirmRequest) => Promise<boolean>
   askPrompt: (req: ConfirmRequest) => Promise<string | null>
   resolveConfirm: (value: string | boolean | null) => void
+  selectFile: (id: string, mode: 'single' | 'toggle' | 'range') => void
+  selectAll: () => void
+  clearSelection: () => void
+  setFocused: (id: string | null) => void
 }
+
+const NO_SELECTION = { selectedIds: [] as string[], anchorId: null, focusedId: null }
 
 export const useStashStore = create<StashState>((set, get) => ({
   ready: false,
@@ -94,6 +106,9 @@ export const useStashStore = create<StashState>((set, get) => ({
   contextMenu: null,
   dropActive: false,
   confirm: null,
+  selectedIds: [],
+  anchorId: null,
+  focusedId: null,
 
   init: async () => {
     const [shelves, settings, systemTheme, pinned, appVersion] = await Promise.all([
@@ -145,15 +160,26 @@ export const useStashStore = create<StashState>((set, get) => ({
       shelves,
       settings.lastShelfId || settings.defaultShelfId
     )
-    set({ shelves, files, stats, settings: normalizeSettings(settings), activeShelfId })
+    const present = new Set(files.map((f) => f.id))
+    const { selectedIds, focusedId, anchorId } = get()
+    set({
+      shelves,
+      files,
+      stats,
+      settings: normalizeSettings(settings),
+      activeShelfId,
+      selectedIds: selectedIds.filter((id) => present.has(id)),
+      focusedId: focusedId && present.has(focusedId) ? focusedId : null,
+      anchorId: anchorId && present.has(anchorId) ? anchorId : null
+    })
   },
 
   setActiveShelf: (id) => {
-    set({ activeShelfId: id, showSettings: false })
+    set({ activeShelfId: id, showSettings: false, ...NO_SELECTION })
     if (id) void get().updateSettings({ lastShelfId: id })
   },
-  setSearch: (q) => set({ searchQuery: q }),
-  setFilter: (f) => set({ filter: f }),
+  setSearch: (q) => set({ searchQuery: q, ...NO_SELECTION }),
+  setFilter: (f) => set({ filter: f, ...NO_SELECTION }),
 
   setPinned: async (p) => {
     await window.stash.setPinned(p)
@@ -168,7 +194,8 @@ export const useStashStore = create<StashState>((set, get) => ({
       contextMenu: null,
       confirm: null,
       searchQuery: '',
-      dropActive: false
+      dropActive: false,
+      ...NO_SELECTION
     })
     pending?.resolve(false)
   },
@@ -239,6 +266,41 @@ export const useStashStore = create<StashState>((set, get) => ({
     set({ confirm: null })
     pending?.resolve(value)
   },
+
+  selectFile: (id, mode) => {
+    const { selectedIds, anchorId } = get()
+    if (mode === 'toggle') {
+      const next = selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+      set({ selectedIds: next, anchorId: id, focusedId: id })
+      return
+    }
+    if (mode === 'range' && anchorId) {
+      const ids = get()
+        .getVisibleFiles()
+        .map((f) => f.id)
+      const a = ids.indexOf(anchorId)
+      const b = ids.indexOf(id)
+      if (a !== -1 && b !== -1) {
+        const [from, to] = a < b ? [a, b] : [b, a]
+        set({ selectedIds: ids.slice(from, to + 1), focusedId: id })
+        return
+      }
+    }
+    set({ selectedIds: [id], anchorId: id, focusedId: id })
+  },
+
+  selectAll: () => {
+    const ids = get()
+      .getVisibleFiles()
+      .map((f) => f.id)
+    set({ selectedIds: ids, anchorId: ids[0] ?? null })
+  },
+
+  clearSelection: () => set({ selectedIds: [], anchorId: null }),
+
+  setFocused: (id) => set({ focusedId: id }),
 
   getVisibleFiles: () => {
     const { files, activeShelfId, searchQuery, filter, settings } = get()

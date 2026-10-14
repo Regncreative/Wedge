@@ -9,6 +9,7 @@ import { ContextMenu } from './components/context-menu'
 import { Toast } from './components/toast'
 import { ConfirmDialog } from './components/confirm-dialog'
 import { SettingsPanel } from './components/settings-panel'
+import { Welcome } from './components/welcome'
 import { useStashStore } from './stores/stash-store'
 import { useT } from './lib/i18n'
 
@@ -103,6 +104,7 @@ export default function App() {
         <ContextMenu />
         <Toast />
         <ConfirmDialog />
+        <Welcome />
       </DropZone>
     </motion.div>
   )

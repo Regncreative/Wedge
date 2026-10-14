@@ -33,6 +33,13 @@ export const FileCard = memo(function FileCard({
   const refresh = useStashStore((s) => s.refresh)
   const showToast = useStashStore((s) => s.showToast)
   const askConfirm = useStashStore((s) => s.askConfirm)
+  const selectFile = useStashStore((s) => s.selectFile)
+  const setFocused = useStashStore((s) => s.setFocused)
+  const selected = useStashStore((s) => s.selectedIds.includes(file.id))
+  // Roving tabindex: the focused row, or the first row before anything is focused.
+  const tabbable = useStashStore((s) =>
+    s.focusedId === null ? index === 0 : s.focusedId === file.id
+  )
   const [preview, setPreview] = useState(false)
   const [previewPos, setPreviewPos] = useState<{ left: number; top: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -71,7 +78,13 @@ export const FileCard = memo(function FileCard({
       e.preventDefault()
       // Mark outbound so DropZone doesn't treat this as an inbound drop
       document.body.dataset.stashDragging = '1'
-      window.stash.startDrag(file.id)
+      // Dragging a selected row drags the whole selection.
+      const { selectedIds, files } = useStashStore.getState()
+      const ids =
+        selectedIds.length > 1 && selectedIds.includes(file.id)
+          ? selectedIds.filter((id) => files.find((f) => f.id === id)?.exists)
+          : [file.id]
+      window.stash.startDrag(ids)
       const clear = () => {
         delete document.body.dataset.stashDragging
         window.removeEventListener('dragend', clear)
@@ -137,14 +150,20 @@ export const FileCard = memo(function FileCard({
         ref={cardRef}
         className={cn(
           'stash-drag-source group relative flex h-full items-center gap-3.5 rounded-[14px] px-3.5',
-          'bg-[var(--card)]',
+          'bg-[var(--card)] outline-none',
           'transition-colors duration-150 ease-out',
+          'focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+          selected && 'bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]',
           file.exists
             ? 'cursor-grab active:cursor-grabbing hover:bg-[var(--card-hover)] hover:shadow-[var(--hover-shadow)]'
             : 'cursor-not-allowed opacity-60'
         )}
         draggable={file.exists}
         onDragStart={onDragStart}
+        onClick={(e) => {
+          selectFile(file.id, e.shiftKey ? 'range' : e.ctrlKey || e.metaKey ? 'toggle' : 'single')
+        }}
+        onFocus={() => setFocused(file.id)}
         onDoubleClick={() => {
           if (!file.exists) return
           void window.stash.openFile(file.id)
@@ -158,7 +177,10 @@ export const FileCard = memo(function FileCard({
           setPreview(false)
           setPreviewPos(null)
         }}
-        role="listitem"
+        role="option"
+        aria-selected={selected}
+        tabIndex={tabbable ? 0 : -1}
+        data-file-id={file.id}
         aria-label={file.exists ? file.name : `${file.name} (${t.fileNotFound})`}
       >
         <div className={cn('relative shrink-0', !file.exists && 'grayscale')}>
@@ -202,6 +224,7 @@ export const FileCard = memo(function FileCard({
           <button
             type="button"
             onClick={togglePin}
+            tabIndex={-1}
             className={cn(
               'rounded-md p-1.5 transition-colors duration-150',
               file.isPinned
@@ -215,6 +238,7 @@ export const FileCard = memo(function FileCard({
           <button
             type="button"
             onClick={removeFile}
+            tabIndex={-1}
             className="rounded-md p-1.5 text-[var(--muted-foreground)] opacity-40 transition-colors duration-150 hover:text-[var(--destructive)] group-hover:opacity-100"
             aria-label={t.removeFromShelf}
           >

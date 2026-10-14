@@ -12,8 +12,10 @@ export const IpcChannels = {
   FILES_LIST: 'files:list',
   FILES_ADD: 'files:add',
   FILES_REMOVE: 'files:remove',
+  FILES_REMOVE_MANY: 'files:remove-many',
   FILES_CLEAR_MISSING: 'files:clear-missing',
   FILES_PIN: 'files:pin',
+  FILES_PIN_MANY: 'files:pin-many',
   FILES_MOVE: 'files:move',
   FILES_OPEN: 'files:open',
   FILES_REVEAL: 'files:reveal',
@@ -43,6 +45,8 @@ export const IpcChannels = {
   APP_GET_VERSION: 'app:get-version',
   OPEN_RELEASES: 'app:open-releases',
   OPEN_LOGS: 'app:open-logs',
+  DATA_EXPORT: 'data:export',
+  DATA_IMPORT: 'data:import',
 
   // Updates
   UPDATE_CHECK: 'update:check',

@@ -1,8 +1,11 @@
+import type { KeyboardEvent } from 'react'
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Package } from 'lucide-react'
 import { FileCard } from './file-card'
 import { DropFooter } from './drop-footer'
+import { SelectionBar } from './selection-bar'
+import { useSelectionActions } from '@/hooks/use-selection-actions'
 import { useStashStore } from '@/stores/stash-store'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
@@ -20,6 +23,7 @@ export function FileList() {
   const activeShelfId = useStashStore((s) => s.activeShelfId)
   const dropActive = useStashStore((s) => s.dropActive)
   const fileSort = useStashStore((s) => s.settings?.fileSort)
+  const { removeSelected, pinSelected, openFocused } = useSelectionActions()
 
   const visible = useMemo(
     () => getVisibleFiles(),
@@ -68,6 +72,85 @@ export function FileList() {
       setScrollTop(containerRef.current?.scrollTop ?? 0)
     })
   }, [])
+
+  /** Scroll a row into the virtual window, then move DOM focus to it. */
+  const focusRow = useCallback(
+    (index: number) => {
+      const el = containerRef.current
+      const file = visible[index]
+      if (!el || !file) return
+      const top = index * ITEM_HEIGHT
+      if (top < el.scrollTop) el.scrollTop = top
+      else if (top + ITEM_HEIGHT > el.scrollTop + el.clientHeight) {
+        el.scrollTop = top + ITEM_HEIGHT - el.clientHeight
+      }
+      setScrollTop(el.scrollTop)
+      // The row may only mount after the scroll re-render.
+      requestAnimationFrame(() => {
+        const row = el.querySelector<HTMLElement>(`[data-file-id="${CSS.escape(file.id)}"]`)
+        row?.focus({ preventScroll: true })
+      })
+    },
+    [visible]
+  )
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (visible.length === 0) return
+    const store = useStashStore.getState()
+    const current = visible.findIndex((f) => f.id === store.focusedId)
+    const pageSize = Math.max(1, Math.floor(height / ITEM_HEIGHT) - 1)
+
+    const moveTo = (target: number) => {
+      e.preventDefault()
+      const index = Math.max(0, Math.min(visible.length - 1, target))
+      store.selectFile(visible[index].id, e.shiftKey ? 'range' : 'single')
+      focusRow(index)
+    }
+
+    const ctrl = e.ctrlKey || e.metaKey
+    switch (e.key) {
+      case 'ArrowDown':
+        return moveTo(current < 0 ? 0 : current + 1)
+      case 'ArrowUp':
+        return moveTo(current < 0 ? 0 : current - 1)
+      case 'PageDown':
+        return moveTo(current + pageSize)
+      case 'PageUp':
+        return moveTo(current - pageSize)
+      case 'Home':
+        return moveTo(0)
+      case 'End':
+        return moveTo(visible.length - 1)
+      case 'Enter':
+        e.preventDefault()
+        void openFocused()
+        return
+      case ' ':
+        if (store.focusedId) {
+          e.preventDefault()
+          store.selectFile(store.focusedId, 'toggle')
+        }
+        return
+      case 'Delete':
+        e.preventDefault()
+        void removeSelected()
+        return
+      case 'Escape':
+        if (store.selectedIds.length > 0) {
+          e.stopPropagation()
+          store.clearSelection()
+        }
+        return
+      default:
+        if (ctrl && e.key.toLowerCase() === 'a') {
+          e.preventDefault()
+          store.selectAll()
+        } else if (!ctrl && e.key.toLowerCase() === 'p') {
+          e.preventDefault()
+          void pinSelected()
+        }
+    }
+  }
 
   const totalHeight = visible.length * ITEM_HEIGHT
   const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN)
@@ -122,8 +205,10 @@ export function FileList() {
           'scroll-autohide min-h-0 flex-1 overflow-y-auto overflow-x-hidden',
           scrolling && 'is-scrolling'
         )}
-        role="list"
-        aria-label="Stashed files"
+        role="listbox"
+        aria-multiselectable
+        aria-label={t.filesListLabel}
+        onKeyDown={onKeyDown}
       >
         <div style={{ height: totalHeight, position: 'relative', overflow: 'clip' }}>
           {slice.map((file, i) => {
@@ -146,6 +231,7 @@ export function FileList() {
           })}
         </div>
       </div>
+      <SelectionBar />
       <DropFooter />
     </div>
   )

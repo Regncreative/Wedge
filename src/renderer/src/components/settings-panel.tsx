@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Trash2, Upload } from 'lucide-react'
 import { useStashStore } from '@/stores/stash-store'
 import type { FileSort, ThemeMode } from '@shared/types'
 import type { UpdateStatus } from '@shared/types'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { HotkeyRecorder } from './hotkey-recorder'
+
+const SECONDARY_BUTTON =
+  'flex h-10 items-center justify-center gap-2 rounded-[12px] bg-[var(--pill)] text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]'
 
 const ACCENTS = ['#2563EB', '#0078D4', '#8764B8', '#038387', '#00B294', '#CA5010', '#E74856', '#C239B3']
 
@@ -50,6 +53,21 @@ export function SettingsPanel() {
 
   const idleTimeoutSec = settings.idleTimeoutSec ?? 10
   const idlePercent = Math.round((settings.idleOpacity ?? 0.4) * 100)
+
+  const exportData = async () => {
+    const result = await window.stash.exportData()
+    if (result.ok) showToast(t.exportDone)
+  }
+
+  const importData = async () => {
+    const result = await window.stash.importData()
+    if (result.ok) {
+      await refresh()
+      showToast(t.importDone(result.shelves, result.files))
+    } else if (!result.canceled) {
+      showToast(t.importFailed)
+    }
+  }
 
   const clearMissing = async () => {
     if (clearing) return
@@ -313,10 +331,55 @@ export function SettingsPanel() {
           </ul>
         </SettingsCard>
 
+        <SettingsCard title={t.dataSection}>
+          <div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                className={SECONDARY_BUTTON}
+                onClick={() => void exportData()}
+              >
+                <Upload size={15} strokeWidth={1.75} />
+                {t.exportData}
+              </button>
+              <button
+                type="button"
+                className={SECONDARY_BUTTON}
+                onClick={() => void importData()}
+              >
+                <Download size={15} strokeWidth={1.75} />
+                {t.importData}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted-foreground)]">
+              {t.dataHint}
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              className={cn(SECONDARY_BUTTON, 'w-full')}
+              onClick={() => void window.stash.openLogsFolder()}
+            >
+              <FileText size={15} strokeWidth={1.75} />
+              {t.openLogs}
+            </button>
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted-foreground)]">
+              {t.openLogsHint}
+            </p>
+          </div>
+        </SettingsCard>
+
         <SettingsCard title={t.updatesSection}>
           <p className="text-center text-[12px] text-[var(--muted-foreground)]">
             {t.currentVersion(appVersion || '—')}
           </p>
+          <ToggleRow
+            label={t.betaUpdates}
+            hint={t.betaUpdatesHint}
+            checked={settings.updateChannel === 'beta'}
+            onChange={(v) => void updateSettings({ updateChannel: v ? 'beta' : 'stable' })}
+          />
           <button
             type="button"
             className="h-10 w-full rounded-[12px] bg-[var(--pill)] text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]"
