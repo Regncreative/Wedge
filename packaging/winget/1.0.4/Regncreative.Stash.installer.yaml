@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: Regncreative.Stash
+PackageVersion: 1.0.4
+MinimumOSVersion: 10.0.17763.0
+InstallerType: nullsoft
+Scope: user
+InstallerSwitches:
+  Custom: /currentuser
+UpgradeBehavior: install
+ReleaseDate: 2026-07-28
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Regncreative/Stash/releases/download/v1.0.4/Stash-Setup-1.0.4.exe
+    InstallerSha256: DCFA16A5542F426F232797D9B07E0A27CA5709157B6A0CA1B5AE274A8AA8ADAB
+ManifestType: installer
+ManifestVersion: 1.6.0

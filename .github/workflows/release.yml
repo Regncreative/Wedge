@@ -1,0 +1,87 @@
+name: Release
+
+# Push a version tag (npm version patch && git push --follow-tags) to build
+# the installer and upload it to a *draft* GitHub Release. Nothing reaches
+# users until a maintainer reviews the draft and clicks "Publish release".
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Check tag matches package.json
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+      - run: npm run test:e2e
+
+      # Code signing: once a certificate is available (SignPath / Certum),
+      # sign Stash.exe and the installer here, then set
+      # build.win.verifyUpdateCodeSignature back to true in package.json.
+
+      - name: Build installer and upload draft release
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Stable users only get releases that are not pre-releases, so a beta
+      # tag (v1.2.0-beta.1) must never be published as a normal release.
+      - name: Mark pre-release versions
+        if: contains(github.ref_name, '-')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --prerelease --repo "$GITHUB_REPOSITORY"
+
+      - name: Add release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Section of CHANGELOG.md for this version, if present.
+          notes=$(awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found=1; next }
+            found && index($0, "## [") == 1 { exit }
+            found && index($0, "[") == 1 && index($0, "]: http") > 0 { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -n "$notes" ]; then
+            printf '%s\n' "$notes" > notes.md
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md --repo "$GITHUB_REPOSITORY"
+          else
+            echo "::warning::No CHANGELOG.md section for $version"
+          fi

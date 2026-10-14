@@ -4,7 +4,7 @@ import { getPanelWindow } from './window'
 import { IpcChannels } from '../shared/ipc'
 import { getSettings } from './database'
 import { getMessages } from '../shared/i18n'
-import type { UpdateStatus } from '../shared/types'
+import type { UpdateChannel, UpdateStatus } from '../shared/types'
 
 let lastStatus: UpdateStatus = { state: 'idle' }
 let initialized = false
@@ -30,9 +30,15 @@ export function initUpdater(): void {
     lastStatus = { state: 'dev' }
     return
   }
+  if (process.windowsStore) {
+    lastStatus = { state: 'store' }
+    return
+  }
 
+  autoUpdater.logger = console // routed into the log file by initLogging()
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
+  applyUpdateChannel(getSettings().updateChannel)
   // Builds are not Authenticode-signed; skip publisher checks so updates install.
   if (autoUpdater instanceof NsisUpdater) {
     autoUpdater.verifyUpdateCodeSignature = async () => null
@@ -74,14 +80,29 @@ export function initUpdater(): void {
   }, 8_000)
 }
 
+/**
+ * Beta users also receive GitHub pre-releases (tags like v1.2.0-beta.1, which
+ * publish beta.yml); for stable releases electron-updater falls back to
+ * latest.yml, so beta users get those too. Stable users only see releases
+ * not marked as pre-release. Switching back to stable never downgrades: the
+ * user stays on the beta until a newer stable ships.
+ */
+export function applyUpdateChannel(channel: UpdateChannel): void {
+  if (!app.isPackaged || process.windowsStore) return
+  autoUpdater.channel = channel === 'beta' ? 'beta' : 'latest'
+  autoUpdater.allowPrerelease = channel === 'beta'
+  // Setting `channel` turns allowDowngrade on; keep it off.
+  autoUpdater.allowDowngrade = false
+}
+
 export function getUpdateStatus(): UpdateStatus {
   return lastStatus
 }
 
 /** Manual or automatic update check. */
 export async function checkForUpdates(manual: boolean): Promise<UpdateStatus> {
-  if (!app.isPackaged) {
-    const status: UpdateStatus = { state: 'dev' }
+  if (!app.isPackaged || process.windowsStore) {
+    const status: UpdateStatus = { state: process.windowsStore ? 'store' : 'dev' }
     broadcast(status)
     return status
   }
@@ -111,6 +132,6 @@ export async function checkForUpdates(manual: boolean): Promise<UpdateStatus> {
 
 /** Install downloaded update and relaunch. */
 export function installUpdateNow(): void {
-  if (!app.isPackaged) return
+  if (!app.isPackaged || process.windowsStore) return
   autoUpdater.quitAndInstall(false, true)
 }

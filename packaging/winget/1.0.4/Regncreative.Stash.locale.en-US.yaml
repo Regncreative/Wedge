@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: Regncreative.Stash
+PackageVersion: 1.0.4
+PackageLocale: en-US
+Publisher: Regncreative
+PublisherUrl: https://github.com/Regncreative
+PublisherSupportUrl: https://github.com/Regncreative/Stash/issues
+PackageName: Stash
+PackageUrl: https://stash.regncreative.com
+License: MIT
+LicenseUrl: https://github.com/Regncreative/Stash/blob/main/LICENSE
+ShortDescription: A file shelf in the Windows system tray. Park files, then drag them into any app.
+Description: |-
+  Stash adds a lightweight file shelf to the system tray. Drop files onto shelves, pin what matters,
+  and drag them back into any app when you need them. Stash stores references only; your files stay
+  where they are on disk.
+Moniker: stash
+Tags:
+  - file-shelf
+  - drag-and-drop
+  - productivity
+  - tray
+ReleaseNotesUrl: https://github.com/Regncreative/Stash/releases/tag/v1.0.4
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

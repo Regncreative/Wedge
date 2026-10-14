@@ -95,6 +95,8 @@ export type UpdateStatus =
   | { state: 'downloaded'; version: string }
   | { state: 'error'; message: string }
   | { state: 'dev' }
+  /** Microsoft Store build: the Store installs updates. */
+  | { state: 'store' }
 
 export const DEFAULT_SHELVES_TR: Omit<Shelf, 'id' | 'createdAt'>[] = [
   { name: 'İş', icon: 'briefcase', color: '#2563EB', sortOrder: 0 },

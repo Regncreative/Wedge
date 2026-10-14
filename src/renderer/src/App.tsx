@@ -56,6 +56,9 @@ export default function App() {
         case 'dev':
           showToast(t.updateDev)
           break
+        case 'store':
+          showToast(t.updateStore)
+          break
         case 'error':
           showToast(t.updateError)
           break

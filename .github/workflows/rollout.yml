@@ -1,0 +1,50 @@
+name: Rollout
+
+# Staged rollout for a published release. electron-updater reads
+# `stagingPercentage` from the update file and only that share of installs
+# (by a random per-install id) updates. Use e.g. 10 → 50 → 100, or 0 to
+# halt a bad release. 100 removes the limit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v1.1.0)
+        required: true
+      percentage:
+        description: Share of users who get the update (0-100)
+        required: true
+        default: '10'
+
+permissions:
+  contents: write
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate input
+        env:
+          PCT: ${{ inputs.percentage }}
+        run: |
+          if ! [[ "$PCT" =~ ^[0-9]+$ ]] || [ "$PCT" -gt 100 ]; then
+            echo "::error::percentage must be an integer between 0 and 100"
+            exit 1
+          fi
+
+      - name: Update stagingPercentage in the release's update files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          PCT: ${{ inputs.percentage }}
+        run: |
+          mkdir rollout
+          gh release download "$TAG" --pattern '*.yml' --dir rollout --repo "$GITHUB_REPOSITORY"
+          for f in rollout/*.yml; do
+            sed -i '/^stagingPercentage:/d' "$f"
+            if [ "$PCT" -lt 100 ]; then
+              echo "stagingPercentage: $PCT" >> "$f"
+            fi
+            echo "--- $f"; cat "$f"
+          done
+          gh release upload "$TAG" rollout/*.yml --clobber --repo "$GITHUB_REPOSITORY"

@@ -19,7 +19,6 @@
     "preview": "electron-vite preview",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
-    "release": "npm run build && electron-builder --publish always",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc -p tsconfig.test.json",
     "test": "node scripts/run-vitest.cjs run",
     "test:watch": "node scripts/run-vitest.cjs",
@@ -85,7 +84,8 @@
       {
         "provider": "github",
         "owner": "Regncreative",
-        "repo": "Stash"
+        "repo": "Stash",
+        "releaseType": "draft"
       }
     ],
     "win": {
@@ -104,7 +104,9 @@
       "shortcutName": "Stash",
       "installerIcon": "resources/icon.ico",
       "uninstallerIcon": "resources/icon.ico",
-      "artifactName": "Stash-Setup-${version}.${ext}"
+      "artifactName": "Stash-Setup-${version}.${ext}",
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": false
     }
   }
 }

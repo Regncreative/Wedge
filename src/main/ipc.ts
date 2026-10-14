@@ -9,7 +9,7 @@ import * as db from './database'
 import { getPanelWindow } from './window'
 import { syncAutoLaunch } from './auto-launch'
 import { reregisterHotkey } from './hotkey'
-import { checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
+import { applyUpdateChannel, checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
 import { checkPath, isReachable } from './file-exists'
 import { handle, on } from './ipc-validate'
 import { openLogsFolder } from './logging'
@@ -343,6 +343,9 @@ export function registerIpcHandlers(): void {
     const next = db.setSettings(partial)
     if (partial.startWithWindows !== undefined) {
       syncAutoLaunch(partial.startWithWindows)
+    }
+    if (partial.updateChannel !== undefined) {
+      applyUpdateChannel(next.updateChannel)
     }
     return next
   })

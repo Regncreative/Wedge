@@ -100,6 +100,7 @@ export type Messages = {
   updateReady: (v: string) => string
   updateLatest: string
   updateDev: string
+  updateStore: string
   updateError: string
   updateErrorHint: string
   downloadManually: string
@@ -236,6 +237,7 @@ const tr: Messages = {
   updateReady: (v) => `${v} hazır — yeniden başlatınca kurulur`,
   updateLatest: 'Güncelsiniz',
   updateDev: 'Güncelleme yalnızca kurulu sürümde çalışır',
+  updateStore: 'Güncellemeler Microsoft Store üzerinden yapılır',
   updateError: 'Güncelleme başarısız',
   updateErrorHint: '1.0.1 ve öncesi otomatik güncellenemiyor. En son kurucuyu indir.',
   downloadManually: 'Manuel indir',
@@ -372,6 +374,7 @@ const en: Messages = {
   updateReady: (v) => `${v} ready — restarts to install`,
   updateLatest: 'You’re up to date',
   updateDev: 'Updates only work in the installed app',
+  updateStore: 'Updates are installed by the Microsoft Store',
   updateError: 'Update failed',
   updateErrorHint: '1.0.1 and earlier can’t auto-update. Download the latest installer.',
   downloadManually: 'Download manually',
