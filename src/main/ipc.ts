@@ -177,7 +177,10 @@ export function registerIpcHandlers(): void {
       const result = db.addFiles(metas, targetShelfId)
       const shelf = db.listShelves().find((s) => s.id === targetShelfId)
 
-      if (result.added > 0 && settings.notifications) {
+      // Drops land on the open panel, which already shows a toast; only
+      // notify when files arrive while the panel is hidden.
+      const panelVisible = getPanelWindow()?.isVisible() ?? false
+      if (result.added > 0 && settings.notifications && !panelVisible) {
         try {
           const t = getMessages(settings.language)
           new Notification({
@@ -190,15 +193,12 @@ export function registerIpcHandlers(): void {
         }
       }
 
-      const payload = {
+      return {
         added: result.added,
         skipped: result.skipped,
         shelfId: targetShelfId,
         shelfName: shelf?.name ?? ''
       }
-
-      getPanelWindow()?.webContents.send(IpcChannels.FILES_ADDED_EVENT, payload)
-      return payload
     }
   )
 

@@ -23,7 +23,6 @@ export const IpcChannels = {
   FILES_CHECK_EXISTS: 'files:check-exists',
   FILES_START_DRAG: 'files:start-drag',
   FILES_SEARCH: 'files:search',
-  FILES_ADDED_EVENT: 'files:added-event',
   FILES_ICON: 'files:icon',
 
   // Shelves

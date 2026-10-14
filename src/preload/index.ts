@@ -61,7 +61,6 @@ export interface StashApi {
   getUpdateStatus: () => Promise<UpdateStatus>
 
   // Events
-  onFilesAdded: (cb: (result: AddFilesResult) => void) => () => void
   onThemeChanged: (cb: (theme: 'light' | 'dark') => void) => () => void
   onNavigateSettings: (cb: () => void) => () => void
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void
@@ -110,11 +109,6 @@ const api: StashApi = {
   installUpdate: () => ipcRenderer.invoke(IpcChannels.UPDATE_INSTALL),
   getUpdateStatus: () => ipcRenderer.invoke(IpcChannels.UPDATE_GET_STATUS),
 
-  onFilesAdded: (cb) => {
-    const handler = (_: IpcRendererEvent, result: AddFilesResult) => cb(result)
-    ipcRenderer.on(IpcChannels.FILES_ADDED_EVENT, handler)
-    return () => ipcRenderer.removeListener(IpcChannels.FILES_ADDED_EVENT, handler)
-  },
   onThemeChanged: (cb) => {
     const handler = (_: IpcRendererEvent, theme: 'light' | 'dark') => cb(theme)
     ipcRenderer.on(IpcChannels.THEME_CHANGED, handler)

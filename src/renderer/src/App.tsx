@@ -16,7 +16,6 @@ export default function App() {
   const t = useT()
   const ready = useStashStore((s) => s.ready)
   const init = useStashStore((s) => s.init)
-  const refresh = useStashStore((s) => s.refresh)
   const showSettings = useStashStore((s) => s.showSettings)
   const setShowSettings = useStashStore((s) => s.setShowSettings)
   const setTheme = useStashStore((s) => s.setTheme)
@@ -31,12 +30,6 @@ export default function App() {
   }, [init])
 
   useEffect(() => {
-    const unsubAdded = window.stash.onFilesAdded((result) => {
-      void refresh()
-      if (result.added > 0) {
-        showToast(t.filesAdded(result.added, result.shelfName))
-      }
-    })
     const unsubTheme = window.stash.onThemeChanged((theme) => {
       const mode = useStashStore.getState().settings?.theme
       if (mode === 'system' || !mode) {
@@ -71,14 +64,13 @@ export default function App() {
       }
     })
     return () => {
-      unsubAdded()
       unsubTheme()
       unsubNav()
       unsubShown()
       unsubHidden()
       unsubUpdate()
     }
-  }, [refresh, setShowSettings, setTheme, showToast, t])
+  }, [setShowSettings, setTheme, showToast, t])
 
   if (!ready) {
     return (
