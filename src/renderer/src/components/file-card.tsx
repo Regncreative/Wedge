@@ -7,7 +7,7 @@ import type { StashFile } from '@shared/types'
 import { FileTypeIcon } from './file-icon'
 import { formatBytes, formatClock } from '@/lib/format'
 import { useStashStore } from '@/stores/stash-store'
-import { cn } from '@/lib/utils'
+import { cn, toFileUrl } from '@/lib/utils'
 import { IMAGE_EXTS } from '@shared/types'
 import { useT } from '@/lib/i18n'
 
@@ -231,7 +231,7 @@ export const FileCard = memo(function FileCard({
             style={{ left: previewPos.left, top: previewPos.top }}
           >
             <img
-              src={`file://${file.absolutePath.replace(/\\/g, '/')}`}
+              src={toFileUrl(file.absolutePath)}
               alt=""
               className="max-h-36 max-w-[200px] object-contain"
               draggable={false}
