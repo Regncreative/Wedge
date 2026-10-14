@@ -1,11 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { createTray, destroyTray, getTray } from './tray'
-import {
-  createPanelWindow,
-  registerWindowIpc,
-  showPanel,
-  setQuitting
-} from './window'
+import { createPanelWindow, registerWindowIpc, showPanel } from './window'
 import { initDatabase, closeDatabase, getSettings } from './database'
 import { registerIpcHandlers } from './ipc'
 import { syncAutoLaunch } from './auto-launch'
@@ -46,7 +41,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  setQuitting(true)
   unregisterHotkeys()
   destroyTray()
   closeDatabase()

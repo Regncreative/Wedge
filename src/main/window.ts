@@ -3,7 +3,6 @@ import {
   BrowserWindow,
   screen,
   nativeTheme,
-  app,
   ipcMain
 } from 'electron'
 import { join } from 'path'
@@ -17,21 +16,8 @@ let isPinned = false
 let currentOpacity = 1
 let opacityAnim: ReturnType<typeof setInterval> | null = null
 
-export function setQuitting(_value: boolean): void {
-  // Kept for callers.
-}
-
 export function getPanelWindow(): BrowserWindow | null {
   return panelWindow
-}
-
-export function isPanelPinned(): boolean {
-  return isPinned
-}
-
-/** Call before opening OS dialogs (e.g. Properties) so always-on-top can drop briefly. */
-export function beginExternalDialog(): void {
-  // no-op placeholder for dialog flow; opacity stays managed by renderer.
 }
 
 function stopOpacityAnim(): void {
@@ -231,8 +217,4 @@ export function registerWindowIpc(): void {
       nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
     )
   })
-}
-
-export function isDev(): boolean {
-  return !app.isPackaged
 }

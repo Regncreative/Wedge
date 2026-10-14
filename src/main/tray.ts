@@ -1,6 +1,6 @@
 import { Tray, Menu, nativeImage, app, NativeImage } from 'electron'
 import { join } from 'path'
-import { showPanel, togglePanel, hidePanel, setQuitting, getPanelWindow } from './window'
+import { showPanel, togglePanel, hidePanel, getPanelWindow } from './window'
 import { checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
 import { getSettings } from './database'
 import { getMessages } from '../shared/i18n'
@@ -79,17 +79,11 @@ function buildContextMenu(): Menu {
     {
       label: t.trayQuit,
       click: () => {
-        setQuitting(true)
         hidePanel()
         app.quit()
       }
     }
   ])
-}
-
-export function rebuildTrayMenu(): void {
-  if (!tray) return
-  tray.setContextMenu(buildContextMenu())
 }
 
 export function createTray(): Tray {

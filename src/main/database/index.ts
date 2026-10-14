@@ -228,36 +228,6 @@ export function listFiles(shelfId?: string | null): StashFile[] {
   return rows.map(mapFile)
 }
 
-export function searchFiles(query: string, shelfId?: string | null): StashFile[] {
-  const q = `%${query.toLowerCase()}%`
-  let rows: Record<string, unknown>[]
-  if (shelfId) {
-    rows = getDb()
-      .prepare(
-        `SELECT * FROM files
-         WHERE shelf_id = ?
-           AND (
-             LOWER(name) LIKE ?
-             OR LOWER(extension) LIKE ?
-             OR LOWER(absolute_path) LIKE ?
-           )
-         ORDER BY is_pinned DESC, added_at DESC`
-      )
-      .all(shelfId, q, q, q) as Record<string, unknown>[]
-  } else {
-    rows = getDb()
-      .prepare(
-        `SELECT * FROM files
-         WHERE LOWER(name) LIKE ?
-            OR LOWER(extension) LIKE ?
-            OR LOWER(absolute_path) LIKE ?
-         ORDER BY is_pinned DESC, added_at DESC`
-      )
-      .all(q, q, q) as Record<string, unknown>[]
-  }
-  return rows.map(mapFile)
-}
-
 export interface FileInput {
   absolutePath: string
   name: string

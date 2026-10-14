@@ -21,7 +21,6 @@ export interface StashApi {
 
   // Files
   listFiles: (shelfId?: string | null) => Promise<StashFile[]>
-  searchFiles: (query: string, shelfId?: string | null) => Promise<StashFile[]>
   addFiles: (paths: string[], shelfId?: string) => Promise<AddFilesResult>
   removeFile: (id: string) => Promise<boolean>
   clearMissingFiles: () => Promise<number>
@@ -31,7 +30,6 @@ export interface StashApi {
   revealFile: (id: string) => Promise<{ ok: boolean; error?: string }>
   copyPath: (id: string) => Promise<boolean>
   getProperties: (id: string) => Promise<{ ok: boolean; error?: string }>
-  checkExists: (id: string) => Promise<boolean>
   getFileIcon: (id: string) => Promise<string | null>
   startDrag: (id: string) => void
   getPathForFile: (file: File) => string
@@ -76,7 +74,6 @@ const api: StashApi = {
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_OPACITY, opacity, animate !== false),
 
   listFiles: (shelfId) => ipcRenderer.invoke(IpcChannels.FILES_LIST, shelfId),
-  searchFiles: (query, shelfId) => ipcRenderer.invoke(IpcChannels.FILES_SEARCH, query, shelfId),
   addFiles: (paths, shelfId) => ipcRenderer.invoke(IpcChannels.FILES_ADD, paths, shelfId),
   removeFile: (id) => ipcRenderer.invoke(IpcChannels.FILES_REMOVE, id),
   clearMissingFiles: () => ipcRenderer.invoke(IpcChannels.FILES_CLEAR_MISSING),
@@ -86,7 +83,6 @@ const api: StashApi = {
   revealFile: (id) => ipcRenderer.invoke(IpcChannels.FILES_REVEAL, id),
   copyPath: (id) => ipcRenderer.invoke(IpcChannels.FILES_COPY_PATH, id),
   getProperties: (id) => ipcRenderer.invoke(IpcChannels.FILES_PROPERTIES, id),
-  checkExists: (id) => ipcRenderer.invoke(IpcChannels.FILES_CHECK_EXISTS, id),
   getFileIcon: (id) => ipcRenderer.invoke(IpcChannels.FILES_ICON, id),
   startDrag: (id) => ipcRenderer.send(IpcChannels.FILES_START_DRAG, id),
   getPathForFile: (file) => webUtils.getPathForFile(file),

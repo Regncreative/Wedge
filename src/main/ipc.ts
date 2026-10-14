@@ -5,7 +5,7 @@ import { basename, extname, join } from 'path'
 import koffi from 'koffi'
 import { IpcChannels } from '../shared/ipc'
 import * as db from './database'
-import { getPanelWindow, beginExternalDialog } from './window'
+import { getPanelWindow } from './window'
 import { syncAutoLaunch } from './auto-launch'
 import { reregisterHotkey } from './hotkey'
 import { checkForUpdates, getUpdateStatus, installUpdateNow } from './updater'
@@ -93,7 +93,6 @@ const iconCache = new Map<string, string | null>()
  */
 function openNativeProperties(filePath: string): boolean {
   const panel = getPanelWindow()
-  beginExternalDialog()
   if (panel && !panel.isDestroyed()) {
     panel.setAlwaysOnTop(false)
   }
@@ -157,10 +156,6 @@ export function registerIpcHandlers(): void {
   // ── Files ──────────────────────────────────────────────
   ipcMain.handle(IpcChannels.FILES_LIST, (_e, shelfId?: string | null) => {
     return Promise.all(db.listFiles(shelfId).map(enrichExists))
-  })
-
-  ipcMain.handle(IpcChannels.FILES_SEARCH, (_e, query: string, shelfId?: string | null) => {
-    return Promise.all(db.searchFiles(query, shelfId).map(enrichExists))
   })
 
   ipcMain.handle(
@@ -292,12 +287,6 @@ export function registerIpcHandlers(): void {
       console.error('[stash] openNativeProperties failed', err)
       return { ok: false, error: 'failed' }
     }
-  })
-
-  ipcMain.handle(IpcChannels.FILES_CHECK_EXISTS, (_e, id: string) => {
-    const file = db.getFileById(id)
-    if (!file) return false
-    return isReachable(file.absolutePath)
   })
 
   ipcMain.on(IpcChannels.FILES_START_DRAG, (event, id: string) => {

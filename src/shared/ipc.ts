@@ -6,7 +6,6 @@ export const IpcChannels = {
   WINDOW_SHOWN: 'window:shown',
   WINDOW_PIN: 'window:pin',
   WINDOW_IS_PINNED: 'window:is-pinned',
-  WINDOW_BLUR: 'window:blur',
   WINDOW_SET_OPACITY: 'window:set-opacity',
 
   // Files
@@ -20,9 +19,7 @@ export const IpcChannels = {
   FILES_REVEAL: 'files:reveal',
   FILES_COPY_PATH: 'files:copy-path',
   FILES_PROPERTIES: 'files:properties',
-  FILES_CHECK_EXISTS: 'files:check-exists',
   FILES_START_DRAG: 'files:start-drag',
-  FILES_SEARCH: 'files:search',
   FILES_ICON: 'files:icon',
 
   // Shelves
@@ -43,7 +40,6 @@ export const IpcChannels = {
   THEME_GET: 'theme:get',
   THEME_CHANGED: 'theme:changed',
   NOTIFY: 'notify',
-  GET_PATH_FOR_FILE: 'get-path-for-file',
   APP_GET_VERSION: 'app:get-version',
   OPEN_RELEASES: 'app:open-releases',
 
