@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Pin, Trash2, X } from 'lucide-react'
+import { Archive, MoreHorizontal, Pin, Trash2, X } from 'lucide-react'
 import { useStashStore } from '@/stores/stash-store'
 import { useSelectionActions } from '@/hooks/use-selection-actions'
 import { useT } from '@/lib/i18n'
@@ -9,6 +9,9 @@ export function SelectionBar() {
   const t = useT()
   const count = useStashStore((s) => s.selectedIds.length)
   const clearSelection = useStashStore((s) => s.clearSelection)
+  const openContextMenu = useStashStore((s) => s.openContextMenu)
+  const refresh = useStashStore((s) => s.refresh)
+  const showToast = useStashStore((s) => s.showToast)
   const { removeSelected, pinSelected } = useSelectionActions()
 
   if (count < 2) return null
@@ -35,11 +38,37 @@ export function SelectionBar() {
       </button>
       <button
         type="button"
+        className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]"
+        onClick={async () => {
+          const res = await window.stash.zipFiles(useStashStore.getState().selectedIds)
+          await refresh()
+          if (res.ok) showToast(t.zipDone)
+        }}
+      >
+        <Archive size={14} strokeWidth={1.75} />
+        ZIP
+      </button>
+      <button
+        type="button"
         className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[12px] font-medium text-[var(--destructive)] transition-colors hover:bg-[var(--pill-hover)]"
         onClick={() => void removeSelected()}
       >
         <Trash2 size={14} strokeWidth={1.75} />
         {t.remove}
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={t.more}
+        title={t.more}
+        onClick={(e) => {
+          const first = useStashStore.getState().selectedIds[0]
+          const rect = e.currentTarget.getBoundingClientRect()
+          // Open upwards from the bar.
+          if (first) openContextMenu(rect.left - 180, Math.max(8, rect.top - 420), first)
+        }}
+      >
+        <MoreHorizontal size={16} strokeWidth={1.75} />
       </button>
       <button
         type="button"

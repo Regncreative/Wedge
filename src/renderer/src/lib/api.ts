@@ -5,11 +5,18 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import type {
   AddFilesResult,
   AppSettings,
+  FilesChanged,
+  PhoneSession,
+  Preview,
+  Rule,
   Shelf,
   ShelfStats,
   StashFile,
+  SyncDevice,
   UpdateStatus
 } from '@shared/types'
+
+export type ImageFormat = 'jpg' | 'png' | 'webp'
 
 type OpResult = { ok: boolean; error?: string }
 
@@ -51,8 +58,48 @@ export interface StashApi {
   /** Native drag into other apps; resolves when the drag ends. */
   startDrag: (ids: string[]) => Promise<void>
 
+  // Notes, reminders, search
+  setNote: (id: string, note: string, tags: string) => Promise<boolean>
+  setReminder: (id: string, at: number | null) => Promise<boolean>
+  /** Ids of files whose contents match the query. */
+  searchContent: (query: string) => Promise<string[]>
+  /** Tells the backend what is selected (for the paste-into-dialog shortcut). */
+  setSelection: (ids: string[]) => Promise<void>
+  quickLook: (id: string) => Promise<Preview>
+
+  // Quick actions
+  zipFiles: (ids: string[]) => Promise<{ ok: boolean; path?: string }>
+  convertImages: (
+    ids: string[],
+    format: ImageFormat,
+    maxSide?: number | null
+  ) => Promise<{ converted: number; failed: number }>
+  collectFiles: (ids: string[]) => Promise<{ ok: boolean; canceled?: boolean; copied?: number }>
+  copyPaths: (ids: string[]) => Promise<number>
+  openFiles: (ids: string[]) => Promise<number>
+  /** Zip the files to a temporary archive and drag it out; resolves when the drag ends. */
+  startDragZip: (ids: string[], name: string) => Promise<void>
+  pasteClipboard: (
+    shelfId?: string | null
+  ) => Promise<{ kind: 'files' | 'image' | 'link' | 'text' | 'empty'; added: number }>
+
   // Shelves
   listShelves: () => Promise<Shelf[]>
+  setShelfExpiry: (id: string, hours: number | null) => Promise<boolean>
+  listRules: () => Promise<Rule[]>
+  addRule: (shelfId: string, extensions: string, source: Rule['source']) => Promise<Rule>
+  deleteRule: (id: string) => Promise<boolean>
+  dropShelf: () => Promise<Shelf>
+  hideDropShelf: () => Promise<void>
+  openDropShelf: () => Promise<void>
+  openWidget: (shelfId: string) => Promise<boolean>
+  closeWidget: (shelfId: string) => Promise<boolean>
+
+  // Phone and sync
+  phoneStart: () => Promise<PhoneSession>
+  phoneStop: () => Promise<void>
+  pickFolder: () => Promise<string | null>
+  syncNow: () => Promise<SyncDevice[]>
   createShelf: (input: { name: string; icon?: string; color?: string }) => Promise<Shelf>
   renameShelf: (id: string, name: string) => Promise<boolean>
   deleteShelf: (id: string) => Promise<boolean>
@@ -77,6 +124,9 @@ export interface StashApi {
 
   // Events
   onFileDrop: (cb: (event: FileDropEvent) => void) => () => void
+  /** Files added or removed outside the panel (watchers, phone, sync, expiry). */
+  onFilesChanged: (cb: (change: FilesChanged) => void) => () => void
+  onDropShelfShown: (cb: () => void) => () => void
   onThemeChanged: (cb: (theme: 'light' | 'dark') => void) => () => void
   onNavigateSettings: (cb: () => void) => () => void
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void
@@ -131,7 +181,36 @@ export const api: StashApi = {
   getPreview: (id) => invoke('file_preview', { id }),
   startDrag: (ids) => invoke('start_drag', { ids }),
 
+  setNote: (id, note, tags) => invoke('set_file_note', { id, note, tags }),
+  setReminder: (id, at) => invoke('set_reminder', { id, at }),
+  searchContent: (query) => invoke('search_content', { query }),
+  setSelection: (ids) => invoke('set_selection', { ids }),
+  quickLook: (id) => invoke('quick_look', { id }),
+
+  zipFiles: (ids) => invoke('zip_files', { ids }),
+  convertImages: (ids, format, maxSide) =>
+    invoke('convert_images', { ids, format, maxSide: maxSide ?? null }),
+  collectFiles: (ids) => invoke('collect_files', { ids }),
+  copyPaths: (ids) => invoke('copy_paths', { ids }),
+  openFiles: (ids) => invoke('open_files', { ids }),
+  startDragZip: (ids, name) => invoke('start_drag_zip', { ids, name }),
+  pasteClipboard: (shelfId) => invoke('paste_clipboard', { shelfId: shelfId ?? null }),
+
   listShelves: () => invoke('list_shelves'),
+  setShelfExpiry: (id, hours) => invoke('set_shelf_expiry', { id, hours }),
+  listRules: () => invoke('list_rules'),
+  addRule: (shelfId, extensions, source) => invoke('add_rule', { shelfId, extensions, source }),
+  deleteRule: (id) => invoke('delete_rule', { id }),
+  dropShelf: () => invoke('drop_shelf'),
+  hideDropShelf: () => invoke('hide_drop_shelf'),
+  openDropShelf: () => invoke('open_drop_shelf'),
+  openWidget: (shelfId) => invoke('open_widget', { shelfId }),
+  closeWidget: (shelfId) => invoke('close_widget', { shelfId }),
+
+  phoneStart: () => invoke('phone_start'),
+  phoneStop: () => invoke('phone_stop'),
+  pickFolder: () => invoke('pick_folder'),
+  syncNow: () => invoke('sync_now'),
   createShelf: (input) => invoke('create_shelf', { input }),
   renameShelf: (id, name) => invoke('rename_shelf', { id, name }),
   deleteShelf: (id) => invoke('delete_shelf', { id }),
@@ -163,6 +242,8 @@ export const api: StashApi = {
     subscribe(() =>
       getCurrentWindow().onThemeChanged(({ payload }) => cb(payload === 'light' ? 'light' : 'dark'))
     ),
+  onFilesChanged: (cb) => onEvent<FilesChanged>('files-changed', cb),
+  onDropShelfShown: (cb) => onEvent('drop-shelf-shown', cb),
   onNavigateSettings: (cb) => onEvent('navigate-settings', cb),
   onUpdateStatus: (cb) => onEvent<UpdateStatus>('update-status', cb),
   onPanelShown: (cb) => onEvent('panel-shown', cb),

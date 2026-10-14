@@ -4,6 +4,11 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 export type AppLanguage = 'tr' | 'en'
 export type FileSort = 'added' | 'name' | 'recent' | 'size'
 export type UpdateChannel = 'stable' | 'beta'
+export type EdgeReveal = 'off' | 'left' | 'right'
+/** How a file got onto a shelf. */
+export type FileSource = 'manual' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'sync'
+/** Automatic shelves are filled by Stash itself. */
+export type ShelfKind = 'normal' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'drop'
 
 export type FileFilter =
   | 'all'
@@ -25,6 +30,9 @@ export interface Shelf {
   color: string
   createdAt: number
   sortOrder: number
+  kind: ShelfKind
+  /** Files older than this many hours are removed (temporary shelf). */
+  expireHours: number | null
 }
 
 export interface StashFile {
@@ -39,7 +47,44 @@ export interface StashFile {
   addedAt: number
   lastAccessed: number | null
   isPinned: boolean
+  note: string
+  /** Comma-separated. */
+  tags: string
+  /** Reminder time (ms since epoch). */
+  remindAt: number | null
+  source: FileSource
   exists: boolean
+}
+
+export interface Rule {
+  id: string
+  shelfId: string
+  /** Comma-separated extensions; empty = every file. */
+  extensions: string
+  source: 'any' | FileSource
+}
+
+export type Preview =
+  | { kind: 'image'; url: string }
+  | { kind: 'text'; text: string }
+  | { kind: 'none' }
+
+export interface PhoneSession {
+  url: string
+  qrSvg: string
+  expiresAt: number
+}
+
+export interface SyncDevice {
+  name: string
+  updatedAt: number
+  thisPc: boolean
+}
+
+export interface FilesChanged {
+  added: number
+  shelfName: string
+  source: FileSource | 'expiry'
 }
 
 export interface AppSettings {
@@ -65,6 +110,20 @@ export interface AppSettings {
   updateChannel: UpdateChannel
   /** First-run welcome has been dismissed. */
   onboardingDone: boolean
+  /** New files in Downloads land on the Downloads shelf. */
+  watchDownloads: boolean
+  /** New screenshots land on the Screenshots shelf. */
+  watchScreenshots: boolean
+  /** Shaking the mouse while dragging opens a drop shelf at the cursor. */
+  shakeToOpen: boolean
+  /** Pushing the cursor against this screen edge opens the panel. */
+  edgeReveal: EdgeReveal
+  /** "Add to Stash" in Explorer's right-click menu. */
+  contextMenu: boolean
+  /** Fills the selected file's path into an Open/Save dialog. */
+  pasteHotkey: string
+  /** Cloud-synced folder used to sync shelves between PCs; empty = off. */
+  syncFolder: string
 }
 
 export interface ShelfStats {
@@ -96,25 +155,6 @@ export type UpdateStatus =
   | { state: 'error'; message: string }
   | { state: 'dev' }
 
-export const DEFAULT_SHELVES_TR: Omit<Shelf, 'id' | 'createdAt'>[] = [
-  { name: 'İş', icon: 'briefcase', color: '#2563EB', sortOrder: 0 },
-  { name: 'Kişisel', icon: 'heart', color: '#E74856', sortOrder: 1 },
-  { name: 'Geçici', icon: 'clock', color: '#64748B', sortOrder: 2 }
-]
-
-export const DEFAULT_SHELVES_EN: Omit<Shelf, 'id' | 'createdAt'>[] = [
-  { name: 'Work', icon: 'briefcase', color: '#2563EB', sortOrder: 0 },
-  { name: 'Personal', icon: 'heart', color: '#E74856', sortOrder: 1 },
-  { name: 'Temporary', icon: 'clock', color: '#64748B', sortOrder: 2 }
-]
-
-/** @deprecated Prefer getDefaultShelves(lang) — kept for older imports. */
-export const DEFAULT_SHELVES = DEFAULT_SHELVES_TR
-
-export function getDefaultShelves(lang: AppLanguage): Omit<Shelf, 'id' | 'createdAt'>[] {
-  return lang === 'tr' ? DEFAULT_SHELVES_TR : DEFAULT_SHELVES_EN
-}
-
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   accentColor: '#2563EB',
@@ -128,7 +168,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   idleOpacity: 0.4,
   idleTimeoutSec: 10,
   updateChannel: 'stable',
-  onboardingDone: false
+  onboardingDone: false,
+  watchDownloads: true,
+  watchScreenshots: true,
+  shakeToOpen: true,
+  edgeReveal: 'off',
+  contextMenu: true,
+  pasteHotkey: 'Control+Alt+V',
+  syncFolder: ''
 }
 
 /** Ensure settings always have valid numeric/enum fields (older DBs / partial IPC). */
@@ -150,6 +197,12 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   s.startWithWindows = s.startWithWindows === true
   s.updateChannel = s.updateChannel === 'beta' ? 'beta' : 'stable'
   s.onboardingDone = s.onboardingDone === true
+  s.watchDownloads = s.watchDownloads !== false
+  s.watchScreenshots = s.watchScreenshots !== false
+  s.shakeToOpen = s.shakeToOpen !== false
+  s.edgeReveal = s.edgeReveal === 'left' || s.edgeReveal === 'right' ? s.edgeReveal : 'off'
+  s.contextMenu = s.contextMenu !== false
+  s.syncFolder = typeof s.syncFolder === 'string' ? s.syncFolder : ''
   return s
 }
 

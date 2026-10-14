@@ -12,7 +12,11 @@ import {
   Inbox,
   Package,
   Clock,
-  GraduationCap
+  GraduationCap,
+  Download,
+  Camera,
+  Smartphone,
+  Clipboard
 } from 'lucide-react'
 import { classifyExtension } from '@shared/types'
 import type { StashFile } from '@shared/types'
@@ -25,7 +29,11 @@ const SHELF_ICONS: Record<string, typeof Inbox> = {
   folder: Folder,
   package: Package,
   clock: Clock,
-  graduation: GraduationCap
+  graduation: GraduationCap,
+  download: Download,
+  camera: Camera,
+  smartphone: Smartphone,
+  clipboard: Clipboard
 }
 
 export function ShelfIcon({

@@ -256,6 +256,16 @@ mod tests {
     fn release_signature_matches_shipped_public_key() {
         use base64::Engine;
         let installer = std::env::var("STASH_INSTALLER").expect("STASH_INSTALLER");
+        // cargo test runs inside src-tauri; accept paths relative to the repo root too.
+        let installer = if std::path::Path::new(&installer).exists() {
+            installer
+        } else {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join(&installer)
+                .to_string_lossy()
+                .into_owned()
+        };
         let conf: serde_json::Value =
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         let decode = |b64: &str| {

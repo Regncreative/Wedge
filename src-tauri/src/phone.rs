@@ -204,8 +204,15 @@ pub fn phone_start(app: AppHandle) -> Result<PhoneSession, String> {
             return Ok(r.session.clone());
         }
     }
-    let ip = local_ip().ok_or("no network")?;
-    let server = tiny_http::Server::http("0.0.0.0:0").map_err(|e| e.to_string())?;
+    // Tests stay on loopback (no firewall prompt, no network needed).
+    let loopback = std::env::var_os("STASH_PHONE_LOOPBACK").is_some();
+    let ip = if loopback {
+        std::net::IpAddr::from([127, 0, 0, 1])
+    } else {
+        local_ip().ok_or("no network")?
+    };
+    let bind = if loopback { "127.0.0.1:0" } else { "0.0.0.0:0" };
+    let server = tiny_http::Server::http(bind).map_err(|e| e.to_string())?;
     let port = server
         .server_addr()
         .to_ip()

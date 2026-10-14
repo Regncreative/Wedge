@@ -2,9 +2,7 @@
 //! the user shakes the mouse while dragging. Files dropped on it collect on
 //! the "Drop shelf" (kept 24 hours) until they are dragged out together.
 
-use tauri::{
-    AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Manager, PhysicalPosition, WebviewWindow, WebviewWindowBuilder};
 
 use crate::db;
 use crate::i18n;
@@ -20,7 +18,7 @@ fn window(app: &AppHandle) -> Option<WebviewWindow> {
     if let Some(w) = app.get_webview_window(LABEL) {
         return Some(w);
     }
-    WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html?view=drop".into()))
+    WebviewWindowBuilder::new(app, LABEL, crate::panel::page_url(app, "view=drop"))
         .title("Stash")
         .inner_size(WIDTH, HEIGHT)
         .decorations(false)
@@ -82,6 +80,23 @@ pub fn hide(app: &AppHandle) {
 #[tauri::command]
 pub fn drop_shelf(app: AppHandle) -> Result<Shelf, String> {
     shelf(&app).map_err(|e| e.to_string())
+}
+
+/// Open the drop shelf at the cursor (tray menu; no shake needed).
+pub fn show_at_cursor(app: &AppHandle) {
+    let (x, y) = app
+        .cursor_position()
+        .map(|p| (p.x as i32, p.y as i32))
+        .unwrap_or((200, 200));
+    show_at(app, x, y);
+}
+
+// Async: creating a window from a synchronous command deadlocks on Windows.
+#[tauri::command]
+pub async fn open_drop_shelf(app: AppHandle) -> Result<(), String> {
+    let handle = app.clone();
+    app.run_on_main_thread(move || show_at_cursor(&handle))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

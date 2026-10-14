@@ -2,7 +2,7 @@ import type { CSSProperties, DragEvent, MouseEvent } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Pin, Trash2 } from 'lucide-react'
+import { AlertTriangle, Bell, Pin, Trash2 } from 'lucide-react'
 import type { StashFile } from '@shared/types'
 import { FileTypeIcon } from './file-icon'
 import { formatBytes, formatClock } from '@/lib/format'
@@ -226,10 +226,30 @@ export const FileCard = memo(function FileCard({
             ) : (
               formatBytes(file.size)
             )}
+            {file.note ? <span title={file.note}> · {file.note}</span> : null}
           </div>
+          {file.tags ? (
+            <div className="mt-1 flex gap-1 overflow-hidden">
+              {file.tags.split(',').map((tag) => (
+                <span
+                  key={tag}
+                  className="shrink-0 rounded-full bg-[var(--accent-soft)] px-1.5 py-px text-[10px] font-medium text-[var(--accent)]"
+                >
+                  {tag.trim()}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {file.remindAt ? (
+            <Bell
+              className="h-3.5 w-3.5 text-[var(--accent)]"
+              strokeWidth={2}
+              aria-label={new Date(file.remindAt).toLocaleString()}
+            />
+          ) : null}
           <span className="mr-1.5 text-[13px] tabular-nums leading-none text-[var(--muted-foreground)]">
             {formatClock(file.addedAt)}
           </span>

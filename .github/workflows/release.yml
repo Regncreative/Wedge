@@ -67,7 +67,7 @@ jobs:
 
       - name: Locate installer
         run: |
-          setup=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe)
+          setup=$(realpath src-tauri/target/release/bundle/nsis/*-setup.exe)
           echo "SETUP=$setup" >> "$GITHUB_ENV"
 
       - name: Verify update signature against the shipped public key

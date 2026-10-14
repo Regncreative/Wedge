@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 Stash 2.0 is rebuilt on Tauri. It looks and works the same, with your shelves and settings carried over, and it is much smaller and safer.
 
+### Added in 2.0
+- **Drop shelf:** shake the mouse while dragging a file to open a shelf at the cursor; collect files from anywhere and drag them out together.
+- **Automatic shelves** for new downloads and screenshots, and **rules** that route files to shelves by type and source.
+- **Search inside files** (PDF, Word, Excel, PowerPoint, OpenDocument, text and code), diacritic-insensitive.
+- **Quick Look** preview with Space; Ctrl+Space now toggles selection.
+- **Quick actions:** ZIP, convert/shrink images, copy into a folder, open all, drag a shelf as one ZIP.
+- **Notes, tags and reminders** on files; **temporary shelves** that clear themselves.
+- **Explorer "Add to Stash"** context menu, **Ctrl+V** for files/images/links/text, and **phone to PC** via QR code.
+- **Paste into Open/Save dialogs** with a shortcut (Ctrl+Alt+V).
+- **Sync between PCs** through a OneDrive/Dropbox/Google Drive folder.
+- **Desktop widgets** and **edge reveal** (slide the panel in from a screen edge).
+
 ### Changed
 - Rebuilt on Tauri 2 with a Rust backend. The installer is 3 MB instead of 90 MB and the app uses far less memory.
 - The panel is drawn by WebView2, which Windows keeps up to date, instead of a bundled Chromium that no longer received security fixes (Electron 34).

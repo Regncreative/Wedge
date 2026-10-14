@@ -20,7 +20,7 @@ npm run dev
 
 The first Rust build takes a few minutes; later ones are incremental.
 
-`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Stash`, which is handy for trying things without touching your own shelves.
+`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Stash`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
 
 ## Checks
 
@@ -52,13 +52,23 @@ src/renderer/src/       React panel
   lib/api.ts            window.stash: every backend call goes through here
 src/shared/             Types and translations (locales/)
 src-tauri/src/
-  commands.rs           Tauri commands (validate every argument here)
-  db.rs                 SQLite access and schema migrations
+  commands.rs           Core Tauri commands (validate every argument here)
+  commands_extra.rs     Notes, reminders, rules, search, actions, clipboard, preview
+  db.rs                 SQLite access and schema migrations (incl. FTS5 index)
+  services.rs           Downloads/Screenshots watchers, expiry, reminders, indexing
+  textract.rs           Text from Office/OpenDocument, PDF and text files
+  actions.rs            ZIP, image conversion, copy into folder
+  input.rs              Mouse hook: shake-to-open and edge reveal
+  dropshelf.rs          The floating drop shelf window
+  widget.rs             Desktop widgets
+  phone.rs              Phone → PC upload server (QR)
+  sync.rs               Folder-based sync between PCs
+  shell.rs              Explorer context menu, clipboard files, file-dialog paste
   transfer.rs           Export / import
   files.rs              Non-blocking file checks
   win.rs                Shell icons, thumbnails, Properties (Win32)
   panel.rs, tray.rs     Window placement, tray icon and menu
-  hotkey.rs             Global shortcut
+  hotkey.rs             Global shortcuts
   updater.rs            Signed updates, beta feed, staged rollout
   i18n.rs               Native strings (tray, notifications)
 src-tauri/windows/      Installer hooks (upgrade from 1.x)
@@ -70,6 +80,7 @@ Rules of thumb:
 - **Commands:** validate every argument in `commands.rs` before touching the database or the file system; deserialization rejects unknown fields.
 - **Database:** schema changes go in a new entry at the end of `MIGRATIONS` in `db.rs`. Never edit a migration that has shipped. 1.x and 2.x share the same `stash.db`.
 - **Blocking work:** file-system and shell calls run off the UI thread (`spawn_blocking`) and must not hang on unreachable network paths.
+- **Windows:** create windows only from async commands or the main thread; doing it in a synchronous command deadlocks on Windows.
 - **UI:** keep to the existing Fluent panel style. Interactive elements need an accessible name and must work with the keyboard.
 - **Strings:** never hard-code UI text; add it to `Messages` in `src/shared/i18n.ts` and every file in `src/shared/locales/`. Tray and notification strings live in `src-tauri/src/i18n.rs`.
 

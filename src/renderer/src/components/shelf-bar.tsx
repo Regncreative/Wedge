@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Clock, Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ShelfIcon } from './file-icon'
@@ -13,7 +13,7 @@ export function ShelfBar() {
   const setActiveShelf = useStashStore((s) => s.setActiveShelf)
   const refresh = useStashStore((s) => s.refresh)
   const files = useStashStore((s) => s.files)
-  const askPrompt = useStashStore((s) => s.askPrompt)
+  const openShelfMenu = useStashStore((s) => s.openShelfMenu)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -56,20 +56,11 @@ export function ShelfBar() {
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15 }}
               onClick={() => setActiveShelf(shelf.id)}
-              onContextMenu={async (e) => {
+              onContextMenu={(e) => {
                 e.preventDefault()
-                const next = await askPrompt({
-                  title: t.renameShelf,
-                  message: t.renameShelfHint,
-                  promptDefault: shelf.name,
-                  promptPlaceholder: t.shelfName,
-                  confirmLabel: t.save
-                })
-                if (next && next.trim() && next.trim() !== shelf.name) {
-                  await window.stash.renameShelf(shelf.id, next.trim())
-                  await refresh()
-                }
+                openShelfMenu(e.clientX, e.clientY, shelf.id)
               }}
+              title={shelf.expireHours ? t.tempShelf : undefined}
               className={cn(
                 'flex h-10 shrink-0 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors duration-150',
                 active
@@ -83,6 +74,13 @@ export function ShelfBar() {
                 color={active ? '#ffffff' : 'var(--muted-foreground)'}
               />
               <span className="max-w-[100px] truncate">{shelf.name}</span>
+              {shelf.expireHours ? (
+                <Clock
+                  aria-label={t.tempShelf}
+                  className={cn('h-3 w-3', active ? 'text-white/85' : 'text-[var(--muted-foreground)]')}
+                  strokeWidth={2}
+                />
+              ) : null}
               <span
                 className={cn(
                   'tabular-nums',

@@ -10,6 +10,10 @@ import { Toast } from './components/toast'
 import { ConfirmDialog } from './components/confirm-dialog'
 import { SettingsPanel } from './components/settings-panel'
 import { Welcome } from './components/welcome'
+import { NoteDialog } from './components/note-dialog'
+import { QuickLook } from './components/quick-look'
+import { ShelfMenu } from './components/shelf-menu'
+import { PhoneSheet } from './components/phone-sheet'
 import { useStashStore } from './stores/stash-store'
 import { useT } from './lib/i18n'
 
@@ -29,6 +33,55 @@ export default function App() {
   useEffect(() => {
     void init()
   }, [init])
+
+  // The backend uses the selection for the paste-into-dialog shortcut.
+  useEffect(
+    () =>
+      useStashStore.subscribe((s, prev) => {
+        if (s.selectedIds !== prev.selectedIds) void window.stash.setSelection(s.selectedIds)
+      }),
+    []
+  )
+
+  // Files arriving from watchers, the phone, sync or expiry.
+  useEffect(
+    () =>
+      window.stash.onFilesChanged((change) => {
+        const { refresh, showToast } = useStashStore.getState()
+        void refresh()
+        if (change.added === 0) return
+        if (change.source === 'phone') showToast(t.phoneReceived(change.added))
+        else if (change.source === 'downloads' || change.source === 'screenshots') {
+          showToast(t.autoAdded(change.added, change.shelfName))
+        }
+      }),
+    [t]
+  )
+
+  // Ctrl+V in the panel: files, images, links or text from the clipboard.
+  useEffect(() => {
+    const onKey = async (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'v') return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return
+      }
+      e.preventDefault()
+      const { activeShelfId, refresh, showToast } = useStashStore.getState()
+      const res = await window.stash.pasteClipboard(activeShelfId)
+      await refresh()
+      const messages = {
+        files: t.pastedFiles(res.added),
+        image: t.pastedImage,
+        link: t.pastedLink,
+        text: t.pastedText,
+        empty: t.clipboardEmpty
+      }
+      showToast(res.added === 0 && res.kind === 'files' ? t.alreadyOnShelf : messages[res.kind])
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [t])
 
   useEffect(() => {
     const unsubTheme = window.stash.onThemeChanged((theme) => {
@@ -100,6 +153,10 @@ export default function App() {
         )}
         <ContextMenu />
         <Toast />
+        <ShelfMenu />
+        <NoteDialog />
+        <QuickLook />
+        <PhoneSheet />
         <ConfirmDialog />
         <Welcome />
       </DropZone>

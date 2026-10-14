@@ -7,6 +7,7 @@ import type { UpdateStatus } from '@shared/types'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import { HotkeyRecorder } from './hotkey-recorder'
+import { RulesEditor, SyncCard } from './settings-extra'
 
 const SECONDARY_BUTTON =
   'flex h-10 items-center justify-center gap-2 rounded-[12px] bg-[var(--pill)] text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--pill-hover)]'
@@ -287,6 +288,80 @@ export function SettingsPanel() {
               {t.clearMissingHint}
             </p>
           </div>
+        </SettingsCard>
+
+        <SettingsCard title={t.autoShelves}>
+          <ToggleRow
+            label={t.watchDownloads}
+            hint={t.watchDownloadsHint}
+            checked={settings.watchDownloads}
+            onChange={(v) => void updateSettings({ watchDownloads: v })}
+          />
+          <ToggleRow
+            label={t.watchScreenshots}
+            hint={t.watchScreenshotsHint}
+            checked={settings.watchScreenshots}
+            onChange={(v) => void updateSettings({ watchScreenshots: v })}
+          />
+        </SettingsCard>
+
+        <SettingsCard title={t.gestures}>
+          <ToggleRow
+            label={t.shakeToOpen}
+            hint={t.shakeToOpenHint}
+            checked={settings.shakeToOpen}
+            onChange={(v) => void updateSettings({ shakeToOpen: v })}
+          />
+          <Field label={t.edgeReveal}>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['off', 'left', 'right'] as const).map((side) => (
+                <button
+                  key={side}
+                  type="button"
+                  aria-pressed={settings.edgeReveal === side}
+                  onClick={() => void updateSettings({ edgeReveal: side })}
+                  className={cn(
+                    'rounded-[10px] py-2 text-[12px] font-medium transition-colors duration-150',
+                    settings.edgeReveal === side
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--pill)] text-[var(--muted-foreground)] hover:bg-[var(--pill-hover)] hover:text-[var(--foreground)]'
+                  )}
+                >
+                  {side === 'off' ? t.edgeOff : side === 'left' ? t.edgeLeft : t.edgeRight}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted-foreground)]">{t.edgeRevealHint}</p>
+          </Field>
+        </SettingsCard>
+
+        <SettingsCard title={t.windowsSection}>
+          <ToggleRow
+            label={t.contextMenuToggle}
+            hint={t.contextMenuHint}
+            checked={settings.contextMenu}
+            onChange={(v) => void updateSettings({ contextMenu: v })}
+          />
+          <Field label={t.pasteHotkey}>
+            <HotkeyRecorder
+              value={settings.pasteHotkey}
+              onChange={async (accel) => {
+                if (!(await updateSettings({ pasteHotkey: accel }))) {
+                  showToast(t.hotkeyUnavailable)
+                }
+              }}
+            />
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--muted-foreground)]">{t.pasteHotkeyHint}</p>
+          </Field>
+        </SettingsCard>
+
+        <SettingsCard title={t.rulesSection}>
+          <p className="-mt-1 text-[11px] leading-snug text-[var(--muted-foreground)]">{t.rulesHint}</p>
+          <RulesEditor />
+        </SettingsCard>
+
+        <SettingsCard title={t.syncSection}>
+          <SyncCard />
         </SettingsCard>
 
         <SettingsCard title={t.shelvesSection}>

@@ -56,7 +56,7 @@ test('selects with Ctrl/Shift+click and removes the selection', async () => {
 
   const bar = page.getByRole('toolbar')
   await expect(bar).toBeVisible()
-  await bar.getByRole('button').nth(1).click() // remove
+  await bar.getByRole('button', { name: /^(Kaldır|Remove)$/ }).click()
   await page.getByRole('dialog').getByRole('button').last().click() // confirm
 
   await expect(page.getByRole('option')).toHaveCount(2)

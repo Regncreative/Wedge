@@ -12,6 +12,21 @@ pub fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(LABEL)
 }
 
+/// URL of the app's own page with a query (e.g. `view=widget`), for extra
+/// windows. `WebviewUrl::App` can't carry a query string, so this reuses the
+/// panel's origin (tauri.localhost in builds, the dev server in development).
+pub fn page_url(app: &AppHandle, query: &str) -> tauri::WebviewUrl {
+    match window(app).and_then(|w| w.url().ok()) {
+        Some(mut url) => {
+            url.set_path("/");
+            url.set_query(Some(query));
+            url.set_fragment(None);
+            tauri::WebviewUrl::External(url)
+        }
+        None => tauri::WebviewUrl::App("index.html".into()),
+    }
+}
+
 /// Where the tray icon is, if Windows tells us.
 fn tray_rect(app: &AppHandle) -> Option<Rect> {
     app.tray_by_id(crate::tray::ID)?.rect().ok().flatten()

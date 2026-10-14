@@ -1,6 +1,6 @@
 import { chromium, type Browser, type Page } from '@playwright/test'
 import { spawn, type ChildProcess } from 'child_process'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 
@@ -13,13 +13,25 @@ export interface LaunchedApp {
   browser: Browser
   page: Page
   userData: string
+  /** Stand-ins for the watched Downloads and Screenshots folders. */
+  downloads: string
+  screenshots: string
   close: () => Promise<void>
 }
 
 let nextPort = 9300 + Math.floor(Math.random() * 500)
 
 export function appEnv(userData: string, extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  return { ...process.env, STASH_USER_DATA: userData, STASH_SHOW_ON_START: '1', ...extra }
+  return {
+    ...process.env,
+    STASH_USER_DATA: userData,
+    STASH_SHOW_ON_START: '1',
+    // Never watch the real Downloads/Screenshots or open a LAN port in tests.
+    STASH_DOWNLOADS_DIR: join(userData, 'test-downloads'),
+    STASH_SCREENSHOTS_DIR: join(userData, 'test-screenshots'),
+    STASH_PHONE_LOOPBACK: '1',
+    ...extra
+  }
 }
 
 function waitForExit(child: ChildProcess): Promise<number | null> {
@@ -35,6 +47,10 @@ export async function launchApp(
   userData = mkdtempSync(join(tmpdir(), 'stash-e2e-'))
 ): Promise<LaunchedApp> {
   const port = nextPort++
+  const downloads = join(userData, 'test-downloads')
+  const screenshots = join(userData, 'test-screenshots')
+  mkdirSync(downloads, { recursive: true })
+  mkdirSync(screenshots, { recursive: true })
   const child = spawn(EXE, [], {
     env: appEnv(userData, {
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`
@@ -64,6 +80,8 @@ export async function launchApp(
     browser,
     page,
     userData,
+    downloads,
+    screenshots,
     close: async () => {
       await browser?.close().catch(() => {})
       child.kill()

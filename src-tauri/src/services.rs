@@ -115,6 +115,7 @@ pub fn ingest(
     };
     if added_total > 0 {
         let _ = app.emit(FILES_CHANGED, change.clone());
+        index_soon(app);
     }
     Some(change)
 }
@@ -124,15 +125,19 @@ fn watched_folders(app: &AppHandle) -> Vec<(PathBuf, &'static str)> {
     let Ok(settings) = db::get_settings(&state.db(), state.language) else {
         return Vec::new();
     };
+    // Tests point the watchers at their own folders.
+    let env_dir = |name: &str| std::env::var_os(name).map(PathBuf::from);
     let mut out = Vec::new();
     if settings.watch_downloads {
-        if let Ok(dir) = app.path().download_dir() {
+        if let Some(dir) = env_dir("STASH_DOWNLOADS_DIR").or_else(|| app.path().download_dir().ok())
+        {
             out.push((dir, "downloads"));
         }
     }
     if settings.watch_screenshots {
-        if let Ok(dir) = app.path().picture_dir() {
-            out.push((dir.join("Screenshots"), "screenshots"));
+        let default = || app.path().picture_dir().ok().map(|d| d.join("Screenshots"));
+        if let Some(dir) = env_dir("STASH_SCREENSHOTS_DIR").or_else(default) {
+            out.push((dir, "screenshots"));
         }
     }
     out
@@ -228,6 +233,12 @@ pub fn restart_watchers(app: &AppHandle) {
             }
         }
     });
+}
+
+/// Index newly added files right away, off the calling thread.
+pub fn index_soon(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || index_batch(&app));
 }
 
 /// Index text for files that don't have any yet (a batch at a time).

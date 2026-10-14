@@ -314,6 +314,19 @@ pub fn start_drag_zip(
     .map_err(err)
 }
 
+/// Folder picker (sync folder).
+#[tauri::command]
+pub async fn pick_folder(app: AppHandle) -> CmdResult<Option<String>> {
+    let mut dialog = app.dialog().file();
+    if let Some(win) = panel::window(&app) {
+        dialog = dialog.set_parent(&win);
+    }
+    Ok(dialog
+        .blocking_pick_folder()
+        .and_then(|f| f.into_path().ok())
+        .map(|p| p.to_string_lossy().into_owned()))
+}
+
 // ── Clipboard ─────────────────────────────────────────────
 
 fn clips_dir(state: &AppState) -> PathBuf {

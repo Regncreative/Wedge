@@ -3,7 +3,7 @@
 //! at startup.
 
 use serde_json::{Map, Value};
-use tauri::{AppHandle, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, PhysicalPosition, WebviewWindowBuilder};
 
 use crate::db;
 use crate::state::AppState;
@@ -38,8 +38,8 @@ fn open_window(app: &AppHandle, shelf_id: &str, pos: Option<(i32, i32)>) -> Resu
         let _ = w.show();
         return Ok(());
     }
-    let url = format!("index.html?view=widget&shelf={shelf_id}");
-    let win = WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
+    let url = crate::panel::page_url(app, &format!("view=widget&shelf={shelf_id}"));
+    let win = WebviewWindowBuilder::new(app, &label, url)
         .title("Stash")
         .inner_size(280.0, 360.0)
         .min_inner_size(220.0, 200.0)
@@ -59,8 +59,9 @@ fn open_window(app: &AppHandle, shelf_id: &str, pos: Option<(i32, i32)>) -> Resu
     Ok(())
 }
 
+// Async: creating a window from a synchronous command deadlocks on Windows.
 #[tauri::command]
-pub fn open_widget(app: AppHandle, shelf_id: String) -> Result<bool, String> {
+pub async fn open_widget(app: AppHandle, shelf_id: String) -> Result<bool, String> {
     crate::commands::check_id(&shelf_id)?;
     open_window(&app, &shelf_id, None)?;
     let mut widgets = stored(&app);
@@ -70,7 +71,7 @@ pub fn open_widget(app: AppHandle, shelf_id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub fn close_widget(app: AppHandle, shelf_id: String) -> Result<bool, String> {
+pub async fn close_widget(app: AppHandle, shelf_id: String) -> Result<bool, String> {
     crate::commands::check_id(&shelf_id)?;
     if let Some(w) = app.get_webview_window(&label(&shelf_id)) {
         let _ = w.destroy();

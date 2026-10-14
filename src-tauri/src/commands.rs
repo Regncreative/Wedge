@@ -188,6 +188,9 @@ pub async fn add_files(
         )
     };
 
+    if result.added > 0 {
+        crate::services::index_soon(&app);
+    }
     // Drops land on the open panel, which shows its own toast; only notify
     // when files arrive while the panel is hidden.
     let visible = panel::window(&app)

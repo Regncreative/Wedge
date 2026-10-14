@@ -42,6 +42,14 @@ interface StashState {
   appVersion: string
   activeShelfId: string | null
   searchQuery: string
+  /** Files whose contents match the search (from the backend index). */
+  contentMatches: Set<string>
+  /** File shown in the Quick Look overlay. */
+  quickLookId: string | null
+  shelfMenu: { x: number; y: number; shelfId: string } | null
+  phoneOpen: boolean
+  /** File whose note and tags are being edited. */
+  noteFileId: string | null
   filter: FileFilter
   pinned: boolean
   showSettings: boolean
@@ -65,6 +73,11 @@ interface StashState {
   refresh: () => Promise<void>
   setActiveShelf: (id: string | null) => void
   setSearch: (q: string) => void
+  openQuickLook: (id: string | null) => void
+  openShelfMenu: (x: number, y: number, shelfId: string) => void
+  closeShelfMenu: () => void
+  setPhoneOpen: (open: boolean) => void
+  editNote: (id: string | null) => void
   setFilter: (f: FileFilter) => void
   setPinned: (p: boolean) => Promise<void>
   setShowSettings: (v: boolean) => void
@@ -87,6 +100,23 @@ interface StashState {
   setFocused: (id: string | null) => void
 }
 
+let contentTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Debounced full-text search over file contents (backend index). */
+function scheduleContentSearch(q: string, done: (ids: string[]) => void): void {
+  if (contentTimer) clearTimeout(contentTimer)
+  if (q.trim().length < 2) {
+    done([])
+    return
+  }
+  contentTimer = setTimeout(() => {
+    void window.stash
+      .searchContent(q.trim())
+      .then(done)
+      .catch(() => done([]))
+  }, 180)
+}
+
 const NO_SELECTION = { selectedIds: [] as string[], anchorId: null, focusedId: null }
 
 export const useStashStore = create<StashState>((set, get) => ({
@@ -98,6 +128,11 @@ export const useStashStore = create<StashState>((set, get) => ({
   appVersion: '',
   activeShelfId: null,
   searchQuery: '',
+  contentMatches: new Set<string>(),
+  quickLookId: null,
+  shelfMenu: null,
+  phoneOpen: false,
+  noteFileId: null,
   filter: 'all',
   pinned: false,
   showSettings: false,
@@ -178,7 +213,18 @@ export const useStashStore = create<StashState>((set, get) => ({
     set({ activeShelfId: id, showSettings: false, ...NO_SELECTION })
     if (id) void get().updateSettings({ lastShelfId: id })
   },
-  setSearch: (q) => set({ searchQuery: q, ...NO_SELECTION }),
+  setSearch: (q) => {
+    set({ searchQuery: q, ...NO_SELECTION })
+    scheduleContentSearch(q, (ids) => {
+      // Ignore results for a query that has since changed.
+      if (get().searchQuery === q) set({ contentMatches: new Set(ids) })
+    })
+  },
+  openQuickLook: (id) => set({ quickLookId: id, contextMenu: null }),
+  openShelfMenu: (x, y, shelfId) => set({ shelfMenu: { x, y, shelfId }, contextMenu: null }),
+  closeShelfMenu: () => set({ shelfMenu: null }),
+  setPhoneOpen: (open) => set({ phoneOpen: open }),
+  editNote: (id) => set({ noteFileId: id, contextMenu: null }),
   setFilter: (f) => set({ filter: f, ...NO_SELECTION }),
 
   setPinned: async (p) => {
@@ -303,7 +349,7 @@ export const useStashStore = create<StashState>((set, get) => ({
   setFocused: (id) => set({ focusedId: id }),
 
   getVisibleFiles: () => {
-    const { files, activeShelfId, searchQuery, filter, settings } = get()
+    const { files, activeShelfId, searchQuery, filter, settings, contentMatches } = get()
     let result = files
 
     if (activeShelfId) {
@@ -317,6 +363,9 @@ export const useStashStore = create<StashState>((set, get) => ({
           f.name.toLowerCase().includes(q) ||
           f.extension.toLowerCase().includes(q) ||
           f.absolutePath.toLowerCase().includes(q) ||
+          f.note.toLowerCase().includes(q) ||
+          f.tags.toLowerCase().includes(q) ||
+          contentMatches.has(f.id) ||
           (q === 'pinned' && f.isPinned)
       )
     }

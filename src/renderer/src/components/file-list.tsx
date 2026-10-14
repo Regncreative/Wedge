@@ -23,12 +23,13 @@ export function FileList() {
   const activeShelfId = useStashStore((s) => s.activeShelfId)
   const dropActive = useStashStore((s) => s.dropActive)
   const fileSort = useStashStore((s) => s.settings?.fileSort)
+  const contentMatches = useStashStore((s) => s.contentMatches)
   const { removeSelected, pinSelected, openFocused } = useSelectionActions()
 
   const visible = useMemo(
     () => getVisibleFiles(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [files, searchQuery, filter, activeShelfId, fileSort, getVisibleFiles]
+    [files, searchQuery, contentMatches, filter, activeShelfId, fileSort, getVisibleFiles]
   )
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -126,9 +127,11 @@ export function FileList() {
         void openFocused()
         return
       case ' ':
+        // Space previews (Quick Look); Ctrl+Space toggles selection.
         if (store.focusedId) {
           e.preventDefault()
-          store.selectFile(store.focusedId, 'toggle')
+          if (ctrl) store.selectFile(store.focusedId, 'toggle')
+          else store.openQuickLook(store.focusedId)
         }
         return
       case 'Delete':

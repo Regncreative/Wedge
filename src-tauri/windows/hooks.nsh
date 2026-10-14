@@ -46,6 +46,15 @@
   ${EndIf}
 !macroend
 
+!macro NSIS_HOOK_PREUNINSTALL
+  ; Explorer's "Add to Stash" entry points at this install; remove it on a
+  ; real uninstall (an update re-registers it on the next start).
+  ${If} $UpdateMode <> 1
+    DeleteRegKey HKCU "Software\Classes\*\shell\Stash"
+    DeleteRegKey HKCU "Software\Classes\Directory\shell\Stash"
+  ${EndIf}
+!macroend
+
 !macro NSIS_HOOK_POSTUNINSTALL
   ; The uninstaller's "Delete the application data" checkbox clears Tauri's
   ; own folders; shelves and settings live in %APPDATA%\Stash (shared with

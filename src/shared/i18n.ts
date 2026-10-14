@@ -161,6 +161,94 @@ export type Messages = {
   importFailed: string
   openLogs: string
   openLogsHint: string
+  preview: string
+  noteAndTags: string
+  noteTitle: string
+  notePlaceholder: string
+  tagsPlaceholder: string
+  remind: string
+  remindIn1h: string
+  remindTomorrow: string
+  remindNextWeek: string
+  remindClear: string
+  reminderSet: (when: string) => string
+  reminderCleared: string
+  convert: string
+  toFormat: (format: string) => string
+  shrinkTo: (px: number) => string
+  converted: (n: number) => string
+  convertFailed: string
+  makeZip: string
+  zipDone: string
+  copyToFolder: string
+  copiedTo: (n: number) => string
+  pathsCopied: (n: number) => string
+  openAll: string
+  more: string
+  dragAsZip: string
+  pastedFiles: (n: number) => string
+  pastedImage: string
+  pastedLink: string
+  pastedText: string
+  clipboardEmpty: string
+  tempShelf: string
+  expiryOff: string
+  expiry24h: string
+  expiry7d: string
+  expiry30d: string
+  expiresBadge: (label: string) => string
+  pinToDesktop: string
+  unpinFromDesktop: string
+  phoneButton: string
+  phoneTitle: string
+  phoneHint: string
+  phoneExpires: (min: number) => string
+  phoneFirewall: string
+  phoneError: string
+  phoneReceived: (n: number) => string
+  noPreview: string
+  dropShelfHint: string
+  dragAll: string
+  clearShelf: string
+  widgetEmpty: string
+  autoAdded: (n: number, shelf: string) => string
+  autoShelves: string
+  watchDownloads: string
+  watchDownloadsHint: string
+  watchScreenshots: string
+  watchScreenshotsHint: string
+  gestures: string
+  shakeToOpen: string
+  shakeToOpenHint: string
+  edgeReveal: string
+  edgeRevealHint: string
+  edgeOff: string
+  edgeLeft: string
+  edgeRight: string
+  windowsSection: string
+  contextMenuToggle: string
+  contextMenuHint: string
+  pasteHotkey: string
+  pasteHotkeyHint: string
+  rulesSection: string
+  rulesHint: string
+  ruleExtensions: string
+  ruleAllFiles: string
+  ruleSourceAny: string
+  sourceManual: string
+  sourceDownloads: string
+  sourceScreenshots: string
+  sourcePhone: string
+  sourceClipboard: string
+  addRule: string
+  noRules: string
+  syncSection: string
+  syncHint: string
+  syncChoose: string
+  syncOff: string
+  syncNow: string
+  syncThisPc: string
+  syncFailed: string
 }
 
 export const dictionaries: Record<AppLanguage, Messages> = { tr, en }

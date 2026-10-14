@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Settings, X } from 'lucide-react'
+import { Search, Settings, X, Smartphone } from 'lucide-react'
 import { useStashStore } from '@/stores/stash-store'
 import { formatBytes } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -89,6 +89,15 @@ export function Header() {
             onClick={() => setSearchOpen((v) => !v)}
           >
             <Search size={18} strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={t.phoneButton}
+            title={t.phoneButton}
+            onClick={() => useStashStore.getState().setPhoneOpen(true)}
+          >
+            <Smartphone size={18} strokeWidth={1.75} />
           </button>
           <button
             type="button"

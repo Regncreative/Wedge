@@ -39,6 +39,24 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 
 ## Features
 
+**Collect from anywhere, drop anywhere**
+- **Shake to open** — shake the mouse while dragging a file and a drop shelf opens right at the cursor; collect files from several folders, then drag them all out at once
+- **Automatic shelves** — new downloads and screenshots appear on their own shelves; rules send files to the right shelf by type
+- **Right-click → Add to Stash** in Explorer, **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
+- **Paste into file dialogs** — a shortcut types the selected file's path into any Open/Save window
+
+**Find and use**
+- **Search inside files** — PDF, Word, Excel, PowerPoint, text and code, not just names
+- **Space to preview** — Quick Look for images, PDFs, documents and text
+- **Quick actions** — ZIP, convert or shrink images, copy into a folder, open all, drag a whole shelf as one ZIP
+- **Notes, tags and reminders** on any file; **temporary shelves** that clean themselves up
+
+**Everywhere you work**
+- **Sync between PCs** through a OneDrive, Dropbox or Google Drive folder
+- **Desktop widgets** — pin a shelf to the desktop
+- **Edge reveal** — push the cursor against the screen edge to slide the panel in
+
+**Plus**
 - **System tray integration** — silent background app, always one click away
 - **Drag & drop shelves** — drop files in, drag them out to Explorer, browsers, and other apps
 - **Multi-select** — Ctrl/Shift+click, then drag, pin or remove several files at once
@@ -167,6 +185,9 @@ scripts/          Release helpers
 - [x] Multi-select, keyboard navigation, export / import
 - [x] Automated, staged releases with a beta channel
 - [x] 2.0: rebuilt on Tauri (3 MB installer, signed updates)
+- [x] Shake-to-open drop shelf, automatic shelves, rules, content search, Quick Look
+- [x] Phone to PC, sync between PCs, desktop widgets, quick actions
+- [ ] Share links (needs a hosting decision)
 - [ ] Code signing
 - [ ] Microsoft Store and winget
 - [ ] Plugins / extensions

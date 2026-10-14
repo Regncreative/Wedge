@@ -9,6 +9,7 @@
   ],
   "permissions": [
     "core:default",
-    "core:window:allow-theme"
+    "core:window:allow-theme",
+    "core:window:allow-start-dragging"
   ]
 }
