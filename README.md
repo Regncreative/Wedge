@@ -40,15 +40,19 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), not a typic
 
 - **System tray integration** — silent background app, always one click away
 - **Drag & drop shelves** — drop files in, drag them out to Explorer, browsers, and other apps
+- **Multi-select** — Ctrl/Shift+click, then drag, pin or remove several files at once
+- **Keyboard friendly** — navigate, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
 - **Global shortcut** — open the panel with `Ctrl+Shift+Space` (customizable)
 - **Multiple shelves** — organize by context (Work, Personal, Temporary…)
 - **Instant search & filters** — find files by name, type, or shelf
 - **Fluent Design UI** — dark/light themes, accent colors, smooth motion
 - **Turkish & English** — full UI + tray localization
 - **Auto launch** — start with Windows (installed builds)
-- **Auto update** — updates from GitHub Releases
-- **SQLite storage** — fast local metadata, no cloud required
+- **Auto update** — updates from GitHub Releases, with an opt-in beta channel
+- **Export / import** — move your shelves and settings to another PC
+- **SQLite storage** — fast local metadata, no cloud required, automatic backup before upgrades
 - **Missing-file awareness** — deleted or recycled paths show as unavailable until you clear them
+- **Private by design** — no account, no telemetry ([privacy](PRIVACY.md))
 
 ## Screenshots
 
@@ -90,11 +94,15 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
 
 ## Development
 
+Requires Windows and Node.js 22 (`.nvmrc`).
+
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Development mode |
 | `npm run build` | Production build (`out/`) |
-| `npm run dist` | Build Windows installer |
+| `npm run dist` | Build Windows installer locally |
+| `npm test` | Unit tests (Vitest) |
+| `npm run test:e2e` | End-to-end tests against the built app (Playwright) |
 | `npm run typecheck` | TypeScript check |
 | `npm run lint` | ESLint |
 
@@ -102,8 +110,9 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
 
 - **Electron** + **React** + **TypeScript** + **Vite** (`electron-vite`)
 - **Tailwind CSS** + **Framer Motion** + **Zustand**
-- **better-sqlite3** for local storage
+- **better-sqlite3** for local storage, **zod** for IPC validation, **electron-log** for logs
 - **electron-builder** + **electron-updater** for packaging and updates
+- **Vitest** + **Playwright** for tests, GitHub Actions on Windows for CI and releases
 
 ## Architecture
 
@@ -156,36 +165,23 @@ docs/             README images
 - [x] Auto update via GitHub Releases
 - [x] Idle opacity & missing-file cleanup
 - [x] Official demo GIF in README
+- [x] Multi-select, keyboard navigation, export / import
+- [x] Automated, staged releases with a beta channel
+- [ ] Code signing
+- [ ] Microsoft Store and winget
 - [ ] Plugins / extensions
 - [ ] Optional cloud sync
 - [ ] Smarter / AI-assisted search
 
 ## Releases & auto-update
 
-Packaged builds check [GitHub Releases](https://github.com/Regncreative/Stash/releases) for updates on launch and via tray / settings.
+Installed copies check [GitHub Releases](https://github.com/Regncreative/Stash/releases) for updates on launch and from the tray / Settings. Users can opt into beta versions in Settings.
 
-### Publish a new version
-
-1. Bump `version` in `package.json` (e.g. `1.0.1` → `1.0.2`)
-2. Create a [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` scope
-3. In PowerShell:
-
-```powershell
-$env:GH_TOKEN = "ghp_..."
-$env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
-# Prefer Temp output if Defender locks C:\Stash\release
-npm run release
-```
-
-This builds the installer and uploads it to a GitHub Release. Installed copies of Stash download it automatically.
+Releases are built by GitHub Actions, not on a developer machine: push a version tag and the **Release** workflow tests, builds and uploads the installer to a draft release for review. Rollouts can be staged with the **Rollout** workflow. See [CONTRIBUTING.md](CONTRIBUTING.md#releasing-maintainers).
 
 ## Contributing
 
-Issues and pull requests are welcome.
-
-1. Fork the repo and create a feature branch
-2. Run `npm run lint` and `npm run typecheck` before opening a PR
-3. Keep UI changes consistent with the Fluent panel language already in the app
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and conventions, and [SECURITY.md](SECURITY.md) to report a vulnerability privately.
 
 ## License
 

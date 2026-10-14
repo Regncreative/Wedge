@@ -5,7 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Multi-select with Ctrl/Shift+click or the keyboard; drag, pin or remove several files at once.
+- Full keyboard navigation of the file list (see the FAQ for shortcuts).
+- Welcome screen on first launch.
+- Export and import of shelves and settings.
+- Opt-in beta update channel.
+- Logs in `%APPDATA%\Stash\logs` and an "Open logs folder" button.
+- The uninstaller asks whether to delete shelves and settings.
+
+### Changed
+- The database schema is versioned and backed up before upgrades.
+- Releases are built and published by GitHub Actions, as drafts reviewed before going out, with optional staged rollout.
+
 ### Fixed
+- Recording a hotkey with the Windows key no longer saves it as Ctrl.
 - Unreachable network paths no longer freeze the app; file checks run asynchronously with a timeout.
 - Choosing a hotkey that is already taken keeps the previous one and shows a message.
 - Dropping files shows a single confirmation instead of two toasts plus a Windows notification.
@@ -13,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Security
 - Renderer runs sandboxed.
+- Every IPC call is validated and only accepted from the app's own window.
 
 ## [1.0.4] - 2026-07-28
 ### Changed
