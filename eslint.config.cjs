@@ -6,7 +6,17 @@ const reactRefresh = require('eslint-plugin-react-refresh')
 
 /** @type {import('eslint').Linter.Config[]} */
 module.exports = [
-  { ignores: ['out/**', 'release/**', 'node_modules/**', 'dist/**'] },
+  {
+    ignores: [
+      'out/**',
+      'release/**',
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      'test-results/**',
+      'playwright-report/**'
+    ]
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
