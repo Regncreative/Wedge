@@ -514,6 +514,9 @@ pub fn set_settings(
     if patch.context_menu.is_some() {
         sync_context_menu(&app, next.context_menu);
     }
+    if patch.shake_to_open.is_some() || patch.edge_reveal.is_some() {
+        crate::input::configure(&app, next.shake_to_open, next.edge_reveal);
+    }
     Ok(next)
 }
 

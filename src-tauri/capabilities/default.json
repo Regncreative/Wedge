@@ -1,7 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The panel window: Stash's own commands plus events and theme.",
-  "windows": ["panel"],
-  "permissions": ["core:default", "core:window:allow-theme"]
+  "description": "Stash's windows (panel, drop shelf, desktop widgets): own commands plus events and theme.",
+  "windows": [
+    "panel",
+    "dropshelf",
+    "widget-*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-theme"
+  ]
 }

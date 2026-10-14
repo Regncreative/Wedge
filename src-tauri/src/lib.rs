@@ -4,9 +4,11 @@ pub mod actions;
 pub mod commands;
 pub mod commands_extra;
 pub mod db;
+pub mod dropshelf;
 pub mod files;
 pub mod hotkey;
 pub mod i18n;
+pub mod input;
 pub mod models;
 pub mod panel;
 pub mod services;
@@ -130,6 +132,7 @@ pub fn run() {
                 hotkey::Action::PasteIntoDialog,
             );
             commands::sync_context_menu(handle, settings.context_menu);
+            input::configure(handle, settings.shake_to_open, settings.edge_reveal);
             let launch_paths = shell::paths_from_args(&std::env::args().collect::<Vec<_>>());
             if !launch_paths.is_empty() {
                 add_from_explorer(handle, launch_paths);
@@ -156,13 +159,20 @@ pub fn run() {
             log::info!("[stash] ready");
             Ok(())
         })
-        .on_window_event(|window, event| match event {
-            WindowEvent::CloseRequested { api, .. } => {
-                api.prevent_close();
-                panel::hide(window.app_handle());
+        .on_window_event(|window, event| {
+            let is_panel = window.label() == panel::LABEL;
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    if is_panel {
+                        panel::hide(window.app_handle());
+                    } else {
+                        let _ = window.hide();
+                    }
+                }
+                WindowEvent::Focused(true) if is_panel => panel::on_focus(window.app_handle()),
+                _ => {}
             }
-            WindowEvent::Focused(true) => panel::on_focus(window.app_handle()),
-            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::hide_panel,
@@ -212,6 +222,8 @@ pub fn run() {
             commands_extra::start_drag_zip,
             commands_extra::paste_clipboard,
             commands_extra::quick_look,
+            dropshelf::drop_shelf,
+            dropshelf::hide_drop_shelf,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build Stash");

@@ -71,6 +71,7 @@ pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'
         "screenshots" => (if tr { "Ekran görüntüleri" } else { "Screenshots" }, "camera", "#8764B8"),
         "phone" => (if tr { "Telefondan" } else { "From phone" }, "smartphone", "#038387"),
         "clipboard" => (if tr { "Pano" } else { "Clipboard" }, "clipboard", "#CA5010"),
+        "drop" => (if tr { "Bırakılanlar" } else { "Drop shelf" }, "inbox", "#2563EB"),
         _ => (if tr { "Gelen kutusu" } else { "Inbox" }, "inbox", "#2563EB"),
     }
 }

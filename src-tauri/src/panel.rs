@@ -61,6 +61,31 @@ pub fn show(app: &AppHandle) {
     let _ = app.emit("panel-shown", ());
 }
 
+/// Slide the panel in at the left or right edge of the screen the cursor is
+/// on, vertically centred on the cursor (edge reveal).
+pub fn show_at_edge(app: &AppHandle, left: bool, y: i32) {
+    let Some(win) = window(app) else { return };
+    let cursor_x = app.cursor_position().map(|p| p.x).unwrap_or(0.0);
+    let monitor = app
+        .monitor_from_point(cursor_x, y as f64)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+    if let (Some(m), Ok(size)) = (monitor, win.outer_size()) {
+        let work = m.work_area();
+        let (wx, wy) = (work.position.x, work.position.y);
+        let (ww, wh) = (work.size.width as i32, work.size.height as i32);
+        let (pw, ph) = (size.width as i32, size.height as i32);
+        let x = if left { wx } else { wx + ww - pw };
+        let y = (y - ph / 2).clamp(wy, (wy + wh - ph).max(wy));
+        let _ = win.set_position(PhysicalPosition::new(x, y));
+    }
+    let _ = win.set_always_on_top(true);
+    let _ = win.show();
+    let _ = win.set_focus();
+    let _ = app.emit("panel-shown", ());
+}
+
 pub fn hide(app: &AppHandle) {
     let Some(win) = window(app) else { return };
     let _ = app.emit("panel-hidden", ());
