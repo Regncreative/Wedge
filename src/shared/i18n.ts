@@ -82,6 +82,7 @@ export type Messages = {
   hotkeyRecording: string
   hotkeyEmpty: string
   hotkeyMax: string
+  hotkeyUnavailable: string
   shelvesSection: string
   updatesSection: string
   deleteShelf: (name: string) => string
@@ -216,6 +217,7 @@ const tr: Messages = {
   hotkeyRecording: 'Tuşlara bas…',
   hotkeyEmpty: 'Kısayol yok',
   hotkeyMax: 'max 3',
+  hotkeyUnavailable: 'Bu kısayol kullanılamıyor, eskisi korundu',
   shelvesSection: 'Raflar',
   updatesSection: 'Güncelleme',
   deleteShelf: (name) => `“${name}” rafını sil`,
@@ -351,6 +353,7 @@ const en: Messages = {
   hotkeyRecording: 'Press keys…',
   hotkeyEmpty: 'No hotkey',
   hotkeyMax: 'max 3',
+  hotkeyUnavailable: 'That hotkey is unavailable — kept the previous one',
   shelvesSection: 'Shelves',
   updatesSection: 'Updates',
   deleteShelf: (name) => `Delete “${name}”`,

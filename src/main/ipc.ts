@@ -355,12 +355,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.SETTINGS_GET, () => db.getSettings())
 
   ipcMain.handle(IpcChannels.SETTINGS_SET, (_e, partial: Partial<AppSettings>) => {
+    // Register first: an unavailable hotkey must not be persisted.
+    if (partial.openHotkey !== undefined && !reregisterHotkey(partial.openHotkey)) {
+      throw new Error('hotkey_unavailable')
+    }
     const next = db.setSettings(partial)
     if (partial.startWithWindows !== undefined) {
       syncAutoLaunch(partial.startWithWindows)
-    }
-    if (partial.openHotkey !== undefined) {
-      reregisterHotkey(next.openHotkey)
     }
     return next
   })

@@ -248,7 +248,11 @@ export function SettingsPanel() {
           <Field label={t.openHotkey}>
             <HotkeyRecorder
               value={settings.openHotkey}
-              onChange={(accel) => void updateSettings({ openHotkey: accel })}
+              onChange={async (accel) => {
+                if (!(await updateSettings({ openHotkey: accel }))) {
+                  showToast(t.hotkeyUnavailable)
+                }
+              }}
             />
           </Field>
 

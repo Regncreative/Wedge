@@ -69,7 +69,8 @@ interface StashState {
   openContextMenu: (x: number, y: number, fileId: string) => void
   closeContextMenu: () => void
   setDropActive: (v: boolean) => void
-  updateSettings: (partial: Partial<AppSettings>) => Promise<void>
+  /** Resolves false when the main process rejected the change (it is rolled back). */
+  updateSettings: (partial: Partial<AppSettings>) => Promise<boolean>
   getVisibleFiles: () => StashFile[]
   askConfirm: (req: ConfirmRequest) => Promise<boolean>
   askPrompt: (req: ConfirmRequest) => Promise<string | null>
@@ -205,8 +206,10 @@ export const useStashStore = create<StashState>((set, get) => ({
           partial.theme === 'system' ? systemTheme : (partial.theme as 'light' | 'dark')
         get().setTheme(theme)
       }
+      return true
     } catch {
       if (prev) set({ settings: prev })
+      return false
     }
   },
 

@@ -2,25 +2,36 @@ import { globalShortcut } from 'electron'
 import { getTray } from './tray'
 import { togglePanel } from './window'
 
-let currentHotkey = 'CommandOrControl+Shift+Space'
+let registeredHotkey: string | null = null
 
-export function reregisterHotkey(accelerator: string): void {
+function register(accelerator: string): boolean {
   try {
-    globalShortcut.unregisterAll()
+    return globalShortcut.register(accelerator, () => {
+      togglePanel(getTray()?.getBounds())
+    })
   } catch {
-    // ignore
-  }
-  currentHotkey = accelerator
-  const ok = globalShortcut.register(accelerator, () => {
-    togglePanel(getTray()?.getBounds())
-  })
-  if (!ok) {
-    console.warn('Failed to register hotkey:', accelerator)
+    // Invalid accelerator strings throw instead of returning false.
+    return false
   }
 }
 
-export function getCurrentHotkey(): string {
-  return currentHotkey
+/**
+ * Swap the global panel hotkey. When the new accelerator can't be registered
+ * (taken by another app, or invalid) the previous one is restored and false
+ * is returned, so the user is never left without a working shortcut.
+ */
+export function reregisterHotkey(accelerator: string): boolean {
+  const previous = registeredHotkey
+  unregisterHotkeys()
+  if (register(accelerator)) {
+    registeredHotkey = accelerator
+    return true
+  }
+  console.warn('Failed to register hotkey:', accelerator)
+  if (previous && register(previous)) {
+    registeredHotkey = previous
+  }
+  return false
 }
 
 export function unregisterHotkeys(): void {
@@ -29,4 +40,5 @@ export function unregisterHotkeys(): void {
   } catch {
     // ignore
   }
+  registeredHotkey = null
 }
