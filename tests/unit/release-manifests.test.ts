@@ -26,7 +26,9 @@ describe('release manifests', () => {
   it('writes the electron-updater file that 1.x installs read', () => {
     const { latestYml } = buildManifests(input)
     expect(latestYml).toContain('version: 2.0.0\n')
-    expect(latestYml).toContain('  - url: Stash_2.0.0_x64-setup.exe\n    sha512: abc+/=\n    size: 2857962')
+    expect(latestYml).toContain(
+      '  - url: Stash_2.0.0_x64-setup.exe\n    sha512: abc+/=\n    size: 2857962'
+    )
     expect(latestYml).toContain('path: Stash_2.0.0_x64-setup.exe\n')
     expect(latestYml).toContain("releaseDate: '2026-10-14T12:00:00.000Z'")
   })

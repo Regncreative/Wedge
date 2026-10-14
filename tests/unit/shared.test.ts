@@ -32,6 +32,13 @@ describe('normalizeSettings', () => {
     expect(s.language).toBe('en')
     expect(s.notifications).toBe(true)
   })
+
+  it('keeps the edge handle on a known side (on by default, right)', () => {
+    expect(normalizeSettings({}).edgeHandle).toBe('right')
+    expect(normalizeSettings({ edgeHandle: 'left' }).edgeHandle).toBe('left')
+    expect(normalizeSettings({ edgeHandle: 'off' }).edgeHandle).toBe('off')
+    expect(normalizeSettings({ edgeHandle: 'top' as never }).edgeHandle).toBe('right')
+  })
 })
 
 describe('classifyExtension', () => {

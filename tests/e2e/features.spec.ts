@@ -1,8 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
 import { execFileSync } from 'child_process'
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { basename, join } from 'path'
+import { deflateSync } from 'zlib'
 import { launchApp, removeProfile, type LaunchedApp } from './app'
 
 // UI text is Turkish on Turkish Windows and English elsewhere.
@@ -13,6 +22,51 @@ const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
   'base64'
 )
+
+/** A noisy RGB PNG that compresses like a photo (for "Reduce size"). */
+function noisyPng(w: number, h: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    return c >>> 0
+  })
+  const crc = (buf: Buffer) => {
+    let c = 0xffffffff
+    for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+    return (c ^ 0xffffffff) >>> 0
+  }
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(data.length)
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
+    const sum = Buffer.alloc(4)
+    sum.writeUInt32BE(crc(body))
+    return Buffer.concat([len, body, sum])
+  }
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  let seed = 7
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 3 + 1)] = 0
+    for (let x = 0; x < w; x++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff
+      const i = y * (w * 3 + 1) + 1 + x * 3
+      raw[i] = (x + (seed & 31)) & 0xff
+      raw[i + 1] = (y + ((seed >> 5) & 31)) & 0xff
+      raw[i + 2] = (x + y) & 0xff
+    }
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0))
+  ])
+}
 
 let stash: LaunchedApp
 let work: string
@@ -52,7 +106,9 @@ test('new downloads land on an automatic shelf, and rules route them', async () 
         const shelves = await page.evaluate(() => window.stash.listShelves())
         const dl = shelves.find((s) => s.kind === 'downloads')
         if (!dl) return []
-        return (await page.evaluate((id) => window.stash.listFiles(id), dl.id)).map((f) => `${f.name}:${f.source}`)
+        return (await page.evaluate((id) => window.stash.listFiles(id), dl.id)).map(
+          (f) => `${f.name}:${f.source}`
+        )
       },
       { timeout: 15_000 }
     )
@@ -63,17 +119,26 @@ test('new downloads land on an automatic shelf, and rules route them', async () 
   await page.evaluate((id) => window.stash.addRule(id, 'pdf', 'downloads'), target.id)
   writeFileSync(join(stash.downloads, 'invoice.pdf'), '%PDF-1.4')
   await expect
-    .poll(async () => (await page.evaluate((id) => window.stash.listFiles(id), target.id)).map((f) => f.name), {
-      timeout: 15_000
-    })
+    .poll(
+      async () =>
+        (await page.evaluate((id) => window.stash.listFiles(id), target.id)).map((f) => f.name),
+      {
+        timeout: 15_000
+      }
+    )
     .toEqual(['invoice.pdf'])
 })
 
 test('search finds words inside files', async () => {
   const { page } = stash
-  await addAndShow(page, { 'meeting.txt': 'Agenda: the flamingo budget review', 'other.txt': 'nothing here' })
+  await addAndShow(page, {
+    'meeting.txt': 'Agenda: the flamingo budget review',
+    'other.txt': 'nothing here'
+  })
 
-  const id = (await page.evaluate(() => window.stash.listFiles(null))).find((f) => f.name === 'meeting.txt')!.id
+  const id = (await page.evaluate(() => window.stash.listFiles(null))).find(
+    (f) => f.name === 'meeting.txt'
+  )!.id
   await expect
     .poll(() => page.evaluate(() => window.stash.searchContent('flaming')), { timeout: 10_000 })
     .toEqual([id])
@@ -148,7 +213,10 @@ test('Ctrl+V adds a copied link to the shelf', async () => {
     await expect(row(page, 'example.com.url')).toBeVisible()
   } finally {
     // Put the developer's clipboard back.
-    if (previous.trim()) execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Set-Clipboard -Value $input'], { input: previous })
+    if (previous.trim())
+      execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Set-Clipboard -Value $input'], {
+        input: previous
+      })
   }
 })
 
@@ -156,10 +224,16 @@ test('files sent from a phone land on their own shelf', async () => {
   const { page } = stash
   await addAndShow(page, {})
   await page.getByRole('button', { name: ui('Telefondan al', 'Receive from phone') }).click()
-  const url = (await page.getByRole('dialog').getByText(/^http:\/\//).textContent())!.trim()
+  const url = (await page
+    .getByRole('dialog')
+    .getByText(/^http:\/\//)
+    .textContent())!.trim()
   expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/[0-9a-f]{32}$/)
 
-  const res = await fetch(`${url}/upload?name=${encodeURIComponent('IMG 0001.jpg')}`, { method: 'PUT', body: 'jpeg' })
+  const res = await fetch(`${url}/upload?name=${encodeURIComponent('IMG 0001.jpg')}`, {
+    method: 'PUT',
+    body: 'jpeg'
+  })
   expect(res.ok).toBe(true)
   // Wrong token is refused.
   const bad = await fetch(url.replace(/[0-9a-f]{32}$/, '0'.repeat(32)), { method: 'GET' })
@@ -169,7 +243,9 @@ test('files sent from a phone land on their own shelf', async () => {
     .poll(async () => {
       const shelves = await page.evaluate(() => window.stash.listShelves())
       const phone = shelves.find((s) => s.kind === 'phone')
-      return phone ? (await page.evaluate((id) => window.stash.listFiles(id), phone.id)).map((f) => f.name) : []
+      return phone
+        ? (await page.evaluate((id) => window.stash.listFiles(id), phone.id)).map((f) => f.name)
+        : []
     })
     .toEqual(['IMG 0001.jpg'])
 })
@@ -179,92 +255,132 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
   await addAndShow(page, { 'note.txt': 'x' })
   const first = (await page.evaluate(() => window.stash.listShelves()))[0]
 
-  await page.getByRole('button', { name: new RegExp(first.name) }).first().click({ button: 'right' })
+  await page
+    .getByRole('button', { name: new RegExp(first.name) })
+    .first()
+    .click({ button: 'right' })
   await page.getByRole('menuitem', { name: ui('Geçici raf', 'Temporary shelf') }).click()
   await page.getByRole('menuitemradio', { name: ui('24 saat', 'Clear after 24') }).click()
   await expect
     .poll(async () => (await page.evaluate(() => window.stash.listShelves()))[0].expireHours)
     .toBe(24)
 
-  await page.getByRole('button', { name: new RegExp(first.name) }).first().click({ button: 'right' })
+  await page
+    .getByRole('button', { name: new RegExp(first.name) })
+    .first()
+    .click({ button: 'right' })
   await page.getByRole('menuitem', { name: ui('Masaüstüne sabitle', 'Pin to desktop') }).click()
   const widget = await expect
-    .poll(() => browser.contexts()[0].pages().find((p) => p.url().includes('view=widget')) ?? null)
+    .poll(
+      () =>
+        browser
+          .contexts()[0]
+          .pages()
+          .find((p) => p.url().includes('view=widget')) ?? null
+    )
     .not.toBeNull()
-    .then(() => browser.contexts()[0].pages().find((p) => p.url().includes('view=widget'))!)
+    .then(() =>
+      browser
+        .contexts()[0]
+        .pages()
+        .find((p) => p.url().includes('view=widget'))!
+    )
   await expect(widget.getByText(first.name)).toBeVisible()
   await expect(widget.getByText('note.txt')).toBeVisible()
 })
 
-test('the drop shelf collects files and lists them', async () => {
-  const { page, browser } = stash
+test('the edge handle sits on the chosen screen edge and opens into a shelf list', async () => {
+  const { browser, page } = stash
   await addAndShow(page, {})
-  await page.evaluate(() => window.stash.openDropShelf())
-  await expect
-    .poll(() => browser.contexts()[0].pages().some((p) => p.url().includes('view=drop')))
-    .toBe(true)
-  const drop = browser.contexts()[0].pages().find((p) => p.url().includes('view=drop'))!
-  await drop.waitForFunction(() => Boolean(window.stash))
-  await expect(drop.getByText(/Dosyaları buraya bırak|Drop files here/)).toBeVisible()
+  const edgePage = () =>
+    browser
+      .contexts()[0]
+      .pages()
+      .find((p) => p.url().includes('view=edge'))
+  await expect.poll(() => Boolean(edgePage())).toBe(true)
+  expect(edgePage()!.url()).toContain('side=right')
+  expect(await edgePage()!.evaluate(() => innerWidth)).toBeLessThan(40)
 
-  // Same path the window's drop handler takes.
-  const p = join(work, 'collected.txt')
-  writeFileSync(p, 'x')
-  const shelf = await drop.evaluate(() => window.stash.dropShelf())
-  expect(shelf.kind).toBe('drop')
-  expect(shelf.expireHours).toBe(24)
-  await drop.evaluate(([path, id]) => window.stash.addFiles([path], id), [p, shelf.id])
-  await drop.reload()
-  await expect(drop.getByText('collected.txt')).toBeVisible()
-  await expect(drop.getByRole('button', { name: /Hepsini sürükle|Drag all/ })).toBeVisible()
+  // Dragging files over it opens the shelf list (the page asks for room).
+  await edgePage()!.evaluate(() => window.stash.edgeExpand(true, 200))
+  await expect.poll(() => edgePage()!.evaluate(() => innerWidth)).toBeGreaterThan(200)
+  await edgePage()!.evaluate(() => window.stash.edgeExpand(false))
+  await expect.poll(() => edgePage()!.evaluate(() => innerWidth)).toBeLessThan(40)
+
+  await page.evaluate(() => window.stash.setSettings({ edgeHandle: 'left' }))
+  await expect.poll(() => edgePage()?.url() ?? '').toContain('side=left')
 })
 
-test('sync publishes this PC and merges another one', async () => {
+test('a shared shelf mirrors its folder both ways', async () => {
   const { page } = stash
-  await addAndShow(page, { 'shared.txt': 'x' })
-  const folder = mkdtempSync(join(tmpdir(), 'stash-sync-'))
+  await addAndShow(page, {})
+  const folder = mkdtempSync(join(tmpdir(), 'stash-shared-'))
   try {
-    await page.evaluate((f) => window.stash.setSettings({ syncFolder: f }), folder)
-    await page.evaluate(() => window.stash.syncNow())
-    expect(readdirSync(folder).filter((f) => f.endsWith('.json'))).toHaveLength(1)
+    writeFileSync(join(folder, 'from-a-friend.pdf'), '%PDF')
+    const shelf = await page.evaluate((f) => window.stash.createSharedShelf(f), folder)
+    expect(shelf.kind).toBe('shared')
+    expect(shelf.folder).toBe(folder)
+    const names = () =>
+      page.evaluate(
+        (id) => window.stash.listFiles(id).then((fs) => fs.map((f) => f.name).sort()),
+        shelf.id
+      )
+    expect(await names()).toEqual(['from-a-friend.pdf'])
 
-    const remote = join(work, 'from-laptop.txt')
-    writeFileSync(remote, 'y')
-    writeFileSync(
-      join(folder, 'laptop-device.json'),
-      JSON.stringify({
-        format: 'stash-sync',
-        version: 1,
-        device: 'laptop-device',
-        deviceName: 'LAPTOP',
-        updatedAt: Date.now(),
-        shelves: [{ name: 'Synced shelf', icon: 'folder', color: '#00B294' }],
-        files: [
-          {
-            shelf: 'Synced shelf',
-            path: remote,
-            name: 'from-laptop.txt',
-            extension: 'txt',
-            size: 1,
-            isDirectory: false,
-            createdAt: 1,
-            addedAt: Date.now(),
-            isPinned: false,
-            note: '',
-            tags: ''
-          }
-        ],
-        deleted: []
-      })
+    // Adding a file copies it into the folder.
+    const mine = join(work, 'my notes.txt')
+    writeFileSync(mine, 'hello')
+    await page.evaluate(([p, id]) => window.stash.addFiles([p], id), [mine, shelf.id])
+    expect(readFileSync(join(folder, 'my notes.txt'), 'utf8')).toBe('hello')
+    expect(await names()).toEqual(['from-a-friend.pdf', 'my notes.txt'])
+
+    // A friend adds and deletes files in the folder.
+    writeFileSync(join(folder, 'photo.jpg'), 'jpg')
+    rmSync(join(folder, 'from-a-friend.pdf'))
+    await expect.poll(names, { timeout: 15_000 }).toEqual(['my notes.txt', 'photo.jpg'])
+
+    // Removing from the shelf deletes it from the folder (Recycle Bin; a test folder here).
+    const photo = (await page.evaluate((id) => window.stash.listFiles(id), shelf.id)).find(
+      (f) => f.name === 'photo.jpg'
+    )!
+    await page.evaluate((id) => window.stash.removeFiles([id]), photo.id)
+    expect(existsSync(join(folder, 'photo.jpg'))).toBe(false)
+    expect(readdirSync(stash.trash)).toEqual(['photo.jpg'])
+
+    // Files can't be moved out of a shared shelf; the UI shows it in the rail.
+    const notes = (await page.evaluate((id) => window.stash.listFiles(id), shelf.id))[0]
+    const other = (await page.evaluate(() => window.stash.listShelves()))[0]
+    const err = await page.evaluate(
+      ([id, to]) =>
+        window.stash.moveFile(id, to).then(
+          () => 'moved',
+          (e: unknown) => String(e)
+        ),
+      [notes.id, other.id]
     )
-    const devices = await page.evaluate(() => window.stash.syncNow())
-    expect(devices.map((d) => d.name)).toContain('LAPTOP')
-    const shelves = await page.evaluate(() => window.stash.listShelves())
-    const synced = shelves.find((s) => s.name === 'Synced shelf')!
-    expect((await page.evaluate((id) => window.stash.listFiles(id), synced.id)).map((f) => f.name)).toEqual([
-      'from-laptop.txt'
-    ])
+    expect(err).toContain('shared_move')
+    await page.reload()
+    await page
+      .getByRole('button', { name: new RegExp(shelf.name) })
+      .first()
+      .click()
+    await expect(page.locator('header')).toContainText(/Paylaşılan|Shared/)
+    await expect(row(page, 'my notes.txt')).toBeVisible()
   } finally {
     rmSync(folder, { recursive: true, force: true })
   }
+})
+
+test('reduce size makes a smaller copy and reports the sizes', async () => {
+  const { page } = stash
+  await addAndShow(page, { 'big photo.png': noisyPng(1600, 1000) })
+  await row(page, 'big photo.png').click({ button: 'right' })
+  await page.getByRole('menuitem', { name: ui('Boyutunu küçült', 'Reduce size') }).click()
+  await expect(page.getByRole('status')).toContainText('→')
+  // "big photo-small.jpg" (or "-küçük" in Turkish), next to the original.
+  const smaller = () => readdirSync(work).find((f) => /^big photo-.+\.jpg$/.test(f))
+  await expect.poll(smaller).toBeTruthy()
+  const out = join(work, smaller()!)
+  expect(statSync(out).size).toBeLessThan(statSync(join(work, 'big photo.png')).size)
+  await expect(row(page, basename(out))).toBeVisible()
 })

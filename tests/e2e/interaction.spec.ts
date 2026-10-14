@@ -86,7 +86,11 @@ test('navigates and acts with the keyboard', async () => {
   await expect(row(page, 'c.txt')).toBeFocused()
   await page.keyboard.press('p')
   await expect
-    .poll(async () => (await page.evaluate(() => window.stash.listFiles(null))).filter((f) => f.isPinned).map((f) => f.name))
+    .poll(async () =>
+      (await page.evaluate(() => window.stash.listFiles(null)))
+        .filter((f) => f.isPinned)
+        .map((f) => f.name)
+    )
     .toEqual(['c.txt'])
 
   await page.keyboard.press('Delete')

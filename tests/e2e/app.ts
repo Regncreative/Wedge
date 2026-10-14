@@ -16,6 +16,8 @@ export interface LaunchedApp {
   /** Stand-ins for the watched Downloads and Screenshots folders. */
   downloads: string
   screenshots: string
+  /** Where files removed from shared shelves go (instead of the Recycle Bin). */
+  trash: string
   close: () => Promise<void>
 }
 
@@ -30,6 +32,8 @@ export function appEnv(userData: string, extra: Record<string, string> = {}): No
     STASH_DOWNLOADS_DIR: join(userData, 'test-downloads'),
     STASH_SCREENSHOTS_DIR: join(userData, 'test-screenshots'),
     STASH_PHONE_LOOPBACK: '1',
+    // Shared-shelf removals go here instead of the real Recycle Bin.
+    STASH_TRASH_DIR: join(userData, 'test-trash'),
     ...extra
   }
 }
@@ -82,6 +86,7 @@ export async function launchApp(
     userData,
     downloads,
     screenshots,
+    trash: join(userData, 'test-trash'),
     close: async () => {
       await browser?.close().catch(() => {})
       child.kill()
