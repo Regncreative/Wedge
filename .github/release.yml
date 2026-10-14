@@ -1,0 +1,11 @@
+# Categories for GitHub's auto-generated release notes.
+changelog:
+  categories:
+    - title: New features
+      labels: [enhancement, feature]
+    - title: Bug fixes
+      labels: [bug, fix]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Other changes
+      labels: ["*"]

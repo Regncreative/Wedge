@@ -1,0 +1,38 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the panel
+        2. Drop a file from ...
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Stash version
+      description: Shown at the bottom of Settings.
+      placeholder: 1.0.4
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Settings → "Open logs folder", attach `main.log`. Remove anything private first.
+      render: text

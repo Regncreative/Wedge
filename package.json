@@ -6,6 +6,9 @@
   "author": "Regncreative",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=22 <23"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Regncreative/Stash.git"
