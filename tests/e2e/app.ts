@@ -23,6 +23,27 @@ export interface LaunchedApp {
 
 let nextPort = 9300 + Math.floor(Math.random() * 500)
 
+/**
+ * Where WebView2 notes the DevTools port it listens on. An elevated app (as on
+ * CI runners) ignores WEBVIEW2_* variables; there a machine-wide policy passes
+ * `--remote-debugging-port=0` instead (see ci.yml), and this file has the port.
+ */
+const DEVTOOLS_ACTIVE_PORT = join(
+  process.env.LOCALAPPDATA ?? tmpdir(),
+  'com.regncreative.wedge',
+  'EBWebView',
+  'DevToolsActivePort'
+)
+
+function devtoolsPort(requested: number): number {
+  try {
+    const port = Number(readFileSync(DEVTOOLS_ACTIVE_PORT, 'utf8').split('\n')[0])
+    return port > 0 ? port : requested
+  } catch {
+    return requested
+  }
+}
+
 export function appEnv(userData: string, extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -82,6 +103,7 @@ export async function launchApp(
   const screenshots = join(userData, 'test-screenshots')
   mkdirSync(downloads, { recursive: true })
   mkdirSync(screenshots, { recursive: true })
+  rmSync(DEVTOOLS_ACTIVE_PORT, { force: true })
   const child = spawn(EXE, [], {
     env: appEnv(userData, {
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`
@@ -116,11 +138,11 @@ export async function launchApp(
   while (!browser) {
     if (child.exitCode !== null) throw failedStart(`wedge.exe exited with ${child.exitCode}`)
     try {
-      browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
+      browser = await chromium.connectOverCDP(`http://127.0.0.1:${devtoolsPort(port)}`)
     } catch (err) {
       if (Date.now() > deadline) {
         const error = failedStart(
-          `no DevTools endpoint on port ${port}: ${String(err).split('\n')[0]}`
+          `no DevTools endpoint on port ${devtoolsPort(port)}: ${String(err).split('\n')[0]}`
         )
         child.kill()
         throw error

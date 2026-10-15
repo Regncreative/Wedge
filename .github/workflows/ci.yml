@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    # Stash is a Windows app: test and package on Windows.
+    # Wedge is a Windows app: test and package on Windows.
     runs-on: windows-latest
 
     steps:
@@ -54,20 +54,16 @@ jobs:
       - name: Build app and installer
         run: npx tauri build --debug --config src-tauri/tauri.ci.conf.json
 
-      - name: WebView2 runtime on the runner
+      # Runner processes are elevated, and an elevated app ignores the
+      # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS the tests set. A machine-wide
+      # policy still applies: port 0 lets WebView2 pick a free port, which the
+      # tests read from its DevToolsActivePort file.
+      - name: Open WebView2's DevTools port for the tests
         shell: pwsh
         run: |
-          $keys = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
-                  'HKCU:\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-          $found = $keys | ForEach-Object { Get-ItemProperty $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
-          if ($found) { "WebView2 runtime $($found.pv)" } else { 'WebView2 runtime: not found' }
-          # Policies that can turn off WebView2's DevTools endpoint the tests use.
-          foreach ($root in 'HKLM:\SOFTWARE\Policies\Microsoft', 'HKCU:\SOFTWARE\Policies\Microsoft') {
-            Get-ChildItem $root -Recurse -ErrorAction SilentlyContinue |
-              Where-Object { $_.Name -match 'Edge|WebView' } |
-              ForEach-Object { "== $($_.Name)"; $_.GetValueNames() | ForEach-Object { "   $_" } }
-          }
-          Get-ChildItem env: | Where-Object Name -like 'WEBVIEW2*' | ForEach-Object { "env $($_.Name)=$($_.Value)" }
+          $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name 'wedge.exe' -Value '--remote-debugging-port=0' -PropertyType String -Force | Out-Null
 
       - name: End-to-end tests
         run: npm run test:e2e

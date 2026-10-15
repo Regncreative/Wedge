@@ -75,6 +75,15 @@ jobs:
         env:
           STASH_INSTALLER: ${{ env.SETUP }}
 
+      # The runner is elevated, so the app ignores the tests' WEBVIEW2_*
+      # variable; see the same step in ci.yml.
+      - name: Open WebView2's DevTools port for the tests
+        shell: pwsh
+        run: |
+          $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name 'wedge.exe' -Value '--remote-debugging-port=0' -PropertyType String -Force | Out-Null
+
       - name: End-to-end tests against the release build
         run: npm run test:e2e
         env:
