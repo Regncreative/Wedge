@@ -62,14 +62,15 @@ src-tauri/src/
   textract.rs           Text from Office/OpenDocument, PDF and text files
   actions.rs            ZIP, image conversion and size reduction, copy into folder
   dragdrop.rs           File drops in every window (WebView2 file objects → paths)
-  edge.rs               The edge handle window
+  dragwatch.rs          Notices file drags anywhere (the shell's drag image window)
   widget.rs             Desktop widgets
   phone.rs              Phone → PC upload server (QR)
   shell.rs              Explorer context menu, clipboard files
   transfer.rs           Export / import
   files.rs              Non-blocking file checks
   win.rs                Shell icons, thumbnails, Properties (Win32)
-  panel.rs, tray.rs     Window placement, tray icon and menu
+  panel.rs              The edge window: tab column and drawer, sized per mode
+  tray.rs               Tray icon and menu
   hotkey.rs             Global shortcuts
   updater.rs            Signed updates, beta feed, staged rollout
   i18n.rs               Native strings (tray, notifications)

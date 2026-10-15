@@ -95,6 +95,27 @@ export async function launchApp(
   }
 }
 
+/**
+ * A shelf's tab on the screen edge. With the drawer open only its outer end
+ * shows (the drawer covers the rest), so clicks go near that end.
+ */
+export function tab(page: Page, shelfName: string) {
+  return page.getByRole('button', { name: new RegExp(`^${shelfName}, `) })
+}
+export const TAB_END = { position: { x: 22, y: 26 } }
+
+/** Open a shelf in the drawer (a click on its tab toggles, so only if it isn't showing). */
+export async function showShelf(page: Page, shelfName: string): Promise<void> {
+  const title = await page
+    .locator('.drawer header h1')
+    .textContent()
+    .catch(() => null)
+  const open = await page.evaluate(async () => (await window.stash.edgeState()).mode === 'open')
+  if (open && title === shelfName) return
+  await tab(page, shelfName).click(TAB_END)
+  await page.locator('.drawer header h1', { hasText: shelfName }).waitFor()
+}
+
 export function removeProfile(userData: string): void {
   rmSync(userData, { recursive: true, force: true })
 }

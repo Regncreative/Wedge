@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'os'
 import { basename, join } from 'path'
 import { deflateSync } from 'zlib'
-import { launchApp, removeProfile, type LaunchedApp } from './app'
+import { launchApp, removeProfile, showShelf, tab, TAB_END, type LaunchedApp } from './app'
 
 // UI text is Turkish on Turkish Windows and English elsewhere.
 const ui = (tr: string, en: string) => new RegExp(`^(${tr}|${en})`)
@@ -205,7 +205,13 @@ test('Ctrl+V adds a copied link to the shelf', async () => {
   await addAndShow(page, {})
   const ps = (cmd: string) =>
     execFileSync('powershell.exe', ['-NoProfile', '-Command', cmd], { encoding: 'utf8' })
-  const previous = ps('Get-Clipboard -Raw')
+  // Reading fails while the clipboard holds no text (or the session is locked).
+  let previous = ''
+  try {
+    previous = ps('Get-Clipboard -Raw')
+  } catch {
+    previous = ''
+  }
   try {
     ps("Set-Clipboard -Value 'https://www.example.com/docs/page'")
     await page.locator('header').click()
@@ -255,20 +261,14 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
   await addAndShow(page, { 'note.txt': 'x' })
   const first = (await page.evaluate(() => window.stash.listShelves()))[0]
 
-  await page
-    .getByRole('button', { name: new RegExp(first.name) })
-    .first()
-    .click({ button: 'right' })
+  await tab(page, first.name).click({ ...TAB_END, button: 'right' })
   await page.getByRole('menuitem', { name: ui('Geçici raf', 'Temporary shelf') }).click()
   await page.getByRole('menuitemradio', { name: ui('24 saat', 'Clear after 24') }).click()
   await expect
     .poll(async () => (await page.evaluate(() => window.stash.listShelves()))[0].expireHours)
     .toBe(24)
 
-  await page
-    .getByRole('button', { name: new RegExp(first.name) })
-    .first()
-    .click({ button: 'right' })
+  await tab(page, first.name).click({ ...TAB_END, button: 'right' })
   await page.getByRole('menuitem', { name: ui('Masaüstüne sabitle', 'Pin to desktop') }).click()
   const widget = await expect
     .poll(
@@ -289,26 +289,63 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
   await expect(widget.getByText('note.txt')).toBeVisible()
 })
 
-test('the edge handle sits on the chosen screen edge and opens into a shelf list', async () => {
-  const { browser, page } = stash
+test('the shelves live on the screen edge: tucked in, out for a drag, open as a drawer', async () => {
+  const { page } = stash
   await addAndShow(page, {})
-  const edgePage = () =>
-    browser
-      .contexts()[0]
-      .pages()
-      .find((p) => p.url().includes('view=edge'))
-  await expect.poll(() => Boolean(edgePage())).toBe(true)
-  expect(edgePage()!.url()).toContain('side=right')
-  expect(await edgePage()!.evaluate(() => innerWidth)).toBeLessThan(40)
+  const state = () =>
+    page.evaluate(async () => ({
+      width: innerWidth,
+      left: screenX,
+      mode: (await window.stash.edgeState()).mode,
+      shown: document.querySelector<HTMLElement>('.edge-root')?.dataset.mode
+    }))
 
-  // Dragging files over it opens the shelf list (the page asks for room).
-  await edgePage()!.evaluate(() => window.stash.edgeExpand(true, 200))
-  await expect.poll(() => edgePage()!.evaluate(() => innerWidth)).toBeGreaterThan(200)
-  await edgePage()!.evaluate(() => window.stash.edgeExpand(false))
-  await expect.poll(() => edgePage()!.evaluate(() => innerWidth)).toBeLessThan(40)
+  // Open (the test harness opens the drawer at start): the drawer plus tab ends.
+  expect(await state()).toMatchObject({ mode: 'open', shown: 'open' })
+  expect((await state()).width).toBeGreaterThan(400)
 
+  // Closing tucks the tabs in to a sliver that can't catch clicks elsewhere.
+  await page
+    .getByRole('button', { name: ui('Kapat', 'Close') })
+    .first()
+    .click()
+  await expect.poll(async () => (await state()).width).toBeLessThan(20)
+  expect(await state()).toMatchObject({ mode: 'idle', shown: 'idle' })
+
+  // A drag anywhere brings the tabs out; the pocket is first.
+  await page.evaluate(() => window.stash.edgeMode('drag'))
+  await expect.poll(async () => (await state()).width).toBeGreaterThan(200)
+  const labels = await page
+    .locator('.tab')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
+  expect(labels[0]).toMatch(/^(Cep|Pocket), /)
+
+  // Clicking a tab opens its shelf in the drawer.
+  const second = (await page.evaluate(() => window.stash.listShelves())).find(
+    (s) => s.kind !== 'pocket'
+  )!
+  await tab(page, second.name).click()
+  await expect.poll(async () => (await state()).mode).toBe('open')
+  await expect(page.locator('.drawer header h1')).toHaveText(second.name)
+
+  // The other edge.
   await page.evaluate(() => window.stash.setSettings({ edgeHandle: 'left' }))
-  await expect.poll(() => edgePage()?.url() ?? '').toContain('side=left')
+  await expect.poll(async () => (await state()).left).toBeLessThan(20)
+  await expect(page.locator('.edge-root')).toHaveAttribute('data-side', 'left')
+
+  // The pocket can't be deleted.
+  const pocket = (await page.evaluate(() => window.stash.listShelves())).find(
+    (s) => s.kind === 'pocket'
+  )!
+  const err = await page.evaluate(
+    (id) =>
+      window.stash.deleteShelf(id).then(
+        () => 'deleted',
+        (e: unknown) => String(e)
+      ),
+    pocket.id
+  )
+  expect(err).toContain('pocket')
 })
 
 test('a shared shelf mirrors its folder both ways', async () => {
@@ -360,10 +397,7 @@ test('a shared shelf mirrors its folder both ways', async () => {
     )
     expect(err).toContain('shared_move')
     await page.reload()
-    await page
-      .getByRole('button', { name: new RegExp(shelf.name) })
-      .first()
-      .click()
+    await showShelf(page, shelf.name)
     await expect(page.locator('header')).toContainText(/Paylaşılan|Shared/)
     await expect(row(page, 'my notes.txt')).toBeVisible()
   } finally {

@@ -68,12 +68,13 @@ test('navigates and acts with the keyboard', async () => {
   const { page } = stash
   await seed(page, ['a.txt', 'b.txt', 'c.txt'])
 
+  // Cards sit in a grid: left/right step one, up/down a row.
   await row(page, 'a.txt').focus()
-  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('ArrowRight')
   await expect(row(page, 'b.txt')).toBeFocused()
   await expect(row(page, 'b.txt')).toHaveAttribute('aria-selected', 'true')
 
-  await page.keyboard.press('Shift+ArrowDown')
+  await page.keyboard.press('Shift+ArrowRight')
   await expect(page.getByRole('option', { selected: true })).toHaveCount(2)
 
   await page.keyboard.press('Control+a')

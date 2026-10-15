@@ -18,7 +18,9 @@ test('starts, lists default shelves and shows an added file', async () => {
   try {
     const { page } = stash
     const shelves = await page.evaluate(() => window.stash.listShelves())
-    expect(shelves).toHaveLength(3)
+    // Three default shelves plus the pocket at the top of the edge.
+    expect(shelves.filter((s) => s.kind !== 'pocket')).toHaveLength(3)
+    expect(shelves.filter((s) => s.kind === 'pocket')).toHaveLength(1)
 
     const report = join(workDir, 'quarterly report.pdf')
     writeFileSync(report, 'pdf')

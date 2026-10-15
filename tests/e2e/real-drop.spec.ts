@@ -3,7 +3,7 @@ import { execFileSync } from 'child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { launchApp, removeProfile, type LaunchedApp } from './app'
+import { launchApp, removeProfile, showShelf, type LaunchedApp } from './app'
 
 // Real Windows drag and drop: these move the mouse cursor, so they only run
 // when asked for (STASH_REAL_INPUT=1) on a machine nobody is using.
@@ -73,28 +73,40 @@ function dropFile(path: string, to: { x: number; y: number }): string {
 const shelfFiles = (page: Page, id: string | null) =>
   page.evaluate((s) => window.stash.listFiles(s).then((fs) => fs.map((f) => f.name).sort()), id)
 
-test('dropping on the panel, a rail shelf, a widget and the edge handle', async () => {
+/** The visible end of a shelf's tab (the drawer covers the rest when open). */
+async function tabEnd(page: Page, shelfId: string) {
+  return page.evaluate((id) => {
+    const r = document.querySelector(`.tab[data-drop-shelf="${id}"]`)!.getBoundingClientRect()
+    const x = screenX + Math.max(r.left, 0) + 16
+    const y = screenY + r.top + r.height / 2
+    return { x: Math.round(x * devicePixelRatio), y: Math.round(y * devicePixelRatio) }
+  }, shelfId)
+}
+
+test('dropping into the drawer, on a tab, on a widget and on the tucked-in edge', async () => {
   const { page, browser } = stash
-  const shelves = await page.evaluate(() => window.stash.listShelves())
-  const [first, second] = shelves
+  const shelves = (await page.evaluate(() => window.stash.listShelves())).filter(
+    (s) => s.kind !== 'pocket'
+  )
+  const [first, second, third] = shelves
 
-  // 1. Onto the panel: the shelf on screen.
-  await page
-    .getByRole('button', { name: new RegExp(first.name) })
-    .first()
-    .click()
-  const a = join(work, 'onto-panel.txt')
+  // 1. Into the open drawer: its shelf.
+  await showShelf(page, first.name)
+  // The helper's source window takes focus, and the drawer closes when it
+  // loses focus unless it's kept open.
+  await page.getByRole('button', { name: /^(Açık tut|Keep open)$/ }).click()
+  const a = join(work, 'into-drawer.txt')
   writeFileSync(a, 'a')
-  expect(dropFile(a, await screenPoint(page, 'main'))).toBe('Copy')
-  await expect.poll(() => shelfFiles(page, first.id)).toEqual(['onto-panel.txt'])
+  expect(dropFile(a, await screenPoint(page, '.drawer'))).toBe('Copy')
+  await expect.poll(() => shelfFiles(page, first.id)).toEqual(['into-drawer.txt'])
 
-  // 2. Onto another shelf in the rail.
-  const b = join(work, 'onto-rail.txt')
+  // 2. On another shelf's tab.
+  const b = join(work, 'on-tab.txt')
   writeFileSync(b, 'b')
-  expect(dropFile(b, await screenPoint(page, `[data-drop-shelf="${second.id}"]`))).toBe('Copy')
-  await expect.poll(() => shelfFiles(page, second.id)).toEqual(['onto-rail.txt'])
+  expect(dropFile(b, await tabEnd(page, second.id))).toBe('Copy')
+  await expect.poll(() => shelfFiles(page, second.id)).toEqual(['on-tab.txt'])
 
-  // 3. Onto a desktop widget.
+  // 3. On a desktop widget.
   await page.evaluate((id) => window.stash.openWidget(id), second.id)
   await expect
     .poll(() =>
@@ -110,7 +122,7 @@ test('dropping on the panel, a rail shelf, a widget and the edge handle', async 
     .find((p) => p.url().includes('view=widget'))!
   await widget.waitForFunction(() => Boolean(window.stash))
   await page.evaluate(() => window.stash.hideWindow())
-  const c = join(work, 'onto-widget.txt')
+  const c = join(work, 'on-widget.txt')
   writeFileSync(c, 'c')
   const effect = dropFile(c, await screenPoint(widget))
   if (effect.startsWith('WrongTarget')) {
@@ -118,42 +130,40 @@ test('dropping on the panel, a rail shelf, a widget and the edge handle', async 
     test.info().annotations.push({ type: 'note', description: 'widget covered by another window' })
   } else {
     expect(effect).toBe('Copy')
-    await expect
-      .poll(() => shelfFiles(page, second.id))
-      .toEqual(['onto-rail.txt', 'onto-widget.txt'])
+    await expect.poll(() => shelfFiles(page, second.id)).toEqual(['on-tab.txt', 'on-widget.txt'])
   }
 
-  // 4. Onto the edge handle (shown while the panel is closed): the default shelf.
-  const edge = browser
-    .contexts()[0]
-    .pages()
-    .find((p) => p.url().includes('view=edge'))!
-  const settings = await page.evaluate(() => window.stash.getSettings())
-  const at = await edge.evaluate(() => ({
-    x: Math.round((screenX + innerWidth - 4) * devicePixelRatio),
-    y: Math.round((screenY + innerHeight / 2) * devicePixelRatio)
-  }))
-  const d = join(work, 'onto-edge.txt')
+  // 4. On the tucked-in sliver: the tabs come out under the cursor.
+  await expect.poll(() => page.evaluate(() => innerWidth)).toBeLessThan(20)
+  const sliver = await page.evaluate((id) => {
+    const r = document.querySelector(`.tab[data-drop-shelf="${id}"]`)!.getBoundingClientRect()
+    return {
+      x: Math.round((screenX + innerWidth - 4) * devicePixelRatio),
+      y: Math.round((screenY + r.top + r.height / 2) * devicePixelRatio)
+    }
+  }, third.id)
+  const d = join(work, 'on-edge.txt')
   writeFileSync(d, 'd')
-  expect(dropFile(d, at)).toBe('Copy')
-  await expect.poll(() => shelfFiles(page, settings.defaultShelfId)).toContain('onto-edge.txt')
+  expect(dropFile(d, sliver)).toBe('Copy')
+  await expect.poll(() => shelfFiles(page, third.id)).toEqual(['on-edge.txt'])
+  // …and tuck back in.
+  await expect.poll(() => page.evaluate(() => innerWidth), { timeout: 5000 }).toBeLessThan(20)
 })
 
-test('dragging a file onto a shelf in the rail moves it', async () => {
+test('dragging a card onto another shelf tab moves it', async () => {
   const { page } = stash
-  const [first, second] = await page.evaluate(() => window.stash.listShelves())
+  const [first, second] = (await page.evaluate(() => window.stash.listShelves())).filter(
+    (s) => s.kind !== 'pocket'
+  )
   const p = join(work, 'move me.txt')
   writeFileSync(p, 'x')
   await page.evaluate(([path, id]) => window.stash.addFiles([path], id), [p, first.id])
   await page.reload()
-  await page
-    .getByRole('button', { name: new RegExp(first.name) })
-    .first()
-    .click()
+  await showShelf(page, first.name)
   await page.getByRole('option', { name: 'move me.txt' }).waitFor()
 
   const from = await screenPoint(page, '[data-file-id]')
-  const to = await screenPoint(page, `[data-drop-shelf="${second.id}"]`)
+  const to = await tabEnd(page, second.id)
   expect(
     powershell('mouse-drag.ps1', [
       '-FromX',

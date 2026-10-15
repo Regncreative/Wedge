@@ -26,24 +26,27 @@
 </p>
 
 <p align="center">
-  <img src="docs/panel-dark.png" alt="Stash: shelves on the left, files on the right" width="360">
+  <img src="docs/edge-tabs.png" alt="Shelf tabs sliding out of the screen edge during a drag" width="224">
   &nbsp;
-  <img src="docs/panel-light.png" alt="Stash grid view with previews, light theme" width="360">
+  <img src="docs/panel-dark.png" alt="A shelf pulled out as a drawer, dark theme" width="300">
+  &nbsp;
+  <img src="docs/panel-light.png" alt="A shelf pulled out as a drawer, light theme" width="300">
 </p>
 
 ## What is Stash?
 
 Windows doesn’t have a convenient place to park files while you work — so people pile them on the desktop, spam Downloads, or lose track mid-flow.
 
-**Stash** adds a lightweight file shelf that lives in the system tray. Drop files onto shelves, pin what matters, then drag them back into any app when you need them. Stash stores **references only** — your files stay where they are on disk.
+**Stash** puts your shelves on the edge of the screen. Start dragging a file anywhere and colored shelf tabs slide out; drop it on one. Click a tab and that shelf opens like a drawer, ready to drag files back into any app. Stash stores **references only** — your files stay where they are on disk.
 
 Designed to feel like a built-in Windows 11 feature (Fluent Design), and light like one: a **5 MB installer** that uses the WebView2 runtime built into Windows.
 
 ## Features
 
 **Collect from anywhere**
-- **Edge handle** — a slim tab on the side of the screen: drag files onto it and pick a shelf, even while the panel is closed; click it to open the panel
-- **Drop onto any shelf** — drop on the panel, or straight onto a shelf in the rail; drag a file onto another shelf to move it
+- **Shelves on the screen edge** — tucked-in tabs that slide out the moment you start dragging a file, from Explorer, the desktop or a browser; drop on the shelf you want
+- **Drawers** — click a tab to pull its shelf out; drag a card onto another tab to move it
+- **Pocket** — collect files from different folders, then drag them all out in one go (the pocket empties itself)
 - **Automatic shelves** — new downloads and screenshots appear on their own shelves; rules send files to the right shelf by type
 - **Right-click → Add to Stash** in Explorer, **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
 
@@ -58,11 +61,11 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 - **Desktop widgets** — pin a shelf to the desktop
 
 **Plus**
-- **New design** — a shelf rail on the left, content on the right; Fluent-style dark and light themes with accent colors
+- **Its own look** — colored index tabs, cards with real previews, dark and light themes
 - **System tray integration** — silent background app, always one click away
 - **Multi-select** — Ctrl/Shift+click, then drag, pin or remove several files at once
 - **Keyboard friendly** — navigate, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
-- **Global shortcut** — open the panel with `Ctrl+Shift+Space` (customizable)
+- **Global shortcut** — open the drawer with `Ctrl+Shift+Space` (customizable)
 - **Turkish & English** — full UI + tray localization
 - **Auto update** — updates from GitHub Releases, with an opt-in beta channel; every update is signature-checked
 - **Export / import** — move your shelves and settings to another PC
@@ -73,9 +76,11 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 ## Screenshots
 
 <p align="center">
-  <img src="docs/settings.png" alt="Stash settings" width="360">
+  <img src="docs/pocket.png" alt="The pocket: collect files, drag them out together" width="300">
   &nbsp;
-  <img src="docs/shared-shelf.png" alt="Creating a shared shelf from a cloud folder" width="360">
+  <img src="docs/shared-shelf.png" alt="Creating a shared shelf from a cloud folder" width="300">
+  &nbsp;
+  <img src="docs/settings.png" alt="Stash settings" width="300">
 </p>
 
 ## Installation
@@ -85,7 +90,7 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
 1. Download from **[stash.regncreative.com](https://stash.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Stash/releases/latest)** (`Stash_<version>_x64-setup.exe`)
 2. Run the installer
 3. Launch **Stash** — it appears in the system tray
-4. Click the tray icon (or press `Ctrl+Shift+Space`) to open the panel
+4. Start dragging a file: your shelves slide out of the right edge of the screen. Or click a tab, the tray icon, or press `Ctrl+Shift+Space`
 
 > Tip: enable **Start with Windows** in Settings so Stash is ready after sign-in.
 >
@@ -100,7 +105,7 @@ npm ci
 npm run dev
 ```
 
-The app starts silently in the tray. Click the tray icon or use the hotkey to open the panel. See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and conventions.
+The app starts in the tray with its tabs tucked into the right screen edge. Click a tab, the tray icon or use the hotkey to open the drawer. See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and conventions.
 
 ## Development
 
@@ -132,12 +137,12 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
                     │
 ┌───────────────────▼─────────────────────┐
 │           Rust backend (Tauri)          │
-│  Panel · Edge handle · Widgets · Tray   │
+│  Edge window · Drag watch · Widgets     │
 │  SQLite (rusqlite) · validated commands │
 └───────────────────┬─────────────────────┘
                     │ invoke / events
 ┌───────────────────▼─────────────────────┐
-│        React panel (WebView2)           │
+│     React tabs and drawer (WebView2)    │
 │  window.stash API · shelves · settings  │
 └─────────────────────────────────────────┘
 ```
@@ -146,10 +151,10 @@ The app starts silently in the tray. Click the tray icon or use the hotkey to op
 
 ```text
 src/
-  renderer/       React UI (panel, edge handle, widgets); lib/api.ts bridges to Rust
+  renderer/       React UI (edge tabs, drawer, widgets); lib/api.ts bridges to Rust
   shared/         Types and translations (locales/)
 src-tauri/
-  src/            Rust backend: commands, database, shared shelves, edge handle, tray, updater
+  src/            Rust backend: commands, database, edge window, drag watch, shared shelves, updater
   windows/        Installer hooks (upgrade from 1.x)
   tauri.conf.json App, window, bundle and updater configuration
 tests/
@@ -171,7 +176,7 @@ scripts/          Release helpers
 - [x] 2.0: rebuilt on Tauri (5 MB installer, signed updates)
 - [x] Automatic shelves, rules, content search, Quick Look
 - [x] Phone to PC, desktop widgets, quick actions
-- [x] Edge handle, shared shelves (cloud folders), new design
+- [x] Shelves on the screen edge, pocket, shared shelves (cloud folders), new design
 - [ ] Share links (needs a hosting decision)
 - [ ] New demo GIF
 - [ ] Code signing

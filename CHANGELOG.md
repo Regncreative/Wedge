@@ -8,10 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 Stash 2.0 is rebuilt on Tauri with a new design. Your shelves and settings carry over, and the app is much smaller and safer.
 
 ### Added in 2.0
-- **New design:** a shelf rail on the left (every shelf is also a drop target), files on the right as a list with thumbnails or a grid with large previews, type filters, and redesigned settings.
-- **Edge handle:** a slim tab on the screen edge; drag files onto it to pick a shelf, even with the panel closed; click it to open the panel. It hides during full-screen apps.
+- **Shelves on the screen edge:** colored index tabs tucked into the edge slide out the moment a file drag starts anywhere in Windows; drop on a shelf. Clicking a tab pulls its shelf out as a drawer (cards with real previews, search, menus). The tray icon and hotkey open the drawer; it closes when you click elsewhere unless pinned. Tabs step aside during full-screen apps.
+- **Pocket:** a shelf at the top of the edge that collects files for later; drag them all out together and it empties itself.
+- **Shelf colors and icons** from the shelf menu.
 - **Shared shelves:** link a Google Drive, OneDrive or Dropbox folder as a shelf; files you drop are copied into it and files others add show up for you.
-- **Drag a file onto a shelf in the rail** to move it there.
+- **Drag a card onto another shelf's tab** to move it there.
 - **Automatic shelves** for new downloads and screenshots, and **rules** that route files to shelves by type and source.
 - **Search inside files** (PDF, Word, Excel, PowerPoint, OpenDocument, text and code) across every shelf, diacritic-insensitive.
 - **Quick Look** preview with Space; Ctrl+Space toggles selection. Desktop widgets preview on hover and with Space.
@@ -26,7 +27,8 @@ Stash 2.0 is rebuilt on Tauri with a new design. Your shelves and settings carry
 - 1.x installs upgrade automatically; the old app is removed and its data is reused.
 - Image previews are rendered by Windows (thumbnails) instead of loading files into the panel.
 - WebP conversion is lossy (quality 80) and JPG uses quality 82, so converted photos no longer grow; PNG uses maximum compression.
-- Dropping files works the same in every Stash window (panel, edge handle, widgets), using WebView2's own drop handling.
+- Dropping files works the same in every Stash window (tabs, drawer, widgets), using WebView2's own drop handling.
+- The tray panel is replaced by the edge drawer; the idle-fade setting is gone.
 
 ### Security
 - Every update is verified against Stash's signing key before it installs.
