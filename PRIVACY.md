@@ -24,7 +24,7 @@ With *Automatic shelves* on, Stash notices new files in your **Downloads** and *
 
 If you link a **shared shelf**, Stash also watches that folder (only its top level) so files added there show up on the shelf.
 
-Stash doesn't read your keyboard or mouse outside its own windows. To slide the shelf tabs out when you start dragging files, it watches for the picture Windows shows next to the cursor during a drag (a window named `SysDragImage`) to appear and disappear. It learns only that a drag started or ended, never what is dragged or where.
+Stash doesn't read your keyboard or mouse outside its own windows. To slide the shelf tabs out when you start dragging files, it watches for the picture Windows shows next to the cursor during a drag (a window named `SysDragImage`) to appear and disappear. It learns only that a drag started or ended, never what is dragged or where. When you drag files out of Stash, it checks that the mouse button is still held before handing the drag to Windows.
 
 ## Network access
 

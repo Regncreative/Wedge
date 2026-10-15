@@ -264,17 +264,17 @@ pub fn copy_paths(
 }
 
 #[tauri::command]
-pub fn open_files(
+pub async fn open_files(
     app: AppHandle,
     state: State<'_, AppState>,
     ids: Vec<String>,
 ) -> CmdResult<usize> {
     let files = files_by_ids(&state, &ids)?;
     let mut opened = 0;
-    for f in files
-        .iter()
-        .filter(|f| Path::new(&f.absolute_path).exists())
-    {
+    for f in &files {
+        if !crate::files::is_reachable(&f.absolute_path).await {
+            continue;
+        }
         if app
             .opener()
             .open_path(&f.absolute_path, None::<&str>)
@@ -287,27 +287,23 @@ pub fn open_files(
     Ok(opened)
 }
 
-/// Zip the files into a temporary archive and drag that out (e.g. into a mail).
+/// Zip the files into a temporary archive and drag that out (e.g. into a
+/// mail). The archive is written in the background; if the button was let
+/// go meanwhile, there is nothing to drag.
 #[tauri::command]
-pub fn start_drag_zip(
+pub async fn start_drag_zip(
     app: AppHandle,
     state: State<'_, AppState>,
     ids: Vec<String>,
     name: String,
 ) -> CmdResult<()> {
     let files = files_by_ids(&state, &ids)?;
-    let paths = existing_paths(&files);
-    if paths.is_empty() {
-        return Ok(());
-    }
     let safe: String = name
         .chars()
         .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
         .take(80)
         .collect();
-    let dir = std::env::temp_dir().join("Stash");
-    std::fs::create_dir_all(&dir).map_err(err)?;
-    let dest = dir.join(format!(
+    let dest = std::env::temp_dir().join("Stash").join(format!(
         "{}.zip",
         if safe.trim().is_empty() {
             "Stash"
@@ -315,19 +311,25 @@ pub fn start_drag_zip(
             safe.trim()
         }
     ));
-    let _ = std::fs::remove_file(&dest);
-    actions::zip_paths(&paths, &dest).map_err(err)?;
-    let window = panel::window(&app).ok_or("no window")?;
-    let icon = win::shell_image_png(&dest.to_string_lossy(), 64, false)
-        .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec());
-    drag::start_drag(
-        &window,
-        drag::DragItem::Files(vec![dest]),
-        drag::Image::Raw(icon),
-        |_result, _cursor| {},
-        drag::Options::default(),
-    )
-    .map_err(err)
+    let zip = dest.clone();
+    let written = tauri::async_runtime::spawn_blocking(move || {
+        let paths = existing_paths(&files);
+        if paths.is_empty() {
+            return Ok(false);
+        }
+        std::fs::create_dir_all(zip.parent().unwrap_or(Path::new(".")))?;
+        let _ = std::fs::remove_file(&zip);
+        actions::zip_paths(&paths, &zip).map(|()| true)
+    })
+    .await
+    .map_err(err)?
+    .map_err(err)?;
+    if !written {
+        return Ok(());
+    }
+    let icon = crate::commands::drag_icon(&dest).await;
+    crate::commands::drag_out(&app, vec![dest], icon).await?;
+    Ok(())
 }
 
 /// Folder picker (sync folder).

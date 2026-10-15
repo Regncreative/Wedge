@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { execFileSync } from 'child_process'
 import {
+  copyFileSync,
   existsSync,
   mkdtempSync,
   readdirSync,
@@ -308,6 +309,46 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
   writeFileSync(third, 'z')
   await widget.evaluate(([p, id]) => window.stash.addFiles([p], id), [third, first.id])
   await expect(tab(page, first.name).locator('.tab-count')).toHaveText('03', { timeout: 2000 })
+})
+
+test('icons and previews come from Windows, side by side', async () => {
+  const { page } = stash
+  const photo = join(work, 'photo.jpg')
+  copyFileSync('C:/Windows/Web/Wallpaper/Windows/img0.jpg', photo)
+  const text = join(work, 'notes.txt')
+  writeFileSync(text, 'x')
+  await page.evaluate((ps) => window.stash.addFiles(ps), [photo, text])
+  const files = await page.evaluate(() => window.stash.listFiles(null))
+  // Icons and thumbnails are made on separate workers, at the same time.
+  const id = (name: string) => files.find((f) => f.name === name)!.id
+  const [photoIcon, photoPreview, textIcon] = await page.evaluate(
+    ([p, t]) =>
+      Promise.all([
+        window.stash.getFileIcon(p),
+        window.stash.getPreview(p),
+        window.stash.getFileIcon(t)
+      ]),
+    [id('photo.jpg'), id('notes.txt')]
+  )
+  expect(photoIcon).toMatch(/^data:image\/png;base64,/)
+  expect(photoPreview).toMatch(/^data:image\/png;base64,/)
+  expect(textIcon).toMatch(/^data:image\/png;base64,/)
+})
+
+test('dragging out never holds up the window', async () => {
+  const { page } = stash
+  await addAndShow(page, { 'a.txt': 'a', 'b.txt': 'b' })
+  const ids = (await page.evaluate(() => window.stash.listFiles(null))).map((f) => f.id)
+  // The button isn't held (as when it was let go before the drag could
+  // start): nothing is dragged, so nothing lands wherever the cursor is.
+  const t = Date.now()
+  expect(await page.evaluate((list) => window.stash.startDrag(list), ids)).toBe(false)
+  // The archive is written in the background, the window answering meanwhile.
+  const zipping = page.evaluate((list) => window.stash.startDragZip(list, 'Bundle'), ids)
+  expect(await page.evaluate(() => window.stash.edgeState())).toMatchObject({ mode: 'open' })
+  await zipping
+  expect(Date.now() - t).toBeLessThan(3000)
+  expect(existsSync(join(tmpdir(), 'Stash', 'Bundle.zip'))).toBe(true)
 })
 
 test('the shelves live on the screen edge: tucked in, out for a drag, open as a drawer', async () => {

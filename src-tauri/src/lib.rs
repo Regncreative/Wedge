@@ -20,6 +20,7 @@ pub mod textract;
 pub mod transfer;
 pub mod tray;
 pub mod updater;
+pub mod watchdog;
 pub mod widget;
 pub mod win;
 
@@ -141,6 +142,7 @@ pub fn run() {
             }
             tray::create(handle)?;
             commands::sync_context_menu(handle, settings.context_menu);
+            watchdog::start(handle);
             panel::prepare(handle);
             panel::apply_side(handle, settings.edge_handle);
             panel::start_monitor(handle);

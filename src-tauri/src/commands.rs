@@ -473,47 +473,93 @@ pub async fn file_preview(state: State<'_, AppState>, id: String) -> CmdResult<O
     shell_image(&state, &id, 256, true).await
 }
 
-/// Start a native drag of the given files into other apps. Runs on the UI
-/// thread (synchronous command) and returns when the drag ends.
+/// How long a drag waits for the file's icon before using a plain one.
+const DRAG_ICON_WAIT: std::time::Duration = std::time::Duration::from_millis(300);
+
+/// The icon shown under the cursor while dragging `path` out.
+pub(crate) async fn drag_icon(path: &std::path::Path) -> Vec<u8> {
+    let path = path.to_string_lossy().into_owned();
+    tauri::async_runtime::spawn_blocking(move || {
+        win::shell_image_png_within(&path, 64, false, Some(DRAG_ICON_WAIT))
+    })
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec())
+}
+
+/// Drag files out of Stash into another app and wait until the drag ends;
+/// returns whether something took them. Everything that can be slow (the
+/// database, the files, the icon) is done before; the UI thread, which OLE
+/// needs for the drag, only runs the drag itself.
+pub(crate) async fn drag_out(
+    app: &AppHandle,
+    paths: Vec<std::path::PathBuf>,
+    icon: Vec<u8>,
+) -> CmdResult<bool> {
+    let window = panel::window(app).ok_or("no window")?;
+    let (tx, rx) = std::sync::mpsc::channel::<Result<bool, String>>();
+    app.run_on_main_thread(move || {
+        if !win::primary_button_down() {
+            let _ = tx.send(Ok(false));
+            return;
+        }
+        let dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let flag = dropped.clone();
+        let result = drag::start_drag(
+            &window,
+            drag::DragItem::Files(paths),
+            drag::Image::Raw(icon),
+            move |result, _cursor| {
+                flag.store(
+                    matches!(result, drag::DragResult::Dropped),
+                    Ordering::SeqCst,
+                )
+            },
+            drag::Options::default(),
+        );
+        let _ = tx.send(
+            result
+                .map(|_| dropped.load(Ordering::SeqCst))
+                .map_err(|e| e.to_string()),
+        );
+    })
+    .map_err(err)?;
+    tauri::async_runtime::spawn_blocking(move || rx.recv())
+        .await
+        .map_err(err)?
+        .map_err(err)?
+}
+
+/// Start a native drag of the given files into other apps; returns, when the
+/// drag ends, whether something took them (the pocket empties itself then).
 #[tauri::command]
-pub fn start_drag(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<bool> {
+pub async fn start_drag(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+) -> CmdResult<bool> {
     check_ids(&ids)?;
-    let paths: Vec<std::path::PathBuf> = {
+    let files: Vec<StashFile> = {
         let conn = state.db();
         ids.iter()
             .filter_map(|id| db::get_file(&conn, id).ok().flatten())
-            .map(|f| {
+            .inspect(|f| {
                 let _ = db::touch_file(&conn, &f.id);
-                std::path::PathBuf::from(f.absolute_path)
             })
-            // The drag must start while the button is still down, so this is a
-            // quick local check; the panel only offers files it saw as reachable.
-            .filter(|p| p.exists())
             .collect()
     };
-    if paths.is_empty() {
-        return Ok(false);
+    let mut paths = Vec::new();
+    for f in files {
+        if files::is_reachable(&f.absolute_path).await {
+            paths.push(std::path::PathBuf::from(f.absolute_path));
+        }
     }
-    let window = panel::window(&app).ok_or("no window")?;
-    let icon = win::shell_image_png(&paths[0].to_string_lossy(), 64, false)
-        .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec());
-    let dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let flag = dropped.clone();
-    drag::start_drag(
-        &window,
-        drag::DragItem::Files(paths),
-        drag::Image::Raw(icon),
-        move |result, _cursor| {
-            flag.store(
-                matches!(result, drag::DragResult::Dropped),
-                Ordering::SeqCst,
-            )
-        },
-        drag::Options::default(),
-    )
-    .map_err(err)?;
-    // Whether something took the files (the pocket empties itself then).
-    Ok(dropped.load(Ordering::SeqCst))
+    let Some(first) = paths.first() else {
+        return Ok(false);
+    };
+    let icon = drag_icon(first).await;
+    drag_out(&app, paths, icon).await
 }
 
 // ── Shelves ───────────────────────────────────────────────

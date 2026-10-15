@@ -1,6 +1,7 @@
 //! Windows shell integration: file icons, thumbnails and the Properties sheet.
 
 use std::sync::{mpsc, Mutex, OnceLock};
+use std::time::Duration;
 
 use base64::Engine;
 
@@ -8,14 +9,22 @@ type Rgba = (u32, u32, Vec<u8>);
 type Job = (String, i32, bool, mpsc::Sender<Option<Rgba>>);
 
 /// The shell's icon/thumbnail extraction misbehaves when called from many
-/// threads at once (most calls fail), so all of it runs on one long-lived
-/// single-threaded-apartment worker, one request at a time.
-fn worker() -> Option<mpsc::Sender<Job>> {
-    static WORKER: OnceLock<Mutex<mpsc::Sender<Job>>> = OnceLock::new();
-    let sender = WORKER.get_or_init(|| {
+/// threads at once (most calls fail), so it runs on long-lived
+/// single-threaded-apartment workers, one request at a time: one for icons
+/// and one for thumbnails, so a slow thumbnail (a long video, a file still
+/// in the cloud) never holds up icons.
+fn worker(thumbnails: bool) -> Option<mpsc::Sender<Job>> {
+    static ICONS: OnceLock<Mutex<mpsc::Sender<Job>>> = OnceLock::new();
+    static THUMBNAILS: OnceLock<Mutex<mpsc::Sender<Job>>> = OnceLock::new();
+    let (cell, name) = if thumbnails {
+        (&THUMBNAILS, "shell-thumbnails")
+    } else {
+        (&ICONS, "shell-icons")
+    };
+    let sender = cell.get_or_init(|| {
         let (tx, rx) = mpsc::channel::<Job>();
         let spawned = std::thread::Builder::new()
-            .name("shell-images".into())
+            .name(name.into())
             .spawn(move || {
                 imp::init_sta();
                 for (path, size, thumbnail, reply) in rx {
@@ -33,11 +42,25 @@ fn worker() -> Option<mpsc::Sender<Job>> {
 /// PNG of the shell icon (`thumbnail = false`) or image thumbnail
 /// (`thumbnail = true`) for a file, as Explorer would show it. Blocking.
 pub fn shell_image_png(path: &str, size: i32, thumbnail: bool) -> Option<Vec<u8>> {
+    shell_image_png_within(path, size, thumbnail, None)
+}
+
+/// [`shell_image_png`], giving up after `wait` (the request still finishes
+/// in the background).
+pub fn shell_image_png_within(
+    path: &str,
+    size: i32,
+    thumbnail: bool,
+    wait: Option<Duration>,
+) -> Option<Vec<u8>> {
     let (reply, response) = mpsc::channel();
-    worker()?
+    worker(thumbnail)?
         .send((path.to_owned(), size, thumbnail, reply))
         .ok()?;
-    let (width, height, rgba) = response.recv().ok()??;
+    let (width, height, rgba) = match wait {
+        Some(wait) => response.recv_timeout(wait).ok()??,
+        None => response.recv().ok()??,
+    };
     let mut png_bytes = Vec::new();
     {
         let mut encoder = png::Encoder::new(&mut png_bytes, width, height);
@@ -61,6 +84,41 @@ pub fn shell_image_data_url(path: &str, size: i32, thumbnail: bool) -> Option<St
 /// Open Explorer's Properties sheet for a file. Must run on the UI thread.
 pub fn show_properties(path: &str) -> bool {
     imp::show_properties(path)
+}
+
+/// The primary mouse button is held down right now. Asked only when one of
+/// Stash's own drags is about to start: one started after the button was
+/// let go would drop at once, wherever the cursor happens to be.
+#[cfg(windows)]
+pub fn primary_button_down() -> bool {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_SWAPBUTTON};
+    unsafe {
+        let key = if GetSystemMetrics(SM_SWAPBUTTON) != 0 {
+            VK_RBUTTON
+        } else {
+            VK_LBUTTON
+        };
+        (GetAsyncKeyState(key.0 as i32) as u16 & 0x8000) != 0
+    }
+}
+
+#[cfg(not(windows))]
+pub fn primary_button_down() -> bool {
+    true
+}
+
+/// A file that is only a placeholder for one in the cloud (OneDrive,
+/// Google Drive, Dropbox online-only): reading it would download it.
+#[cfg(windows)]
+fn in_the_cloud(path: &str) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    const OFFLINE: u32 = 0x1000;
+    const RECALL_ON_OPEN: u32 = 0x40000;
+    const RECALL_ON_DATA_ACCESS: u32 = 0x40_0000;
+    std::fs::symlink_metadata(path)
+        .map(|m| m.file_attributes() & (OFFLINE | RECALL_ON_OPEN | RECALL_ON_DATA_ACCESS) != 0)
+        .unwrap_or(false)
 }
 
 /// Convert premultiplied BGRA (what GDI returns) to straight RGBA.
@@ -95,7 +153,7 @@ mod imp {
     use windows::Win32::UI::Shell::{
         IShellItemImageFactory, SHCreateItemFromParsingName, ShellExecuteExW,
         SEE_MASK_INVOKEIDLIST, SHELLEXECUTEINFOW, SIIGBF_BIGGERSIZEOK, SIIGBF_ICONONLY,
-        SIIGBF_RESIZETOFIT, SIIGBF_THUMBNAILONLY,
+        SIIGBF_INCACHEONLY, SIIGBF_RESIZETOFIT, SIIGBF_THUMBNAILONLY,
     };
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOW;
 
@@ -111,7 +169,14 @@ mod imp {
             let factory: IShellItemImageFactory =
                 SHCreateItemFromParsingName(&HSTRING::from(path), None).ok()?;
             let flags = if thumbnail {
-                SIIGBF_THUMBNAILONLY | SIIGBF_RESIZETOFIT
+                // A file still in the cloud: only a thumbnail Windows already
+                // has; making one would download the file (or hang offline).
+                let cached = if super::in_the_cloud(path) {
+                    SIIGBF_INCACHEONLY
+                } else {
+                    Default::default()
+                };
+                SIIGBF_THUMBNAILONLY | SIIGBF_RESIZETOFIT | cached
             } else {
                 SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK
             };
