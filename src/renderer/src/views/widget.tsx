@@ -98,15 +98,9 @@ export function WidgetView({ shelfId }: { shelfId: string }) {
 
   useEffect(() => {
     void load()
+    // Every change, made in the drawer, another widget or by a watcher.
     const off = window.stash.onFilesChanged(() => void load())
-    // Changes made in the panel don't emit events; catch up regularly.
-    const timer = window.setInterval(() => void load(), 5000)
-    window.addEventListener('focus', load)
-    return () => {
-      off()
-      window.clearInterval(timer)
-      window.removeEventListener('focus', load)
-    }
+    return () => off()
   }, [load])
 
   useEffect(

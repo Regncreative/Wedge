@@ -242,7 +242,11 @@ fn place(app: &AppHandle, s: EdgeState) {
     let Some(f) = frame(app, s.side) else {
         return;
     };
-    let (x, y) = if hidden(s) { (PARKED, PARKED) } else { (f.x, f.y) };
+    let (x, y) = if hidden(s) {
+        (PARKED, PARKED)
+    } else {
+        (f.x, f.y)
+    };
     #[cfg(windows)]
     if let Ok(hwnd) = win.hwnd() {
         use windows::Win32::Foundation::RECT;
@@ -256,8 +260,12 @@ fn place(app: &AppHandle, s: EdgeState) {
             // the web view lay out again.
             let mut now = RECT::default();
             let _ = GetWindowRect(hwnd, &mut now);
-            let same = (now.left, now.top, now.right - now.left, now.bottom - now.top)
-                == (x, y, f.w, f.h);
+            let same = (
+                now.left,
+                now.top,
+                now.right - now.left,
+                now.bottom - now.top,
+            ) == (x, y, f.w, f.h);
             let flags = if same {
                 SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE
             } else {
@@ -417,7 +425,11 @@ pub fn edge_state() -> EdgeState {
 pub fn edge_area(app: AppHandle) -> Option<[i32; 4]> {
     let s = state();
     let f = frame(&app, s.side)?;
-    let (x, y) = if hidden(s) { (PARKED, PARKED) } else { (f.x, f.y) };
+    let (x, y) = if hidden(s) {
+        (PARKED, PARKED)
+    } else {
+        (f.x, f.y)
+    };
     let (l, t, r, b) = area(&f, s);
     Some([x + l, y + t, r - l, b - t])
 }
@@ -459,9 +471,18 @@ mod tests {
             scale: 1.0,
         };
         let s = |mode, side| EdgeState { mode, side };
-        assert_eq!(area(&f, s(Mode::Idle, EdgeHandle::Right)), (498, 196, 512, 488));
-        assert_eq!(area(&f, s(Mode::Peek, EdgeHandle::Right)), (264, 196, 512, 488));
-        assert_eq!(area(&f, s(Mode::Drag, EdgeHandle::Left)), (0, 196, 248, 488));
+        assert_eq!(
+            area(&f, s(Mode::Idle, EdgeHandle::Right)),
+            (498, 196, 512, 488)
+        );
+        assert_eq!(
+            area(&f, s(Mode::Peek, EdgeHandle::Right)),
+            (264, 196, 512, 488)
+        );
+        assert_eq!(
+            area(&f, s(Mode::Drag, EdgeHandle::Left)),
+            (0, 196, 248, 488)
+        );
         assert_eq!(area(&f, s(Mode::Open, EdgeHandle::Right)), (0, 0, 512, 684));
         let hi = Frame { scale: 1.5, ..f };
         assert_eq!(area(&hi, s(Mode::Idle, EdgeHandle::Right)).0, 512 - 21);

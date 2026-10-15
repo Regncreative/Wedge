@@ -83,7 +83,8 @@ export interface PhoneSession {
 export interface FilesChanged {
   added: number
   shelfName: string
-  source: FileSource | 'expiry'
+  /** 'app': a change made in one of Stash's windows. */
+  source: FileSource | 'expiry' | 'app'
 }
 
 /** An image written by Convert / Reduce size, with its size before and after. */

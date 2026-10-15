@@ -19,8 +19,41 @@ use crate::models::FileInput;
 use crate::state::AppState;
 use crate::textract;
 
-/// Emitted whenever files are added or removed outside the panel.
+/// Emitted whenever files or shelves change: from a watcher, the phone,
+/// a shared folder or expiry (with what arrived), or from any window
+/// (source "app").
 pub const FILES_CHANGED: &str = "files-changed";
+
+/// Every window learns about changes made in another one (the drawer, a
+/// desktop widget) without polling: the database reports each write to the
+/// files or shelves tables, and a moment after a burst of them one
+/// `files-changed` event (source "app") goes out.
+pub fn announce_changes(app: &AppHandle, conn: &rusqlite::Connection) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static PENDING: AtomicBool = AtomicBool::new(false);
+    let app = app.clone();
+    conn.update_hook(Some(
+        move |_: rusqlite::hooks::Action, _: &str, table: &str, _: i64| {
+            if !matches!(table, "files" | "shelves") || PENDING.swap(true, Ordering::SeqCst) {
+                return;
+            }
+            // Called inside the write, with the database locked: hand over.
+            let app = app.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(150));
+                PENDING.store(false, Ordering::SeqCst);
+                let _ = app.emit(
+                    FILES_CHANGED,
+                    FilesChanged {
+                        added: 0,
+                        shelf_name: String::new(),
+                        source: "app".into(),
+                    },
+                );
+            });
+        },
+    ));
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -31,9 +31,12 @@ npm test              # frontend unit tests (Vitest)
 npm run test:rust     # backend unit tests (cargo test)
 npm run build:e2e     # debug build with the UI embedded
 npm run test:e2e      # Playwright drives the real stash.exe over WebView2
+npm run test:perf     # performance numbers (opt-in, see below)
 ```
 
 Real Windows drag and drop is tested too, by moving the mouse cursor (`tests/e2e/real-drop.spec.ts`). Those tests only run with `STASH_REAL_INPUT=1`, on a machine nobody is using at the time; the helpers refuse to press or release the mouse anywhere but on Stash's own windows.
+
+Performance is measured by `npm run test:perf` (`tests/e2e/perf.spec.ts`): start-up, idle CPU and memory, how fast the edge reacts, animation frames, and a shelf with a thousand files. It prints the numbers and checks generous budgets; it is left out of the regular run because timings depend on the machine.
 
 Close any running Stash before the end-to-end tests: Stash is single-instance, so a running copy would swallow the test launches.
 

@@ -297,6 +297,17 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
     )
   await expect(widget.getByText(first.name)).toBeVisible()
   await expect(widget.getByText('note.txt')).toBeVisible()
+
+  // Changes reach the other windows at once, without polling: added from
+  // the drawer, the widget shows it; added on the widget, the tab counts it.
+  const later = join(work, 'later.txt')
+  writeFileSync(later, 'y')
+  await page.evaluate(([p, id]) => window.stash.addFiles([p], id), [later, first.id])
+  await expect(widget.getByText('later.txt')).toBeVisible({ timeout: 2000 })
+  const third = join(work, 'from-widget.txt')
+  writeFileSync(third, 'z')
+  await widget.evaluate(([p, id]) => window.stash.addFiles([p], id), [third, first.id])
+  await expect(tab(page, first.name).locator('.tab-count')).toHaveText('03', { timeout: 2000 })
 })
 
 test('the shelves live on the screen edge: tucked in, out for a drag, open as a drawer', async () => {

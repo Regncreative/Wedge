@@ -29,6 +29,7 @@ Stash 2.0 is rebuilt on Tauri with a new design. Your shelves and settings carry
 - WebP conversion is lossy (quality 80) and JPG uses quality 82, so converted photos no longer grow; PNG uses maximum compression.
 - Dropping files works the same in every Stash window (tabs, drawer, widgets), using WebView2's own drop handling.
 - The tray panel is replaced by the edge drawer; the idle-fade setting is gone.
+- Nothing runs while Stash sits idle: desktop widgets hear about changes instead of checking every 5 seconds, files of one type share one icon, and the edge window never resizes while you use it.
 
 ### Security
 - Every update is verified against Stash's signing key before it installs.

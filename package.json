@@ -24,6 +24,7 @@
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "build:e2e": "tauri build --debug --no-bundle",
     "test:e2e": "playwright test",
+    "test:perf": "playwright test perf",
     "lint": "eslint -c eslint.config.cjs . && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri"

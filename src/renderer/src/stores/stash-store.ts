@@ -135,6 +135,9 @@ function applyTheme(theme: 'light' | 'dark'): void {
   document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
+/** File names in a natural order (2 before 10, case ignored); one collator for every sort. */
+const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true })
+
 export const useStashStore = create<StashState>((set, get) => ({
   ready: false,
   shelves: [],
@@ -397,7 +400,7 @@ export const useStashStore = create<StashState>((set, get) => ({
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
       switch (sort) {
         case 'name':
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+          return byName.compare(a.name, b.name)
         case 'recent':
           return (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0) || b.addedAt - a.addedAt
         case 'size':

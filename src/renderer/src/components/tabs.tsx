@@ -51,7 +51,11 @@ export function Tabs() {
   )
   const counts = useMemo(() => {
     const m = new Map<string, StashFile[]>()
-    for (const f of files) m.set(f.shelfId, [...(m.get(f.shelfId) ?? []), f])
+    for (const f of files) {
+      const list = m.get(f.shelfId)
+      if (list) list.push(f)
+      else m.set(f.shelfId, [f])
+    }
     return m
   }, [files])
 

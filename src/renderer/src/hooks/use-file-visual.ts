@@ -33,6 +33,15 @@ function load(
   return p
 }
 
+/** Files that carry their own icon; any other file looks like the rest of its type. */
+const OWN_ICON = new Set(['exe', 'lnk', 'ico', 'url', 'cur', 'ani', 'scr', 'cpl', 'appref-ms'])
+
+/** Files of one type share an icon: a thousand text files make one request, not a thousand. */
+function iconKey(file: StashFile): string {
+  const ext = file.extension.toLowerCase()
+  return file.isDirectory || !ext || OWN_ICON.has(ext) ? file.id : `.${ext}`
+}
+
 /** Files with a meaningful picture: images and videos (and, in grids, documents). */
 export function hasThumbnail(file: StashFile, documents: boolean): boolean {
   if (!file.exists || file.isDirectory) return false
@@ -45,19 +54,20 @@ export function useFileVisual(
   file: StashFile,
   wantThumb: boolean
 ): { icon: string | null; thumb: string | null } {
-  const [icon, setIcon] = useState<string | null>(() => icons.done.get(file.id) ?? null)
+  const key = iconKey(file)
+  const [icon, setIcon] = useState<string | null>(() => icons.done.get(key) ?? null)
   const [thumb, setThumb] = useState<string | null>(() => thumbs.done.get(file.id) ?? null)
 
   useEffect(() => {
     if (!file.exists || file.isDirectory) return
     let alive = true
-    void load(icons, file.id, () => window.stash.getFileIcon(file.id)).then(
+    void load(icons, key, () => window.stash.getFileIcon(file.id)).then(
       (url) => alive && setIcon(url)
     )
     return () => {
       alive = false
     }
-  }, [file.id, file.exists, file.isDirectory])
+  }, [key, file.id, file.exists, file.isDirectory])
 
   useEffect(() => {
     if (!wantThumb) return

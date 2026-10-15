@@ -132,6 +132,7 @@ pub fn run() {
                 db::ensure_kind_shelf(&conn, "pocket", name, icon, color)?;
             }
             let settings = db::get_settings(&conn, language)?;
+            services::announce_changes(app.handle(), &conn);
             app.manage(AppState::new(conn, data_dir.clone(), language));
 
             let handle = app.handle();
