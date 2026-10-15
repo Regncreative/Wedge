@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { AppSettings, FileFilter, Shelf, ShelfStats, StashFile } from '@shared/types'
 import { matchesFilter, normalizeSettings } from '@shared/types'
+import { applyAccent } from '@/lib/edge'
 
 function pickShelfId(
   preferred: string | null | undefined,
@@ -10,18 +11,6 @@ function pickShelfId(
   if (preferred && shelves.some((s) => s.id === preferred)) return preferred
   if (fallback && shelves.some((s) => s.id === fallback)) return fallback
   return shelves[0]?.id ?? null
-}
-
-export type ViewMode = 'list' | 'grid'
-
-const VIEW_KEY = 'stash.viewMode'
-
-function storedViewMode(): ViewMode {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'
-  } catch {
-    return 'list'
-  }
 }
 
 export interface ConfirmRequest {
@@ -54,9 +43,10 @@ interface StashState {
   settings: AppSettings | null
   appVersion: string
   activeShelfId: string | null
-  /** The "All" view: every shelf at once. */
-  allFiles: boolean
-  viewMode: ViewMode
+  /** The drawer stays open when the window loses focus. */
+  keepOpen: boolean
+  /** A native dialog (folder picker, Properties…) is up: don't close on blur. */
+  holds: number
   searchQuery: string
   /** Files whose contents match the search (from the backend index). */
   contentMatches: Set<string>
@@ -75,8 +65,6 @@ interface StashState {
   contextMenu: { x: number; y: number; fileId: string } | null
   /** Files from outside are being dragged over the panel. */
   dropActive: boolean
-  /** Rail shelf under the cursor during a drag (outside files or our own). */
-  dropTarget: string | null
   confirm: PendingConfirm | null
   /** Multi-selection (Ctrl/Shift+click, keyboard), in selection order. */
   selectedIds: string[]
@@ -88,8 +76,9 @@ interface StashState {
   init: () => Promise<void>
   refresh: () => Promise<void>
   setActiveShelf: (id: string) => void
-  showAll: () => void
-  setViewMode: (mode: ViewMode) => void
+  setKeepOpen: (v: boolean) => void
+  /** Run `fn` (which opens a native dialog) without the drawer closing. */
+  hold: <T>(fn: () => Promise<T>) => Promise<T>
   setSearch: (q: string) => void
   openQuickLook: (id: string | null) => void
   openShelfMenu: (x: number, y: number, shelfId: string) => void
@@ -108,7 +97,6 @@ interface StashState {
   openContextMenu: (x: number, y: number, fileId: string) => void
   closeContextMenu: () => void
   setDropActive: (v: boolean) => void
-  setDropTarget: (id: string | null) => void
   /** Resolves false when the backend rejected the change (it is rolled back). */
   updateSettings: (partial: Partial<AppSettings>) => Promise<boolean>
   getVisibleFiles: () => StashFile[]
@@ -155,8 +143,8 @@ export const useStashStore = create<StashState>((set, get) => ({
   settings: null,
   appVersion: '',
   activeShelfId: null,
-  allFiles: false,
-  viewMode: storedViewMode(),
+  keepOpen: false,
+  holds: 0,
   searchQuery: '',
   contentMatches: new Set<string>(),
   quickLookId: null,
@@ -171,7 +159,6 @@ export const useStashStore = create<StashState>((set, get) => ({
   toast: null,
   contextMenu: null,
   dropActive: false,
-  dropTarget: null,
   confirm: null,
   selectedIds: [],
   anchorId: null,
@@ -186,7 +173,7 @@ export const useStashStore = create<StashState>((set, get) => ({
     ])
 
     const theme = settings.theme === 'system' ? systemTheme : settings.theme
-    document.documentElement.style.setProperty('--accent', settings.accentColor)
+    applyAccent(settings.accentColor)
     applyTheme(theme)
     document.documentElement.lang = settings.language
 
@@ -238,17 +225,18 @@ export const useStashStore = create<StashState>((set, get) => ({
   },
 
   setActiveShelf: (id) => {
-    set({ activeShelfId: id, allFiles: false, showSettings: false, filter: 'all', ...NO_SELECTION })
+    set({ activeShelfId: id, showSettings: false, filter: 'all', searchQuery: '', ...NO_SELECTION })
     void get().updateSettings({ lastShelfId: id })
   },
-  showAll: () => set({ allFiles: true, showSettings: false, filter: 'all', ...NO_SELECTION }),
-  setViewMode: (mode) => {
+  setKeepOpen: (v) => set({ keepOpen: v }),
+  hold: async (fn) => {
+    set((s) => ({ holds: s.holds + 1 }))
     try {
-      localStorage.setItem(VIEW_KEY, mode)
-    } catch {
-      // Private mode or blocked storage: the choice just isn't remembered.
+      return await fn()
+    } finally {
+      // Focus comes back to the drawer a moment after the dialog closes.
+      setTimeout(() => set((s) => ({ holds: Math.max(0, s.holds - 1) })), 400)
     }
-    set({ viewMode: mode })
   },
   setSearch: (q) => {
     set({ searchQuery: q, ...NO_SELECTION })
@@ -278,7 +266,6 @@ export const useStashStore = create<StashState>((set, get) => ({
       confirm: null,
       searchQuery: '',
       dropActive: false,
-      dropTarget: null,
       ...NO_SELECTION
     })
     pending?.resolve(false)
@@ -294,10 +281,7 @@ export const useStashStore = create<StashState>((set, get) => ({
   openContextMenu: (x, y, fileId) =>
     set({ contextMenu: { x, y, fileId }, shelfMenu: null, addMenu: null }),
   closeContextMenu: () => set({ contextMenu: null }),
-  setDropActive: (v) => set(v ? { dropActive: true } : { dropActive: false, dropTarget: null }),
-  setDropTarget: (id) => {
-    if (get().dropTarget !== id) set({ dropTarget: id })
-  },
+  setDropActive: (v) => set({ dropActive: v }),
 
   updateSettings: async (partial) => {
     const prev = get().settings
@@ -307,7 +291,7 @@ export const useStashStore = create<StashState>((set, get) => ({
       const next = normalizeSettings(await window.stash.setSettings(partial))
       set({ settings: next })
       if (partial.accentColor) {
-        document.documentElement.style.setProperty('--accent', partial.accentColor)
+        applyAccent(partial.accentColor)
       }
       if (partial.theme) {
         const systemTheme = await window.stash.getSystemTheme()
@@ -378,18 +362,17 @@ export const useStashStore = create<StashState>((set, get) => ({
   setFocused: (id) => set({ focusedId: id }),
 
   dropShelfId: () => {
-    const { allFiles, activeShelfId, settings, shelves } = get()
-    if (!allFiles && activeShelfId) return activeShelfId
-    return pickShelfId(settings?.defaultShelfId, shelves)
+    const { activeShelfId, settings, shelves } = get()
+    return activeShelfId ?? pickShelfId(settings?.defaultShelfId, shelves)
   },
 
   getVisibleFiles: () => {
-    const { files, activeShelfId, allFiles, searchQuery, filter, settings, contentMatches } = get()
+    const { files, activeShelfId, searchQuery, filter, settings, contentMatches } = get()
     const q = searchQuery.trim().toLowerCase()
     let result = files
 
     // Search looks across every shelf.
-    if (!q && !allFiles && activeShelfId) {
+    if (!q && activeShelfId) {
       result = result.filter((f) => f.shelfId === activeShelfId)
     }
 

@@ -137,22 +137,30 @@ export function onFileDrop(listener: Listener): () => void {
   }
 }
 
+/** How a drag out of Stash ended. */
+export interface DragOutcome {
+  /** Shelf (`data-drop-shelf`) it was dropped on in our own window. */
+  shelf: string | null
+  /** Some app (or Stash) took the files. */
+  dropped: boolean
+}
+
 /**
  * Drag files out to other apps (a native drag, run by the backend). Resolves
- * when the drag ends, with the shelf it was dropped on if it landed on one
- * of ours.
+ * when the drag ends.
  */
-export async function dragOut(start: () => Promise<void>): Promise<string | null> {
+export async function dragOut(start: () => Promise<boolean>): Promise<DragOutcome> {
   document.body.dataset.stashDragging = '1'
   internalTarget = null
+  let dropped = false
   try {
-    await start()
+    dropped = await start()
   } catch {
     // Cancelled or failed: nothing to do.
   } finally {
     delete document.body.dataset.stashDragging
   }
-  const target = internalTarget
+  const shelf = internalTarget
   internalTarget = null
-  return target
+  return { shelf, dropped: dropped || shelf !== null }
 }

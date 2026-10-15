@@ -133,7 +133,7 @@ export function ContextMenu() {
       label: t.copyToFolder,
       icon: FolderSymlink,
       action: async () => {
-        const res = await window.stash.collectFiles(ids)
+        const res = await useStashStore.getState().hold(() => window.stash.collectFiles(ids))
         if (res.ok) showToast(t.copiedTo(res.copied ?? 0))
       }
     },
@@ -154,7 +154,9 @@ export function ContextMenu() {
             label: t.properties,
             icon: Info,
             action: async () => {
-              const res = await window.stash.getProperties(file.id)
+              const res = await useStashStore
+                .getState()
+                .hold(() => window.stash.getProperties(file.id))
               if (!res.ok) showToast(t.missingOnDisk)
             }
           }

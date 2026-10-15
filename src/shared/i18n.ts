@@ -49,6 +49,26 @@ export type Messages = {
   filterOther: string
   filtersLabel: string
 
+  // Edge tabs and drawer
+  tabSubNormal: string
+  tabSubTemp: (label: string) => string
+  tabSubShared: string
+  tabSubAuto: string
+  tabSubPocket: string
+  drawerMeta: (n: number, size: string) => string
+  searchMeta: (n: number) => string
+  keepOpen: string
+  pocketHint: string
+  pocketBundle: (n: number) => string
+  pocketBundleHint: string
+  pocketEmptyTitle: string
+  pocketEmptyHint: string
+  pocketLeft: (n: number) => string
+  emptyEdgeHint: string
+  sharedChip: string
+  shelfColor: string
+  shelfIcon: string
+
   // Dropping
   dropTo: (shelf: string) => string
   filesAdded: (n: number, shelf: string) => string
@@ -67,6 +87,7 @@ export type Messages = {
   folder: string
   fileNotFound: string
   pin: string
+  pinned: string
   unpin: string
   open: string
   preview: string

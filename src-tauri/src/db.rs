@@ -163,14 +163,14 @@ pub fn run_migrations(conn: &Connection, backup: Option<&Path>) -> Result<()> {
 pub fn default_shelves(lang: Language) -> [(&'static str, &'static str, &'static str); 3] {
     match lang {
         Language::Tr => [
-            ("İş", "briefcase", "#2563EB"),
-            ("Kişisel", "heart", "#E74856"),
-            ("Geçici", "clock", "#64748B"),
+            ("İş", "briefcase", "#8D97FF"),
+            ("Kişisel", "heart", "#FF7FAC"),
+            ("Geçici", "clock", "#F6BB45"),
         ],
         Language::En => [
-            ("Work", "briefcase", "#2563EB"),
-            ("Personal", "heart", "#E74856"),
-            ("Temporary", "clock", "#64748B"),
+            ("Work", "briefcase", "#8D97FF"),
+            ("Personal", "heart", "#FF7FAC"),
+            ("Temporary", "clock", "#F6BB45"),
         ],
     }
 }
@@ -267,6 +267,14 @@ pub fn shelf_by_folder(conn: &Connection, folder: &str) -> Result<Option<Shelf>>
     Ok(list_shelves(conn)?
         .into_iter()
         .find(|s| s.folder.as_deref().is_some_and(|f| norm(f) == wanted)))
+}
+
+pub fn set_shelf_style(conn: &Connection, id: &str, icon: &str, color: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE shelves SET icon = ?1, color = ?2 WHERE id = ?3",
+        params![icon, color, id],
+    )?;
+    Ok(())
 }
 
 pub fn rename_shelf(conn: &Connection, id: &str, name: &str) -> Result<()> {
@@ -477,7 +485,7 @@ pub const DEFAULT_HOTKEY: &str = "CommandOrControl+Shift+Space";
 fn defaults() -> Map<String, Value> {
     serde_json::json!({
         "theme": "dark",
-        "accentColor": "#2563EB",
+        "accentColor": "#8D97FF",
         "startWithWindows": true,
         "openHotkey": DEFAULT_HOTKEY,
         "defaultShelfId": "",
@@ -563,7 +571,7 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         accent_color: if is_hex_color(&accent) {
             accent
         } else {
-            "#2563EB".into()
+            "#8D97FF".into()
         },
         start_with_windows: bool_of("startWithWindows", true),
         language: lang,
@@ -1032,7 +1040,7 @@ mod tests {
         set_raw(&conn, "idleOpacity", &Value::String("x".into())).unwrap();
         let s = get_settings(&conn, Language::En).unwrap();
         assert_eq!(s.theme, Theme::Dark);
-        assert_eq!(s.accent_color, "#2563EB");
+        assert_eq!(s.accent_color, "#8D97FF");
         assert_eq!(s.idle_opacity, 0.4);
     }
 

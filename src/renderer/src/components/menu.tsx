@@ -12,6 +12,8 @@ export interface MenuEntry {
   disabled?: boolean
   /** Radio item (role="menuitemradio"). */
   checked?: boolean
+  /** A color dot shown before the label. */
+  swatch?: string
   /** Opens a submenu in place, with a back row. */
   children?: MenuEntry[]
   action?: () => unknown
@@ -164,6 +166,12 @@ export function Menu({ x, y, items, onClose, caption, width = 236 }: MenuProps) 
                   className={entry.danger ? 'text-[var(--danger)]' : 'text-[var(--fg-2)]'}
                 />
               ) : null}
+              {entry.swatch && (
+                <span
+                  className="h-3.5 w-3.5 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)]"
+                  style={{ background: entry.swatch }}
+                />
+              )}
               <span className="flex-1 truncate">{entry.label}</span>
               {entry.children && (
                 <ChevronRight size={14} strokeWidth={1.75} className="text-[var(--fg-3)]" />

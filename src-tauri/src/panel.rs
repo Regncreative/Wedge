@@ -1,15 +1,72 @@
-//! The panel window: showing it next to the tray, hiding, toggling.
+//! The Stash window lives on a screen edge: a column of shelf tabs that is
+//! tucked in at rest (a few pixels show), peeks out under the cursor, comes
+//! out while a file is being dragged anywhere (see dragwatch.rs), and opens
+//! into a drawer. The page draws all of it; this module sizes and places the
+//! window for each mode, so at rest nothing but the visible slivers can
+//! catch a click.
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Rect, WebviewWindow};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
+use crate::db;
+use crate::models::EdgeHandle;
 use crate::state::AppState;
 
 pub const LABEL: &str = "panel";
 
+/// What the edge window shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    /// Tucked in: only a sliver of each tab shows.
+    Idle,
+    /// The cursor is at the edge: the tabs' icons show.
+    Peek,
+    /// A file is being dragged: the tabs are out, ready for a drop.
+    Drag,
+    /// The drawer is open.
+    Open,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EdgeState {
+    pub mode: Mode,
+    pub side: EdgeHandle,
+}
+
+// Logical pixels; keep in step with the page (styles/globals.css, `--tab-*`).
+const TAB_STEP: f64 = 62.0;
+const TABS_PAD: f64 = 14.0;
+const IDLE_W: f64 = 14.0;
+const PEEK_W: f64 = 60.0;
+const DRAG_W: f64 = 224.0;
+const DRAWER_W: f64 = 440.0;
+const TAB_OUT: f64 = 60.0;
+const MARGIN: f64 = 10.0;
+
+static STATE: Mutex<EdgeState> = Mutex::new(EdgeState {
+    mode: Mode::Idle,
+    side: EdgeHandle::Right,
+});
+/// A full-screen app (game, video, presentation) is in front.
+static FULLSCREEN: AtomicBool = AtomicBool::new(false);
+
 pub fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(LABEL)
+}
+
+pub fn state() -> EdgeState {
+    *STATE.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The drawer is open (the panel is "shown").
+pub fn is_open() -> bool {
+    state().mode == Mode::Open
 }
 
 /// URL of the app's own page with a query (e.g. `view=widget`), for extra
@@ -27,98 +84,186 @@ pub fn page_url(app: &AppHandle, query: &str) -> tauri::WebviewUrl {
     }
 }
 
-/// Where the tray icon is, if Windows tells us.
-fn tray_rect(app: &AppHandle) -> Option<Rect> {
-    app.tray_by_id(crate::tray::ID)?.rect().ok().flatten()
+/// Height of the tab column: one tab per shelf (the pocket included).
+fn tabs_height(app: &AppHandle) -> f64 {
+    let state = app.state::<AppState>();
+    let n = db::list_shelves(&state.db()).map(|s| s.len()).unwrap_or(4) as f64;
+    n * TAB_STEP + TABS_PAD * 2.0
 }
 
-/// Place the panel flush against the taskbar, horizontally centred on the
-/// tray icon (or in the corner when the icon's position is unknown).
-fn position(app: &AppHandle, win: &WebviewWindow, anchor: Option<Rect>) {
-    let scale_hint = win.scale_factor().unwrap_or(1.0);
-    let anchor_point = anchor.map(|r| {
-        let p = r.position.to_physical::<f64>(scale_hint);
-        let s = r.size.to_physical::<f64>(scale_hint);
-        (p.x + s.width / 2.0, p.y)
-    });
-    let point = anchor_point.or_else(|| app.cursor_position().ok().map(|p| (p.x, p.y)));
-    let monitor = point
-        .and_then(|(x, y)| app.monitor_from_point(x, y).ok().flatten())
-        .or_else(|| app.primary_monitor().ok().flatten());
-    let (Some(monitor), Ok(size)) = (monitor, win.outer_size()) else {
-        return;
-    };
-
+/// Where the window goes for a mode: (x, y, width, height), physical pixels.
+/// The tab column is centred on the work area in every mode, so tabs don't
+/// jump when the window changes size.
+fn geometry(app: &AppHandle, s: EdgeState) -> Option<(i32, i32, i32, i32)> {
+    let monitor = app.primary_monitor().ok().flatten()?;
+    let scale = monitor.scale_factor();
     let work = monitor.work_area();
     let (wx, wy) = (work.position.x, work.position.y);
     let (ww, wh) = (work.size.width as i32, work.size.height as i32);
-    let (pw, ph) = (size.width as i32, size.height as i32);
-    let taskbar_top = wy > monitor.position().y;
-
-    let x = match anchor_point {
-        Some((cx, _)) => cx.round() as i32 - pw / 2,
-        None => wx + ww - pw,
+    let max_h = wh as f64 / scale - 2.0 * MARGIN;
+    let column = tabs_height(app).min(max_h);
+    let (w, h) = match s.mode {
+        Mode::Open => (DRAWER_W + TAB_OUT, max_h),
+        Mode::Drag => (DRAG_W, column),
+        Mode::Peek => (PEEK_W, column),
+        Mode::Idle => (IDLE_W, column),
     };
-    let y = if taskbar_top { wy } else { wy + wh - ph };
-
-    let x = x.clamp(wx, (wx + ww - pw).max(wx));
-    let y = y.clamp(wy, (wy + wh - ph).max(wy));
-    let _ = win.set_position(PhysicalPosition::new(x, y));
+    let (w, h) = ((w * scale).round() as i32, (h * scale).round() as i32);
+    let y = wy + (wh - h) / 2;
+    let x = match s.side {
+        EdgeHandle::Left => wx,
+        _ => wx + ww - w,
+    };
+    Some((x, y, w, h))
 }
 
-pub fn show(app: &AppHandle) {
-    let Some(win) = window(app) else { return };
-    position(app, &win, tray_rect(app));
-    let _ = win.set_always_on_top(true);
-    let _ = win.show();
-    let _ = win.unminimize();
-    let _ = win.set_focus();
-    crate::edge::panel_visible(app, true);
-    let _ = app.emit("panel-shown", ());
+fn hidden(s: EdgeState) -> bool {
+    s.mode != Mode::Open && (s.side == EdgeHandle::Off || FULLSCREEN.load(Ordering::SeqCst))
 }
 
-/// Open the panel at the left or right edge of the screen, vertically
-/// centred on `y` (clicking the edge handle).
-pub fn show_at_edge(app: &AppHandle, left: bool, y: i32) {
+/// Where a hidden window waits: off every screen.
+const PARKED: i32 = -32000;
+
+/// Move and resize in one step, without taking focus. The window is created
+/// visible (off-screen, see tauri.conf.json) and stays "visible" for good:
+/// hiding parks it off-screen. Showing and hiding through the window API
+/// would activate it, and tao re-hides a window it believes hidden whenever
+/// its style changes.
+fn place(app: &AppHandle, s: EdgeState) {
     let Some(win) = window(app) else { return };
-    let cursor_x = app.cursor_position().map(|p| p.x).unwrap_or(0.0);
-    let monitor = app
-        .monitor_from_point(cursor_x, y as f64)
-        .ok()
-        .flatten()
-        .or_else(|| app.primary_monitor().ok().flatten());
-    if let (Some(m), Ok(size)) = (monitor, win.outer_size()) {
-        let work = m.work_area();
-        let (wx, wy) = (work.position.x, work.position.y);
-        let (ww, wh) = (work.size.width as i32, work.size.height as i32);
-        let (pw, ph) = (size.width as i32, size.height as i32);
-        let x = if left { wx } else { wx + ww - pw };
-        let y = (y - ph / 2).clamp(wy, (wy + wh - ph).max(wy));
-        let _ = win.set_position(PhysicalPosition::new(x, y));
+    let Some((mut x, mut y, w, h)) = geometry(app, s) else {
+        return;
+    };
+    if hidden(s) {
+        (x, y) = (PARKED, PARKED);
     }
-    let _ = win.set_always_on_top(true);
-    let _ = win.show();
-    let _ = win.set_focus();
-    crate::edge::panel_visible(app, true);
-    let _ = app.emit("panel-shown", ());
+    #[cfg(windows)]
+    if let Ok(hwnd) = win.hwnd() {
+        use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE};
+        unsafe {
+            let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, w, h, SWP_NOACTIVATE);
+        }
+        return;
+    }
+    let _ = win.set_size(tauri::PhysicalSize::new(w as u32, h as u32));
+    let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
+}
+
+/// Switch mode: place the window and tell the page. Leaving or entering the
+/// drawer also sends `panel-hidden` / `panel-shown`.
+pub fn set_mode(app: &AppHandle, mode: Mode) {
+    let (before, now) = {
+        let mut s = STATE.lock().unwrap_or_else(|e| e.into_inner());
+        let before = *s;
+        s.mode = mode;
+        (before, *s)
+    };
+    place(app, now);
+    let _ = app.emit_to(LABEL, "edge-mode", now);
+    if before.mode != Mode::Open && mode == Mode::Open {
+        let _ = app.emit("panel-shown", ());
+    } else if before.mode == Mode::Open && mode != Mode::Open {
+        let _ = app.emit("panel-hidden", ());
+    }
+}
+
+/// Open the drawer and give it the keyboard (tray, hotkey, second launch).
+pub fn show(app: &AppHandle) {
+    set_mode(app, Mode::Open);
+    if let Some(win) = window(app) {
+        let _ = win.set_always_on_top(true);
+        let _ = win.set_focus();
+    }
 }
 
 pub fn hide(app: &AppHandle) {
-    let Some(win) = window(app) else { return };
-    let _ = app.emit("panel-hidden", ());
-    let _ = win.hide();
-    crate::edge::panel_visible(app, false);
+    set_mode(app, Mode::Idle);
 }
 
 pub fn toggle(app: &AppHandle) {
-    match window(app) {
-        Some(win) if win.is_visible().unwrap_or(false) => hide(app),
-        _ => show(app),
+    if is_open() {
+        hide(app)
+    } else {
+        show(app)
     }
 }
 
+/// The side setting changed (or at startup).
+pub fn apply_side(app: &AppHandle, side: EdgeHandle) {
+    let mode = {
+        let mut s = STATE.lock().unwrap_or_else(|e| e.into_inner());
+        s.side = side;
+        s.mode
+    };
+    set_mode(app, mode);
+}
+
+/// Shelves were added or removed: the tab column changed height.
+pub fn relayout(app: &AppHandle) {
+    place(app, state());
+}
+
+/// A file drag started or ended somewhere in Windows (dragwatch.rs).
+pub fn on_drag(app: &AppHandle, active: bool) {
+    let _ = app.emit_to(LABEL, "edge-drag", active);
+    let s = state();
+    if active {
+        let can_pop = s.side != EdgeHandle::Off && !FULLSCREEN.load(Ordering::SeqCst);
+        if can_pop && matches!(s.mode, Mode::Idle | Mode::Peek) {
+            set_mode(app, Mode::Drag);
+        }
+        return;
+    }
+    // The page tucks the tabs in once it has handled a drop; this is only a
+    // fallback in case it doesn't.
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(2500));
+        if state().mode == Mode::Drag && !crate::dragwatch::active() {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || set_mode(&handle, Mode::Idle));
+        }
+    });
+}
+
+#[cfg(windows)]
+fn fullscreen_app_running() -> bool {
+    use windows::Win32::UI::Shell::{
+        SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE,
+        QUNS_RUNNING_D3D_FULL_SCREEN,
+    };
+    match unsafe { SHQueryUserNotificationState() } {
+        Ok(s) => s == QUNS_BUSY || s == QUNS_RUNNING_D3D_FULL_SCREEN || s == QUNS_PRESENTATION_MODE,
+        Err(_) => false,
+    }
+}
+
+#[cfg(not(windows))]
+fn fullscreen_app_running() -> bool {
+    false
+}
+
+/// Hide the tabs while a full-screen app runs, and follow work-area changes
+/// (taskbar moved, resolution changed).
+pub fn start_monitor(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let mut last = None;
+        loop {
+            std::thread::sleep(Duration::from_millis(1500));
+            let busy = fullscreen_app_running();
+            let geometry = geometry(&app, state());
+            if FULLSCREEN.swap(busy, Ordering::SeqCst) != busy || geometry != last {
+                last = geometry;
+                let handle = app.clone();
+                let _ = app.run_on_main_thread(move || place(&handle, state()));
+            }
+        }
+    });
+}
+
 /// Drop always-on-top so a native dialog (Properties) can sit above the
-/// panel; it comes back the next time the panel gets focus.
+/// drawer; it comes back the next time the window gets focus.
 pub fn yield_to_dialog(app: &AppHandle) {
     if let Some(win) = window(app) {
         let _ = win.set_always_on_top(false);
@@ -134,5 +279,45 @@ pub fn on_focus(app: &AppHandle) {
         if let Some(win) = window(app) {
             let _ = win.set_always_on_top(true);
         }
+    }
+}
+
+#[tauri::command]
+pub fn edge_state() -> EdgeState {
+    state()
+}
+
+/// The page asks for a mode (hover → peek, a drag over the sliver → drag,
+/// a tab click → open, done → idle).
+#[tauri::command]
+pub fn edge_mode(app: AppHandle, mode: Mode) {
+    set_mode(&app, mode);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn modes_and_sides_serialize_for_the_page() {
+        let s = EdgeState {
+            mode: Mode::Drag,
+            side: EdgeHandle::Left,
+        };
+        assert_eq!(
+            serde_json::to_value(s).unwrap(),
+            serde_json::json!({ "mode": "drag", "side": "left" })
+        );
+        let m: Mode = serde_json::from_value(serde_json::json!("open")).unwrap();
+        assert_eq!(m, Mode::Open);
+    }
+
+    #[test]
+    fn hidden_only_when_off_or_full_screen_and_closed() {
+        let s = |mode, side| EdgeState { mode, side };
+        assert!(!hidden(s(Mode::Idle, EdgeHandle::Right)));
+        assert!(hidden(s(Mode::Idle, EdgeHandle::Off)));
+        // The drawer opens from the tray or hotkey even with the tabs off.
+        assert!(!hidden(s(Mode::Open, EdgeHandle::Off)));
     }
 }

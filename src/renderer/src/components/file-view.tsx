@@ -1,19 +1,21 @@
 import type { KeyboardEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileRow, FileTile } from './file-item'
+import { FileCard } from './file-card'
 import { EmptyState } from './empty-state'
 import { openFile, pinFiles, removeFiles } from '@/lib/file-actions'
 import { useStashStore } from '@/stores/stash-store'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
-const ROW_HEIGHT = 58
-const TILE_HEIGHT = 140
-const TILE_MIN_WIDTH = 112
-const PAD = 8
+/** Card height plus the gap below it. */
+const CARD_HEIGHT = 252
+const CARD_MIN_WIDTH = 170
+/** Space around the grid; cards add half the gap on each side. */
+const PAD = 14
+const GAP = 12
 const OVERSCAN = 4
 
-/** The files of the current view, as a virtualized list or grid. */
+/** The files of the drawer's shelf (or the search results) as a virtualized grid of cards. */
 export function FileView() {
   const t = useT()
   const getVisibleFiles = useStashStore((s) => s.getVisibleFiles)
@@ -22,17 +24,15 @@ export function FileView() {
   const searchQuery = useStashStore((s) => s.searchQuery)
   const filter = useStashStore((s) => s.filter)
   const activeShelfId = useStashStore((s) => s.activeShelfId)
-  const allFiles = useStashStore((s) => s.allFiles)
   const fileSort = useStashStore((s) => s.settings?.fileSort)
   const contentMatches = useStashStore((s) => s.contentMatches)
-  const viewMode = useStashStore((s) => s.viewMode)
 
   const visible = useMemo(
     () => getVisibleFiles(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [files, searchQuery, contentMatches, filter, activeShelfId, allFiles, fileSort, getVisibleFiles]
+    [files, searchQuery, contentMatches, filter, activeShelfId, fileSort, getVisibleFiles]
   )
-  const spansShelves = allFiles || searchQuery.trim() !== ''
+  const spansShelves = searchQuery.trim() !== ''
   const shelfNames = useMemo(() => new Map(shelves.map((s) => [s.id, s.name])), [shelves])
 
   const empty = visible.length === 0
@@ -55,13 +55,12 @@ export function FileView() {
   useEffect(() => {
     if (containerRef.current) containerRef.current.scrollTop = 0
     setScrollTop(0)
-  }, [activeShelfId, allFiles, filter, searchQuery, viewMode])
+  }, [activeShelfId, filter, searchQuery])
 
-  const grid = viewMode === 'grid'
-  const columns = grid ? Math.max(2, Math.floor((size.width - PAD * 2) / TILE_MIN_WIDTH)) : 1
-  const itemHeight = grid ? TILE_HEIGHT : ROW_HEIGHT
+  const columns = Math.max(2, Math.floor((size.width - PAD * 2 + GAP) / CARD_MIN_WIDTH))
+  const itemHeight = CARD_HEIGHT
   const rows = Math.ceil(visible.length / columns)
-  const cellWidth = (size.width - PAD * 2) / columns
+  const cellWidth = (size.width - PAD * 2 + GAP) / columns
 
   const onScroll = useCallback(() => {
     setScrolling(true)
@@ -110,11 +109,9 @@ export function FileView() {
       case 'ArrowUp':
         return moveTo(current < 0 ? 0 : from - columns)
       case 'ArrowRight':
-        if (grid) return moveTo(current < 0 ? 0 : from + 1)
-        return
+        return moveTo(current < 0 ? 0 : from + 1)
       case 'ArrowLeft':
-        if (grid) return moveTo(current < 0 ? 0 : from - 1)
-        return
+        return moveTo(current < 0 ? 0 : from - 1)
       case 'PageDown':
         return moveTo(from + pageSize)
       case 'PageUp':
@@ -193,17 +190,13 @@ export function FileView() {
               style={{
                 position: 'absolute',
                 top: PAD + row * itemHeight,
-                left: grid ? PAD + col * cellWidth : 0,
-                width: grid ? cellWidth : '100%',
+                left: PAD - GAP / 2 + col * cellWidth,
+                width: cellWidth,
                 height: itemHeight,
-                padding: grid ? 3 : 0
+                padding: `0 ${GAP / 2}px ${GAP}px`
               }}
             >
-              {grid ? (
-                <FileTile file={file} index={index} shelfName={shelfName} />
-              ) : (
-                <FileRow file={file} index={index} shelfName={shelfName} />
-              )}
+              <FileCard file={file} index={index} shelfName={shelfName} />
             </div>
           )
         })}

@@ -1,70 +1,118 @@
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { useIdleOpacity } from '@/hooks/use-idle-opacity'
-import { Rail } from './components/rail'
-import { ShelfHeader } from './components/shelf-header'
-import { FilterChips } from './components/filter-chips'
-import { FileView } from './components/file-view'
-import { SelectionBar } from './components/selection-bar'
-import { DropOverlay } from './components/drop-overlay'
+import { useEffect, useRef } from 'react'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { Tabs } from './components/tabs'
+import { Drawer } from './components/drawer'
 import { ContextMenu } from './components/context-menu'
 import { AddShelfMenu, ShelfMenu } from './components/shelf-menu'
-import { SettingsView } from './components/settings-view'
-import { Toast } from './components/toast'
-import { ConfirmDialog } from './components/confirm-dialog'
-import { NoteDialog } from './components/note-dialog'
-import { QuickLook } from './components/quick-look'
-import { PhoneSheet } from './components/phone-sheet'
-import { SharedShelfDialog } from './components/shared-dialog'
-import { Welcome } from './components/welcome'
 import { addPaths } from './lib/file-actions'
 import { shelfAt } from './lib/file-drop'
+import { connectEdge, useEdge } from './lib/edge'
 import { useStashStore } from './stores/stash-store'
 import { useT } from './lib/i18n'
+
+/** After a drop on a tab, the tabs stay out this long before tucking in. */
+const AFTER_DROP_MS = 900
 
 export default function App() {
   const t = useT()
   const ready = useStashStore((s) => s.ready)
   const init = useStashStore((s) => s.init)
-  const showSettings = useStashStore((s) => s.showSettings)
-  const idleOpacity = useStashStore((s) => s.settings?.idleOpacity ?? 0.4)
-  const idleTimeoutSec = useStashStore((s) => s.settings?.idleTimeoutSec ?? 10)
-
-  useIdleOpacity(ready, idleOpacity, idleTimeoutSec)
+  const mode = useEdge((s) => s.mode)
+  const side = useEdge((s) => s.side)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     void init()
+    return connectEdge()
   }, [init])
 
-  // Files dragged in from Explorer: onto the current shelf, or onto a shelf in the rail.
+  const later = (fn: () => void, ms: number) => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    leaveTimer.current = setTimeout(fn, ms)
+  }
+  const cancelLater = () => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    leaveTimer.current = null
+  }
+  /** Back to the tucked-in tabs, unless the drawer is open. */
+  const tuckIn = () => {
+    const edge = useEdge.getState()
+    if (edge.mode === 'drag' || edge.mode === 'peek') edge.request('idle')
+  }
+
+  // Files dragged in from Explorer: onto a tab, or into the open drawer.
   useEffect(
     () =>
       window.stash.onFileDrop((event) => {
         const store = useStashStore.getState()
+        const edge = useEdge.getState()
         switch (event.type) {
           case 'enter':
+            cancelLater()
             store.setDropActive(true)
-            store.setDropTarget(shelfAt(event.x, event.y))
+            // Apps that don't show Windows' drag picture: come out on contact.
+            if (edge.mode === 'idle' || edge.mode === 'peek') edge.request('drag')
+            edge.setTarget(shelfAt(event.x, event.y))
             break
           case 'over':
-            store.setDropTarget(shelfAt(event.x, event.y))
+            edge.setTarget(shelfAt(event.x, event.y))
             break
           case 'leave':
             store.setDropActive(false)
+            edge.setTarget(null)
+            if (!edge.dragging) later(tuckIn, 450)
             break
           case 'internal-over':
-            store.setDropTarget(event.shelfId)
+            edge.setTarget(event.shelfId)
             break
           case 'drop': {
             store.setDropActive(false)
-            const target = shelfAt(event.x, event.y) ?? store.dropShelfId()
+            edge.setTarget(null)
+            const target =
+              shelfAt(event.x, event.y) ??
+              (edge.mode === 'open' ? store.activeShelfId : null) ??
+              store.dropShelfId()
+            if (target) edge.flash(target)
             void addPaths(event.paths, target)
+            if (edge.mode === 'drag') later(tuckIn, AFTER_DROP_MS)
             break
           }
         }
       }),
     []
   )
+
+  // A drag elsewhere in Windows ended without coming here: tuck the tabs in.
+  useEffect(
+    () =>
+      useEdge.subscribe((s, prev) => {
+        if (prev.dragging && !s.dragging && !useStashStore.getState().dropActive) {
+          later(tuckIn, 300)
+        }
+        if (!prev.dragging && s.dragging) cancelLater()
+      }),
+    []
+  )
+
+  // Clicking anywhere else closes the drawer (unless it's kept open or a
+  // native dialog it opened is up).
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const off = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (timer) clearTimeout(timer)
+      if (focused) return
+      timer = setTimeout(() => {
+        const { keepOpen, holds, confirm } = useStashStore.getState()
+        if (useEdge.getState().mode === 'open' && !keepOpen && holds === 0 && !confirm) {
+          useEdge.getState().request('idle')
+        }
+      }, 150)
+    })
+    return () => {
+      if (timer) clearTimeout(timer)
+      void off.then((fn) => fn())
+    }
+  }, [])
 
   // Files arriving from watchers, the phone, shared folders or expiry.
   useEffect(
@@ -74,26 +122,31 @@ export default function App() {
         void refresh()
         if (change.added === 0) return
         if (change.source === 'phone') showToast(t.phoneReceived(change.added))
-        else if (change.source === 'shared')
+        else if (change.source === 'shared') {
           showToast(t.sharedArrived(change.added, change.shelfName))
-        else if (change.source === 'downloads' || change.source === 'screenshots') {
+        } else if (change.source === 'downloads' || change.source === 'screenshots') {
           showToast(t.autoAdded(change.added, change.shelfName))
         }
       }),
     [t]
   )
 
-  // Ctrl+V in the panel: files, images, links or text from the clipboard.
+  // Keys: Ctrl+V pastes onto the open shelf; Esc closes settings, then the drawer.
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'v') return
       const target = e.target as HTMLElement | null
-      if (
+      const typing =
         target &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      ) {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        const store = useStashStore.getState()
+        if (store.contextMenu || store.shelfMenu || store.addMenu || store.confirm) return
+        if (store.selectedIds.length > 0 || typing) return
+        if (store.showSettings) store.setShowSettings(false)
+        else useEdge.getState().request('idle')
         return
       }
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'v' || typing) return
       e.preventDefault()
       const { dropShelfId, refresh, showToast } = useStashStore.getState()
       const res = await window.stash.pasteClipboard(dropShelfId())
@@ -114,34 +167,20 @@ export default function App() {
   useEffect(() => {
     const store = () => useStashStore.getState()
     const offTheme = window.stash.onThemeChanged((theme) => {
-      const mode = store().settings?.theme
-      if (mode === 'system' || !mode) store().setTheme(theme)
+      const pref = store().settings?.theme
+      if (pref === 'system' || !pref) store().setTheme(theme)
     })
     const offNav = window.stash.onNavigateSettings(() => store().setShowSettings(true))
-    const reset = () => store().resetPanelUi()
     const offShown = window.stash.onPanelShown(() => {
-      reset()
+      store().resetPanelUi()
       void store().refresh()
     })
-    const offHidden = window.stash.onPanelHidden(reset)
+    const offHidden = window.stash.onPanelHidden(() => store().resetPanelUi())
     const offUpdate = window.stash.onUpdateStatus((status) => {
       const { showToast } = store()
-      switch (status.state) {
-        case 'available':
-          showToast(t.updateAvailable(status.version))
-          break
-        case 'downloaded':
-          showToast(t.updateReady(status.version))
-          break
-        case 'dev':
-          showToast(t.updateDev)
-          break
-        case 'error':
-          showToast(t.updateError)
-          break
-        default:
-          break
-      }
+      if (status.state === 'available') showToast(t.updateAvailable(status.version))
+      else if (status.state === 'downloaded') showToast(t.updateReady(status.version))
+      else if (status.state === 'error') showToast(t.updateError)
     })
     return () => {
       offTheme()
@@ -152,45 +191,28 @@ export default function App() {
     }
   }, [t])
 
-  if (!ready) {
-    return (
-      <div className="app-shell items-center justify-center">
-        <div className="h-5 w-5 animate-pulse rounded-full bg-[var(--accent)] opacity-70" />
-      </div>
-    )
-  }
-
   return (
-    <motion.div
-      className="app-shell"
-      initial={{ opacity: 0, y: 14, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+    <div
+      className="edge-root"
+      data-side={side === 'left' ? 'left' : 'right'}
+      data-mode={mode}
+      onPointerEnter={() => {
+        cancelLater()
+        if (useEdge.getState().mode === 'idle') useEdge.getState().request('peek')
+      }}
+      onPointerLeave={() => {
+        if (useEdge.getState().mode === 'peek') later(tuckIn, 250)
+      }}
     >
-      <Rail />
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        {showSettings ? (
-          <SettingsView />
-        ) : (
-          <>
-            <ShelfHeader />
-            <FilterChips />
-            <FileView />
-            <SelectionBar />
-            <DropOverlay />
-          </>
-        )}
-        <Toast />
-      </main>
-      <ContextMenu />
-      <ShelfMenu />
-      <AddShelfMenu />
-      <NoteDialog />
-      <QuickLook />
-      <PhoneSheet />
-      <SharedShelfDialog />
-      <ConfirmDialog />
-      <Welcome />
-    </motion.div>
+      {ready && (
+        <>
+          <Tabs />
+          <Drawer />
+          <ContextMenu />
+          <ShelfMenu />
+          <AddShelfMenu />
+        </>
+      )}
+    </div>
   )
 }

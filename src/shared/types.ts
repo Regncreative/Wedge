@@ -10,7 +10,7 @@ export type EdgeHandle = 'off' | 'left' | 'right'
 export type FileSource = 'manual' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared'
 /** Automatic shelves are filled by Stash itself; shared shelves mirror a folder. */
 export type ShelfKind =
-  'normal' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared' | 'drop'
+  'normal' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared' | 'pocket' | 'drop'
 
 export type FileFilter =
   | 'all'
@@ -167,7 +167,7 @@ export type UpdateStatus =
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
-  accentColor: '#2563EB',
+  accentColor: '#8D97FF',
   startWithWindows: true,
   language: 'en',
   openHotkey: 'CommandOrControl+Shift+Space',

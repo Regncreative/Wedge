@@ -5,7 +5,7 @@ pub mod commands;
 pub mod commands_extra;
 pub mod db;
 pub mod dragdrop;
-pub mod edge;
+pub mod dragwatch;
 pub mod files;
 pub mod hotkey;
 pub mod i18n;
@@ -56,9 +56,7 @@ fn add_from_explorer(app: &tauri::AppHandle, paths: Vec<String>) {
         let Some(change) = services::ingest(&app, &batch, "manual", target.as_deref()) else {
             return;
         };
-        let visible = panel::window(&app)
-            .and_then(|w| w.is_visible().ok())
-            .unwrap_or(false);
+        let visible = panel::is_open();
         if change.added > 0 && notify && !visible {
             use tauri_plugin_notification::NotificationExt;
             let _ = app
@@ -128,6 +126,11 @@ pub fn run() {
             );
             let language = i18n::system_language();
             let conn = db::open(&data_dir.join("stash.db"), language)?;
+            {
+                // The pocket: a tab at the top of the edge that holds files for later.
+                let (name, icon, color) = i18n::kind_shelf(language, "pocket");
+                db::ensure_kind_shelf(&conn, "pocket", name, icon, color)?;
+            }
             let settings = db::get_settings(&conn, language)?;
             app.manage(AppState::new(conn, data_dir.clone(), language));
 
@@ -137,7 +140,9 @@ pub fn run() {
             }
             tray::create(handle)?;
             commands::sync_context_menu(handle, settings.context_menu);
-            edge::start_monitor(handle);
+            panel::apply_side(handle, settings.edge_handle);
+            panel::start_monitor(handle);
+            dragwatch::start(handle);
             let launch_paths = shell::paths_from_args(&std::env::args().collect::<Vec<_>>());
             if !launch_paths.is_empty() {
                 add_from_explorer(handle, launch_paths);
@@ -213,6 +218,7 @@ pub fn run() {
             commands::rename_shelf,
             commands::delete_shelf,
             commands::create_shared_shelf,
+            commands::set_shelf_style,
             commands::get_stats,
             commands::get_settings,
             commands::set_settings,
@@ -242,9 +248,8 @@ pub fn run() {
             commands_extra::paste_clipboard,
             commands_extra::quick_look,
             commands_extra::pick_folder,
-            edge::edge_expand,
-            edge::edge_move,
-            edge::edge_click,
+            panel::edge_state,
+            panel::edge_mode,
             phone::phone_start,
             phone::phone_stop,
             widget::open_widget,

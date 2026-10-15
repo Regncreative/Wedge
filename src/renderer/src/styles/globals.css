@@ -3,62 +3,79 @@
 @tailwind utilities;
 
 /*
- * Stash "Ray" design: a shelf rail on the left, content on the right.
- * Neutral Fluent-style surfaces; the accent color comes from settings.
+ * Stash on the screen edge: shelf tabs tucked against the edge, a drawer
+ * pulled out by its tab. Tab colors come from each shelf; text on them is
+ * always dark ink. The accent (settings) marks focus and selection.
  */
 
 :root,
 .dark {
-  --bg: rgba(30, 30, 34, 0.97);
-  --bg-solid: #1e1e22;
-  --rail: rgba(0, 0, 0, 0.2);
-  --surface: rgba(255, 255, 255, 0.045);
-  --surface-hover: rgba(255, 255, 255, 0.075);
-  --surface-pressed: rgba(255, 255, 255, 0.11);
-  --flyout: #2a2a2f;
-  --field: rgba(255, 255, 255, 0.055);
-  --stroke: rgba(255, 255, 255, 0.075);
-  --stroke-strong: rgba(255, 255, 255, 0.14);
-  --fg: #f4f4f5;
-  --fg-2: #b6b6bf;
-  --fg-3: #80808b;
-  --accent: #2563eb;
-  --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
-  --accent-faint: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-text: color-mix(in srgb, var(--accent) 62%, white);
-  --danger: #f87171;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --scrollbar: rgba(255, 255, 255, 0.22);
-  --thumb-bg: rgba(255, 255, 255, 0.04);
-  --scrim: rgba(0, 0, 0, 0.5);
+  --bg: #15171e;
+  --bg-solid: #15171e;
+  --surface: #1d2029;
+  --surface-hover: #252935;
+  --surface-pressed: #2d3240;
+  --flyout: #20232c;
+  --field: #1d2029;
+  --stroke: rgba(236, 239, 248, 0.08);
+  --stroke-strong: rgba(236, 239, 248, 0.16);
+  --fg: #eef0f7;
+  --fg-2: #a6abbb;
+  --fg-3: #6f7486;
+  --ink: #12131a;
+  --paper: #eceae4;
+  --accent: #8d97ff;
+  --on-accent: #12131a;
+  --accent-soft: color-mix(in srgb, var(--accent) 24%, transparent);
+  --accent-faint: color-mix(in srgb, var(--accent) 13%, transparent);
+  --accent-text: color-mix(in srgb, var(--accent) 70%, white);
+  --danger: #ff7a70;
+  --success: #43d8aa;
+  --warning: #f6bb45;
+  --shadow-flyout: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 239, 248, 0.08);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-drawer: -24px 0 60px rgba(0, 0, 0, 0.5), inset 1px 0 0 rgba(236, 239, 248, 0.14);
+  --scrollbar: rgba(236, 239, 248, 0.2);
+  --thumb-bg: #252935;
+  --scrim: rgba(8, 9, 12, 0.6);
+
+  --display:
+    'Bricolage Grotesque Variable', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Instrument Sans', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Martian Mono', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+
+  /* Geometry shared with src-tauri/src/panel.rs (TAB_STEP, DRAWER_W, TAB_OUT). */
+  --tab-w: 196px;
+  --tab-h: 52px;
+  --drawer-w: 440px;
+  --tab-out: 60px;
+  --spring: cubic-bezier(0.34, 1.45, 0.6, 1);
 }
 
 .light {
-  --bg: rgba(249, 249, 251, 0.98);
-  --bg-solid: #f9f9fb;
-  --rail: rgba(0, 0, 0, 0.035);
+  --bg: #f4f5f8;
+  --bg-solid: #f4f5f8;
   --surface: #ffffff;
-  --surface-hover: #f1f1f4;
-  --surface-pressed: #e8e8ee;
+  --surface-hover: #eceef3;
+  --surface-pressed: #e3e6ee;
   --flyout: #ffffff;
-  --field: rgba(0, 0, 0, 0.04);
-  --stroke: rgba(0, 0, 0, 0.08);
-  --stroke-strong: rgba(0, 0, 0, 0.15);
-  --fg: #18181b;
-  --fg-2: #4f4f58;
-  --fg-3: #8b8b95;
-  --accent-text: color-mix(in srgb, var(--accent) 88%, black);
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
-  --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.07);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.055);
-  --scrollbar: rgba(0, 0, 0, 0.22);
-  --thumb-bg: rgba(0, 0, 0, 0.035);
-  --scrim: rgba(20, 20, 24, 0.35);
+  --field: #ffffff;
+  --stroke: rgba(18, 19, 26, 0.08);
+  --stroke-strong: rgba(18, 19, 26, 0.15);
+  --fg: #15171e;
+  --fg-2: #4a4f5e;
+  --fg-3: #868b9a;
+  --paper: #e6e3db;
+  --accent-text: color-mix(in srgb, var(--accent) 80%, black);
+  --danger: #d6453b;
+  --success: #12936d;
+  --warning: #b9800f;
+  --shadow-flyout: 0 18px 44px rgba(20, 22, 30, 0.16), 0 0 0 1px rgba(18, 19, 26, 0.08);
+  --shadow-card: 0 1px 2px rgba(20, 22, 30, 0.06), 0 0 0 1px rgba(18, 19, 26, 0.06);
+  --shadow-drawer: -24px 0 60px rgba(20, 22, 30, 0.2), inset 1px 0 0 rgba(18, 19, 26, 0.1);
+  --scrollbar: rgba(18, 19, 26, 0.2);
+  --thumb-bg: #e9ebf1;
+  --scrim: rgba(20, 22, 30, 0.35);
 }
 
 * {
@@ -79,7 +96,7 @@ body,
   width: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--body);
   font-size: 13px;
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
@@ -110,29 +127,210 @@ input {
   outline-offset: 1px;
 }
 
-/* Idle fade: the window is transparent, so fading the page fades the panel. */
-#root {
-  opacity: var(--panel-opacity, 1);
-  transition: opacity var(--panel-fade, 0ms) cubic-bezier(0.33, 1, 0.68, 1);
-}
-
-.app-shell {
-  position: relative;
-  height: 100%;
-  display: flex;
-  overflow: hidden;
-  border-radius: 14px;
-  background: var(--bg);
-  border: 1px solid var(--stroke-strong);
-}
-
 .display-font {
-  font-family: 'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--display);
 }
+.mono {
+  font-family: var(--mono);
+}
+
+/* ── Edge: the tab column and the drawer ───────────────── */
+
+.edge-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  --dir: 1;
+}
+.edge-root[data-side='left'] {
+  --dir: -1;
+}
+
+.tabs {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.edge-root[data-side='left'] .tabs {
+  right: auto;
+  left: 0;
+}
+
+.tab {
+  position: relative;
+  width: var(--tab-w);
+  height: var(--tab-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 11px;
+  border-radius: 16px 0 0 16px;
+  color: var(--ink);
+  text-align: left;
+  background: var(--c);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.32),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  transform: translateX(calc(var(--dir) * var(--x, 0px)));
+  transition:
+    transform 420ms var(--spring),
+    filter 140ms;
+  transition-delay: calc(var(--i) * 26ms);
+  cursor: pointer;
+}
+.edge-root[data-side='left'] .tab {
+  flex-direction: row-reverse;
+  text-align: right;
+  padding: 0 11px 0 14px;
+  border-radius: 0 16px 16px 0;
+}
+.tab .tab-ico {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(18, 19, 26, 0.12);
+}
+.tab .tab-label {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.tab .tab-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab .tab-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0.66;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab .tab-count {
+  flex: none;
+  font: 500 10.5px/1 var(--mono);
+  padding: 5px 7px;
+  border-radius: 8px;
+  background: rgba(18, 19, 26, 0.14);
+}
+.tab.is-bump .tab-count {
+  animation: tab-bump 520ms var(--spring);
+}
+.tab.is-pocket {
+  background:
+    repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.035) 0 6px, transparent 6px 12px),
+    var(--paper);
+}
+.tab.is-pocket .tab-ico {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px rgba(18, 19, 26, 0.35);
+}
+.tab .tab-stack {
+  flex: none;
+  display: flex;
+  padding-inline-start: 9px;
+}
+.tab .tab-stack img,
+.tab .tab-stack span {
+  width: 22px;
+  height: 22px;
+  margin-inline-start: -9px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--c);
+}
+
+/* Modes: tucked (a sliver shows), peek (icons show), drag (out), open. */
+.edge-root[data-mode='idle'] .tab {
+  --x: calc(var(--tab-w) - 9px);
+  transition-delay: 0ms;
+}
+.edge-root[data-mode='peek'] .tab {
+  --x: calc(var(--tab-w) - 52px);
+}
+.edge-root[data-mode='drag'] .tab {
+  --x: 0px;
+}
+.edge-root[data-mode='drag'] .tab.is-target {
+  --x: -20px;
+  filter: brightness(1.06);
+  transition-delay: 0ms;
+}
+.edge-root[data-mode='open'] .tab {
+  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 12px);
+  transition-delay: 0ms;
+}
+.edge-root[data-mode='open'] .tab.is-active,
+.edge-root[data-mode='open'] .tab:hover,
+.edge-root[data-mode='open'] .tab.is-target {
+  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out));
+}
+
+@keyframes tab-bump {
+  40% {
+    transform: scale(1.5);
+  }
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 2;
+  width: var(--drawer-w);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px 0 0 22px;
+  background: var(--bg);
+  box-shadow: var(--shadow-drawer);
+  transform: translateX(calc(var(--dir) * (100% + 40px)));
+  transition: transform 440ms var(--spring);
+}
+.edge-root[data-side='left'] .drawer {
+  right: auto;
+  left: 0;
+  border-radius: 0 22px 22px 0;
+}
+.edge-root[data-mode='open'] .drawer {
+  transform: none;
+}
+.drawer.is-target {
+  box-shadow:
+    var(--shadow-drawer),
+    inset 0 0 0 2px var(--c, var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .drawer {
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ── Shared controls ───────────────────────────────────── */
 
 @layer components {
   .btn-icon {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--fg-2)] transition-colors duration-100;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--fg-2)] transition-colors duration-100;
   }
   .btn-icon:hover {
     background: var(--surface-hover);
@@ -147,7 +345,7 @@ input {
   }
 
   .btn {
-    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[12.5px] font-medium transition-colors duration-100 disabled:opacity-40;
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-[10px] px-3 text-[12.5px] font-medium transition-colors duration-100 disabled:opacity-40;
     background: var(--surface);
     color: var(--fg);
     box-shadow: inset 0 0 0 1px var(--stroke);
@@ -156,27 +354,27 @@ input {
     background: var(--surface-hover);
   }
   .btn-primary {
-    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[12.5px] font-semibold text-white transition-[filter] duration-100 disabled:opacity-40;
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-[10px] px-3.5 text-[12.5px] font-semibold transition-[filter] duration-100 disabled:opacity-40;
     background: var(--accent);
+    color: var(--on-accent);
   }
   .btn-primary:hover:not(:disabled) {
     filter: brightness(1.08);
   }
   .btn-danger {
-    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[12.5px] font-semibold text-white;
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-[10px] px-3.5 text-[12.5px] font-semibold;
     background: var(--danger);
+    color: var(--ink);
   }
 
   .field {
-    @apply h-8 w-full rounded-lg px-2.5 text-[12.5px] outline-none transition-colors;
+    @apply h-8 w-full rounded-[10px] px-2.5 text-[12.5px] outline-none transition-colors;
     background: var(--field);
     color: var(--fg);
     box-shadow: inset 0 0 0 1px var(--stroke);
   }
   .field:focus {
-    box-shadow:
-      inset 0 0 0 1px var(--accent),
-      inset 0 -2px 0 var(--accent);
+    box-shadow: inset 0 0 0 1.5px var(--accent);
   }
   .field::placeholder {
     color: var(--fg-3);
@@ -194,12 +392,12 @@ input {
   }
 
   .flyout {
-    @apply rounded-xl py-1;
+    @apply rounded-2xl py-1;
     background: var(--flyout);
     box-shadow: var(--shadow-flyout);
   }
   .menu-item {
-    @apply mx-1 flex w-[calc(100%-8px)] items-center gap-2.5 rounded-md px-2.5 py-[7px] text-left text-[12.5px] transition-colors duration-75;
+    @apply mx-1 flex w-[calc(100%-8px)] items-center gap-2.5 rounded-[9px] px-2.5 py-[7px] text-left text-[12.5px] transition-colors duration-75;
     color: var(--fg);
   }
   .menu-item:hover:not(:disabled),
@@ -212,42 +410,37 @@ input {
   }
 
   .chip {
-    @apply inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium transition-colors duration-100;
+    @apply inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 text-[12px] font-medium;
     color: var(--fg-2);
-    box-shadow: inset 0 0 0 1px var(--stroke);
-  }
-  .chip:hover {
-    background: var(--surface-hover);
-    color: var(--fg);
-  }
-  .chip[aria-pressed='true'] {
-    background: var(--accent-soft);
-    color: var(--accent-text);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+    background: var(--surface);
   }
 
   .card {
-    @apply rounded-xl;
+    @apply rounded-2xl;
     background: var(--surface);
     box-shadow: var(--shadow-card);
   }
 
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+
   .segmented {
-    @apply inline-flex rounded-lg p-0.5;
+    @apply inline-flex rounded-[10px] p-0.5;
     background: var(--field);
     box-shadow: inset 0 0 0 1px var(--stroke);
   }
   .segmented > button {
-    @apply h-7 rounded-md px-2.5 text-[12px] font-medium transition-colors duration-100;
+    @apply h-7 rounded-[8px] px-2.5 text-[12px] font-medium transition-colors duration-100;
     color: var(--fg-2);
   }
   .segmented > button[aria-pressed='true'] {
     background: var(--surface-pressed);
     color: var(--fg);
-    box-shadow: var(--shadow-card);
-  }
-  .light .segmented > button[aria-pressed='true'] {
-    background: #fff;
   }
 }
 
@@ -258,22 +451,6 @@ input {
 .scroll-autohide.is-scrolling,
 .scroll-autohide:hover {
   scrollbar-color: var(--scrollbar) transparent;
-}
-.scroll-autohide::-webkit-scrollbar {
-  width: 6px;
-}
-.scroll-autohide::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scroll-autohide::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 99px;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-.scroll-autohide.is-scrolling::-webkit-scrollbar-thumb,
-.scroll-autohide:hover::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar);
 }
 
 .no-scrollbar {
@@ -289,6 +466,31 @@ input {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+/* A document drawn as paper with its type on a colored label. */
+.paper-doc {
+  position: relative;
+  background: #f4f3ef;
+}
+.paper-doc::before {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 40%;
+  height: 42%;
+  background: repeating-linear-gradient(#cfcdc6 0 2px, transparent 2px 8px);
+}
+.paper-doc b {
+  position: absolute;
+  left: 9%;
+  top: 10%;
+  padding: 4px 5px;
+  border-radius: 4px;
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: #fff;
 }
 
 /* Range slider */
@@ -325,19 +527,20 @@ input {
   box-shadow: 0 0 0 1px var(--stroke-strong);
 }
 
-/* The edge handle window and widgets are their own pages. */
-.edge-page,
-.edge-page body {
-  background: transparent;
+/* Desktop widgets keep a rounded card of their own. */
+.app-shell {
+  position: relative;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--stroke-strong);
 }
 
-@keyframes stash-pop {
-  from {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+.d-title {
+  color: var(--c);
+}
+.light .d-title {
+  color: color-mix(in oklab, var(--c) 58%, black);
 }

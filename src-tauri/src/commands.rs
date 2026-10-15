@@ -186,9 +186,7 @@ pub async fn add_files(
     }
     // Drops land on the open panel, which shows its own toast; only notify
     // when files arrive while the panel is hidden.
-    let visible = panel::window(&app)
-        .and_then(|w| w.is_visible().ok())
-        .unwrap_or(false);
+    let visible = panel::is_open();
     if result.added > 0 && notify && !visible {
         let body = i18n::files_added(state.language, result.added, &result.shelf_name);
         let _ = app
@@ -478,7 +476,7 @@ pub async fn file_preview(state: State<'_, AppState>, id: String) -> CmdResult<O
 /// Start a native drag of the given files into other apps. Runs on the UI
 /// thread (synchronous command) and returns when the drag ends.
 #[tauri::command]
-pub fn start_drag(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<()> {
+pub fn start_drag(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) -> CmdResult<bool> {
     check_ids(&ids)?;
     let paths: Vec<std::path::PathBuf> = {
         let conn = state.db();
@@ -494,19 +492,28 @@ pub fn start_drag(app: AppHandle, state: State<'_, AppState>, ids: Vec<String>) 
             .collect()
     };
     if paths.is_empty() {
-        return Ok(());
+        return Ok(false);
     }
     let window = panel::window(&app).ok_or("no window")?;
     let icon = win::shell_image_png(&paths[0].to_string_lossy(), 64, false)
         .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec());
+    let dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let flag = dropped.clone();
     drag::start_drag(
         &window,
         drag::DragItem::Files(paths),
         drag::Image::Raw(icon),
-        |_result, _cursor| {},
+        move |result, _cursor| {
+            flag.store(
+                matches!(result, drag::DragResult::Dropped),
+                Ordering::SeqCst,
+            )
+        },
         drag::Options::default(),
     )
-    .map_err(err)
+    .map_err(err)?;
+    // Whether something took the files (the pocket empties itself then).
+    Ok(dropped.load(Ordering::SeqCst))
 }
 
 // ── Shelves ───────────────────────────────────────────────
@@ -525,7 +532,11 @@ pub fn list_shelves(state: State<'_, AppState>) -> CmdResult<Vec<Shelf>> {
 }
 
 #[tauri::command]
-pub fn create_shelf(state: State<'_, AppState>, input: ShelfInput) -> CmdResult<Shelf> {
+pub fn create_shelf(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    input: ShelfInput,
+) -> CmdResult<Shelf> {
     let name = check_shelf_name(&input.name)?;
     if input
         .icon
@@ -535,13 +546,31 @@ pub fn create_shelf(state: State<'_, AppState>, input: ShelfInput) -> CmdResult<
     {
         return Err("Invalid arguments: style".into());
     }
-    db::create_shelf(
+    let shelf = db::create_shelf(
         &state.db(),
         &name,
         input.icon.as_deref(),
         input.color.as_deref(),
     )
-    .map_err(err)
+    .map_err(err)?;
+    panel::relayout(&app);
+    Ok(shelf)
+}
+
+/// A shelf's icon and color (its tab on the screen edge).
+#[tauri::command]
+pub fn set_shelf_style(
+    state: State<'_, AppState>,
+    id: String,
+    icon: String,
+    color: String,
+) -> CmdResult<bool> {
+    check_id(&id)?;
+    if icon.is_empty() || icon.len() > 50 || !db::is_hex_color(&color) {
+        return Err("Invalid arguments: style".into());
+    }
+    db::set_shelf_style(&state.db(), &id, &icon, &color).map_err(err)?;
+    Ok(true)
 }
 
 #[tauri::command]
@@ -598,6 +627,7 @@ pub async fn create_shared_shelf(
         .await
         .map_err(err)?;
     crate::shared::restart_watcher(&app);
+    panel::relayout(&app);
     Ok(shelf)
 }
 
@@ -606,10 +636,18 @@ pub async fn create_shared_shelf(
 pub fn delete_shelf(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<bool> {
     check_id(&id)?;
     let conn = state.db();
-    let was_shared = db::get_shelf(&conn, &id)
-        .ok()
-        .flatten()
-        .is_some_and(|s| s.folder.is_some());
+    let shelves = db::list_shelves(&conn).map_err(err)?;
+    let Some(target) = shelves.iter().find(|s| s.id == id) else {
+        return Ok(false);
+    };
+    // The pocket is part of the edge; and one ordinary shelf always stays.
+    if target.kind == "pocket" {
+        return Err("Cannot delete the pocket".into());
+    }
+    if shelves.iter().filter(|s| s.kind != "pocket").count() <= 1 {
+        return Err("Cannot delete the last shelf".into());
+    }
+    let was_shared = target.folder.is_some();
     match db::delete_shelf(&conn, &id) {
         Ok(()) => {
             // Heal default/last shelf references.
@@ -618,6 +656,7 @@ pub fn delete_shelf(app: AppHandle, state: State<'_, AppState>, id: String) -> C
             if was_shared {
                 crate::shared::restart_watcher(&app);
             }
+            panel::relayout(&app);
             Ok(true)
         }
         Err(DeleteShelfError::LastShelf) => Err("Cannot delete the last shelf".into()),
@@ -661,9 +700,7 @@ pub fn set_settings(
         sync_context_menu(&app, next.context_menu);
     }
     if patch.edge_handle.is_some() {
-        let (handle, side) = (app.clone(), next.edge_handle);
-        // May create a window, which must not happen inside this command.
-        crate::edge::on_main_thread(&app, move || crate::edge::apply(&handle, side));
+        panel::apply_side(&app, next.edge_handle);
     }
     Ok(next)
 }
@@ -701,23 +738,19 @@ pub fn sync_autostart(app: &AppHandle, enabled: bool) {
     }
 }
 
-/// The panel's page has loaded: now the extra windows (edge handle, desktop
-/// widgets) can be created. Runs once.
+/// The page has loaded: now desktop widgets can be reopened. A second webview
+/// started while the main one is still starting never finishes loading, and
+/// `run_on_main_thread` runs inline on the main thread, so this is an async
+/// command (another thread) posting the work. Runs once.
 #[tauri::command]
-pub async fn app_ready(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+pub async fn app_ready(app: AppHandle) -> CmdResult<()> {
     static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     if STARTED.swap(true, Ordering::SeqCst) {
         return Ok(());
     }
-    let side = db::get_settings(&state.db(), state.language)
-        .map_err(err)?
-        .edge_handle;
     let handle = app.clone();
-    app.run_on_main_thread(move || {
-        crate::edge::apply(&handle, side);
-        crate::widget::restore(&handle);
-    })
-    .map_err(err)
+    app.run_on_main_thread(move || crate::widget::restore(&handle))
+        .map_err(err)
 }
 
 #[tauri::command]

@@ -71,10 +71,11 @@ pub fn strings(lang: Language) -> &'static Strings {
 pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'static str) {
     let tr = lang == Language::Tr;
     match kind {
+        "pocket" => (if tr { "Cep" } else { "Pocket" }, "pocket", "#ECEAE4"),
         "downloads" => (
             if tr { "İndirilenler" } else { "Downloads" },
             "download",
-            "#0078D4",
+            "#F6BB45",
         ),
         "screenshots" => (
             if tr {
@@ -83,17 +84,17 @@ pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'
                 "Screenshots"
             },
             "camera",
-            "#8764B8",
+            "#C79BFF",
         ),
         "phone" => (
             if tr { "Telefondan" } else { "From phone" },
             "smartphone",
-            "#038387",
+            "#43D8AA",
         ),
         "clipboard" => (
             if tr { "Pano" } else { "Clipboard" },
             "clipboard",
-            "#CA5010",
+            "#FF8A65",
         ),
         "drop" => (
             if tr { "Bırakılanlar" } else { "Drop shelf" },

@@ -106,11 +106,34 @@ export async function moveFiles(ids: string[], shelfId: string): Promise<void> {
   else showToast(shelf.folder ? t.copiedToShared(shelf.name) : t.movedTo(shelf.name))
 }
 
-/** Drag files out to other apps; dropping them on a shelf in the rail moves them. */
+/**
+ * Drag files out to other apps. Dropping them on a shelf tab moves them
+ * there; files that leave the pocket for another app leave the pocket.
+ */
 export async function dragFilesOut(ids: string[]): Promise<void> {
   if (ids.length === 0) return
-  const target = await dragOut(() => window.stash.startDrag(ids))
-  if (target) await moveFiles(ids, target)
+  const { shelf, dropped } = await dragOut(() => window.stash.startDrag(ids))
+  if (shelf) {
+    await moveFiles(ids, shelf)
+    return
+  }
+  if (dropped) await leavePocket(ids)
+}
+
+/** Take files off the pocket once they were dropped somewhere else. */
+export async function leavePocket(ids: string[]): Promise<void> {
+  const t = messages()
+  const { files, shelves, refresh, showToast } = useStashStore.getState()
+  const pocket = shelves.find((s) => s.kind === 'pocket')
+  const leaving = files.filter((f) => ids.includes(f.id) && f.shelfId === pocket?.id)
+  if (leaving.length === 0) return
+  try {
+    await window.stash.removeFiles(leaving.map((f) => f.id))
+  } catch {
+    // Already gone.
+  }
+  await refresh()
+  showToast(t.pocketLeft(leaving.length))
 }
 
 function sizeReport(t: Messages, results: ConvertedImage[]): string {

@@ -35,7 +35,7 @@ export function SharedShelfDialog() {
   }, [open, setOpen])
 
   const choose = async () => {
-    const folder = await window.stash.pickFolder()
+    const folder = await useStashStore.getState().hold(() => window.stash.pickFolder())
     if (!folder) return
     setBusy(true)
     const { refresh, setActiveShelf, showToast } = useStashStore.getState()

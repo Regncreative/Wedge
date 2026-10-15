@@ -14,8 +14,10 @@
       {
         "label": "panel",
         "title": "Stash",
-        "width": 468,
-        "height": 640,
+        "width": 14,
+        "height": 280,
+        "x": -32000,
+        "y": -32000,
         "resizable": false,
         "maximizable": false,
         "minimizable": false,
@@ -25,7 +27,8 @@
         "shadow": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "visible": false,
+        "visible": true,
+        "focus": false,
         "center": false,
         "dragDropEnabled": false
       }

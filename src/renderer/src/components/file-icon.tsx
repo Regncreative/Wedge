@@ -22,6 +22,7 @@ import {
   Inbox,
   Music,
   Package,
+  Pocket,
   Smartphone,
   Star,
   Users
@@ -32,6 +33,7 @@ import { classifyExtension } from '@shared/types'
 import { cn } from '@/lib/utils'
 
 export const SHELF_ICONS: Record<string, LucideIcon> = {
+  pocket: Pocket,
   inbox: Inbox,
   folder: Folder,
   briefcase: Briefcase,

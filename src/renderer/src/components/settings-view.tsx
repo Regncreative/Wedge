@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
+  ArrowLeft,
   ArrowRight,
   Download,
   FileText,
@@ -17,18 +18,19 @@ import type { FileSort, Rule, ThemeMode, UpdateStatus } from '@shared/types'
 import { HotkeyRecorder } from './hotkey-recorder'
 import { ShelfIcon } from './file-icon'
 import { useStashStore } from '@/stores/stash-store'
+import { useEdge } from '@/lib/edge'
 import { cn } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
 const ACCENTS = [
-  '#2563EB',
-  '#0078D4',
-  '#7C3AED',
-  '#0F9D58',
-  '#038387',
-  '#D97706',
-  '#E11D48',
-  '#C239B3'
+  '#8D97FF',
+  '#43D8AA',
+  '#FF7FAC',
+  '#F6BB45',
+  '#5CC8FF',
+  '#FF8A65',
+  '#B5E655',
+  '#C79BFF'
 ]
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
@@ -119,47 +121,6 @@ function Segmented<T extends string>({
           {o.label}
         </button>
       ))}
-    </div>
-  )
-}
-
-function Slider({
-  value,
-  min,
-  max,
-  step,
-  label,
-  format,
-  onChange,
-  onRelease
-}: {
-  value: number
-  min: number
-  max: number
-  step: number
-  label: string
-  format: (v: number) => string
-  onChange: (v: number) => void
-  onRelease?: (v: number) => void
-}) {
-  const fill = ((value - min) / (max - min)) * 100
-  return (
-    <div className="flex items-center gap-3">
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-        onPointerUp={(e) => onRelease?.(Number((e.target as HTMLInputElement).value))}
-        className="stash-range w-[150px]"
-        style={{ ['--fill' as string]: `${fill}%` }}
-      />
-      <span className="w-10 text-right text-[12px] tabular-nums text-[var(--fg-2)]">
-        {format(value)}
-      </span>
     </div>
   )
 }
@@ -348,14 +309,6 @@ export function SettingsView() {
     return window.stash.onUpdateStatus(setUpdate)
   }, [])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !useStashStore.getState().confirm) setShowSettings(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [setShowSettings])
-
   if (!settings) return null
 
   const clearMissing = async () => {
@@ -381,7 +334,6 @@ export function SettingsView() {
     }
   }
 
-  const idlePercent = Math.round(settings.idleOpacity * 100)
   const sortOptions: { id: FileSort; label: string }[] = [
     { id: 'added', label: t.sortAdded },
     { id: 'name', label: t.sortName },
@@ -391,8 +343,17 @@ export function SettingsView() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-[60px] shrink-0 items-center gap-2 pl-4 pr-2.5">
-        <h1 className="display-font flex-1 text-[15.5px] font-semibold text-[var(--fg)]">
+      <header className="flex shrink-0 items-center gap-1.5 px-4 pb-3 pt-4">
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label={t.back}
+          title={t.back}
+          onClick={() => setShowSettings(false)}
+        >
+          <ArrowLeft size={17} strokeWidth={1.75} />
+        </button>
+        <h1 className="display-font flex-1 text-[26px] font-extrabold tracking-[-0.02em] text-[var(--fg)]">
           {t.settings}
         </h1>
         <button
@@ -400,7 +361,7 @@ export function SettingsView() {
           className="btn-icon"
           aria-label={t.close}
           title={t.close}
-          onClick={() => setShowSettings(false)}
+          onClick={() => useEdge.getState().request('idle')}
         >
           <X size={17} strokeWidth={1.75} />
         </button>
@@ -489,32 +450,6 @@ export function SettingsView() {
               onChange={(v) => void updateSettings({ notifications: v })}
             />
           </Row>
-          <Row label={t.idleOpacity} hint={t.idleOpacityHint}>
-            <Slider
-              label={t.idleOpacity}
-              value={idlePercent}
-              min={10}
-              max={70}
-              step={5}
-              format={(v) => `${v}%`}
-              onChange={(v) => void updateSettings({ idleOpacity: v / 100 })}
-              onRelease={(v) => {
-                void window.stash.setOpacity(v / 100)
-                window.setTimeout(() => void window.stash.setOpacity(1), 700)
-              }}
-            />
-          </Row>
-          <Row label={t.idleTimeout} hint={t.idleTimeoutHint}>
-            <Slider
-              label={t.idleTimeout}
-              value={settings.idleTimeoutSec}
-              min={5}
-              max={60}
-              step={5}
-              format={(v) => `${v} s`}
-              onChange={(v) => void updateSettings({ idleTimeoutSec: v })}
-            />
-          </Row>
         </Section>
 
         <Section title={t.captureSection}>
@@ -523,9 +458,9 @@ export function SettingsView() {
               value={settings.edgeHandle}
               onChange={(v) => void updateSettings({ edgeHandle: v })}
               options={[
-                { id: 'off', label: t.edgeOff },
+                { id: 'right', label: t.edgeRight },
                 { id: 'left', label: t.edgeLeft },
-                { id: 'right', label: t.edgeRight }
+                { id: 'off', label: t.edgeOff }
               ]}
             />
           </Row>
@@ -579,7 +514,7 @@ export function SettingsView() {
                 aria-label={t.exportData}
                 title={t.exportData}
                 onClick={async () => {
-                  const res = await window.stash.exportData()
+                  const res = await useStashStore.getState().hold(() => window.stash.exportData())
                   if (res.ok) showToast(t.exportDone)
                 }}
               >
@@ -591,7 +526,7 @@ export function SettingsView() {
                 aria-label={t.importData}
                 title={t.importData}
                 onClick={async () => {
-                  const res = await window.stash.importData()
+                  const res = await useStashStore.getState().hold(() => window.stash.importData())
                   if (res.ok) {
                     await refresh()
                     showToast(t.importDone(res.shelves, res.files))

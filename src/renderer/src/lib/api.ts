@@ -21,6 +21,14 @@ export type ImageFormat = 'jpg' | 'png' | 'webp'
 
 export type OpResult = { ok: boolean; error?: string }
 
+/** What the edge window shows (src-tauri/src/panel.rs). */
+export type EdgeMode = 'idle' | 'peek' | 'drag' | 'open'
+export type EdgeSide = 'left' | 'right' | 'off'
+export interface EdgeState {
+  mode: EdgeMode
+  side: EdgeSide
+}
+
 export type { FileDropEvent }
 
 /**
@@ -55,8 +63,8 @@ export interface StashApi {
   getFileIcon: (id: string) => Promise<string | null>
   /** Thumbnail (PNG data URL) rendered by Windows: images, videos, PDFs, documents. */
   getPreview: (id: string) => Promise<string | null>
-  /** Native drag into other apps; resolves when the drag ends. */
-  startDrag: (ids: string[]) => Promise<void>
+  /** Native drag into other apps; resolves when the drag ends, true if something took the files. */
+  startDrag: (ids: string[]) => Promise<boolean>
 
   // Notes, reminders, search
   setNote: (id: string, note: string, tags: string) => Promise<boolean>
@@ -85,6 +93,8 @@ export interface StashApi {
   createShelf: (input: { name: string; icon?: string; color?: string }) => Promise<Shelf>
   /** Link a (cloud) folder as a shared shelf; an already linked folder returns its shelf. */
   createSharedShelf: (folder: string, name?: string | null) => Promise<Shelf>
+  /** A shelf's icon and color (its tab). */
+  setShelfStyle: (id: string, icon: string, color: string) => Promise<boolean>
   openShelfFolder: (id: string) => Promise<OpResult>
   renameShelf: (id: string, name: string) => Promise<boolean>
   deleteShelf: (id: string) => Promise<boolean>
@@ -95,15 +105,13 @@ export interface StashApi {
   openWidget: (shelfId: string) => Promise<boolean>
   closeWidget: (shelfId: string) => Promise<boolean>
 
-  // Phone, folders, edge handle
+  // Phone, folders, the edge window
   phoneStart: () => Promise<PhoneSession>
   phoneStop: () => Promise<void>
   pickFolder: () => Promise<string | null>
-  /** Edge handle: open into the shelf list (`height` in CSS px) or close again. */
-  edgeExpand: (expanded: boolean, height?: number) => Promise<void>
-  /** Edge handle dragged to screen y (physical px); `save` on release. */
-  edgeMove: (y: number, save: boolean) => Promise<void>
-  edgeClick: () => Promise<void>
+  edgeState: () => Promise<EdgeState>
+  /** Size the edge window for a mode (the page animates the change). */
+  edgeMode: (mode: EdgeMode) => Promise<void>
 
   // Stats & settings
   getStats: () => Promise<ShelfStats>
@@ -201,6 +209,7 @@ export const api: StashApi = {
   createShelf: (input) => invoke('create_shelf', { input }),
   createSharedShelf: (folder, name) =>
     invoke('create_shared_shelf', { folder, name: name ?? null }),
+  setShelfStyle: (id, icon, color) => invoke('set_shelf_style', { id, icon, color }),
   openShelfFolder: (id) => invoke('open_shelf_folder', { id }),
   renameShelf: (id, name) => invoke('rename_shelf', { id, name }),
   deleteShelf: (id) => invoke('delete_shelf', { id }),
@@ -214,9 +223,8 @@ export const api: StashApi = {
   phoneStart: () => invoke('phone_start'),
   phoneStop: () => invoke('phone_stop'),
   pickFolder: () => invoke('pick_folder'),
-  edgeExpand: (expanded, height) => invoke('edge_expand', { expanded, height: height ?? null }),
-  edgeMove: (y, save) => invoke('edge_move', { y, save }),
-  edgeClick: () => invoke('edge_click'),
+  edgeState: () => invoke('edge_state'),
+  edgeMode: (mode) => invoke('edge_mode', { mode }),
 
   getStats: () => invoke('get_stats'),
   getSettings: () => invoke('get_settings'),

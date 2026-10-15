@@ -6,10 +6,13 @@ import {
   FolderOpen,
   FolderPlus,
   MonitorUp,
+  Palette,
   Pencil,
+  Shapes,
   Trash2,
   Users
 } from 'lucide-react'
+import { SHELF_ICONS } from './file-icon'
 import { Menu, type MenuEntry } from './menu'
 import { dragOut } from '@/lib/file-drop'
 import { useStashStore } from '@/stores/stash-store'
@@ -17,16 +20,30 @@ import { useT } from '@/lib/i18n'
 
 const EXPIRY_OPTIONS: (number | null)[] = [null, 24, 24 * 7, 24 * 30]
 
-/** New shelves take the next color, so the rail stays easy to scan. */
-const SHELF_COLORS = [
-  '#3b82f6',
-  '#8b5cf6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#06b6d4',
-  '#ec4899',
-  '#84cc16'
+/** Tab colors (dark ink reads on all of them). New shelves take the next one. */
+const SHELF_COLORS: [string, string, string][] = [
+  ['#8D97FF', 'İris', 'Iris'],
+  ['#43D8AA', 'Nane', 'Mint'],
+  ['#FF7FAC', 'Gül', 'Rose'],
+  ['#F6BB45', 'Safran', 'Saffron'],
+  ['#5CC8FF', 'Gök', 'Sky'],
+  ['#FF8A65', 'Mercan', 'Coral'],
+  ['#B5E655', 'Limon', 'Lime'],
+  ['#C79BFF', 'Leylak', 'Lilac']
+]
+const PICKABLE_ICONS: [string, string, string][] = [
+  ['folder', 'Klasör', 'Folder'],
+  ['briefcase', 'Çanta', 'Briefcase'],
+  ['heart', 'Kalp', 'Heart'],
+  ['star', 'Yıldız', 'Star'],
+  ['image', 'Resim', 'Picture'],
+  ['music', 'Müzik', 'Music'],
+  ['book', 'Kitap', 'Book'],
+  ['code', 'Kod', 'Code'],
+  ['package', 'Paket', 'Package'],
+  ['graduation', 'Okul', 'School'],
+  ['clock', 'Saat', 'Clock'],
+  ['inbox', 'Gelen kutusu', 'Inbox']
 ]
 
 /** Right-click menu for a shelf (rail) and the header's shelf options. */
@@ -42,6 +59,8 @@ export function ShelfMenu() {
 
   const { refresh, askPrompt, askConfirm, showToast } = useStashStore.getState()
   const ids = files.filter((f) => f.shelfId === shelf.id && f.exists).map((f) => f.id)
+  const pocket = shelf.kind === 'pocket'
+  const lang = useStashStore.getState().settings?.language ?? 'en'
   const expiryLabel = (h: number | null) =>
     h === null ? t.expiryOff : h === 24 ? t.expiry24h : h === 24 * 7 ? t.expiry7d : t.expiry30d
 
@@ -49,7 +68,7 @@ export function ShelfMenu() {
     e.preventDefault()
     if (ids.length === 0) return
     close()
-    void dragOut(() => window.stash.startDragZip(ids, shelf.name))
+    void dragOut(() => window.stash.startDragZip(ids, shelf.name).then(() => false))
   }
 
   const items: MenuEntry[] = [
@@ -89,7 +108,33 @@ export function ShelfMenu() {
       action: () => window.stash.openFiles(ids)
     },
     { label: t.dragAsZip, icon: Archive, disabled: ids.length === 0, onDragStart: onDragZip },
-    ...(shelf.folder
+    {
+      label: t.shelfColor,
+      icon: Palette,
+      separated: true,
+      children: SHELF_COLORS.map(([color, tr, en]) => ({
+        label: lang === 'tr' ? tr : en,
+        swatch: color,
+        checked: shelf.color.toLowerCase() === color.toLowerCase(),
+        action: async () => {
+          await window.stash.setShelfStyle(shelf.id, shelf.icon, color)
+          await refresh()
+        }
+      }))
+    },
+    {
+      label: t.shelfIcon,
+      icon: Shapes,
+      children: PICKABLE_ICONS.filter(([i]) => SHELF_ICONS[i]).map(([name, tr, en]) => ({
+        label: lang === 'tr' ? tr : en,
+        icon: SHELF_ICONS[name],
+        action: async () => {
+          await window.stash.setShelfStyle(shelf.id, name, shelf.color)
+          await refresh()
+        }
+      }))
+    },
+    ...(shelf.folder || pocket
       ? []
       : [
           {
@@ -115,7 +160,7 @@ export function ShelfMenu() {
       icon: Trash2,
       danger: true,
       separated: true,
-      disabled: shelves.length <= 1,
+      disabled: pocket || shelves.filter((s) => s.kind !== 'pocket').length <= 1,
       action: async () => {
         const ok = await askConfirm({
           title: t.deleteShelf(shelf.name),
@@ -168,7 +213,7 @@ export function AddShelfMenu() {
           confirmLabel: t.createShelf
         })
         if (!name?.trim()) return
-        const color = SHELF_COLORS[useStashStore.getState().shelves.length % SHELF_COLORS.length]
+        const [color] = SHELF_COLORS[useStashStore.getState().shelves.length % SHELF_COLORS.length]
         const shelf = await window.stash.createShelf({ name: name.trim(), icon: 'folder', color })
         await refresh()
         setActiveShelf(shelf.id)
