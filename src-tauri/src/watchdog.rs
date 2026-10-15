@@ -1,4 +1,4 @@
-//! Notes in the log when the UI thread stops answering, so a freeze ("Stash
+//! Notes in the log when the UI thread stops answering, so a freeze ("Wedge
 //! is not responding") leaves a trace: how long it lasted. Every few seconds
 //! a no-op is queued on the UI thread; if it hasn't run by the next check,
 //! the thread is stuck.

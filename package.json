@@ -1,20 +1,22 @@
 {
-  "name": "stash",
-  "version": "2.0.0-alpha.0",
-  "description": "A modern file shelf for Windows",
+  "name": "wedge",
+  "version": "2.0.0",
+  "description": "A file shelf on the edge of your screen",
   "author": "Regncreative",
   "license": "MIT",
+  "homepage": "https://wedgeshelf.com",
   "private": true,
   "engines": {
     "node": ">=22"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Regncreative/Stash.git"
+    "url": "https://github.com/Regncreative/Wedge.git"
   },
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
+    "build:store": "tauri build --config src-tauri/tauri.microsoftstore.conf.json",
     "dev:web": "vite",
     "build:web": "vite build",
     "typecheck": "tsc -p tsconfig.web.json && tsc -p tsconfig.test.json",
@@ -25,6 +27,7 @@
     "build:e2e": "tauri build --debug --no-bundle",
     "test:e2e": "playwright test",
     "test:perf": "playwright test perf",
+    "icons": "node scripts/render-icons.mjs",
     "lint": "eslint -c eslint.config.cjs . && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri"

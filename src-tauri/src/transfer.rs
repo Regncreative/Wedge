@@ -1,5 +1,5 @@
 //! Portable JSON backup of shelves, file references and look-and-feel
-//! settings. Same format as Stash 1.x exports.
+//! settings. Same format as Stash 1.x exports (Wedge was called Stash).
 
 use std::collections::HashMap;
 
@@ -137,7 +137,7 @@ impl From<rusqlite::Error> for ImportError {
 fn validate(data: &StashExport) -> Result<(), ImportError> {
     let bad = |m: &str| Err(ImportError::Invalid(m.into()));
     if data.format != "stash-export" || data.version != 1 {
-        return bad("not a Stash export");
+        return bad("not a Wedge (or Stash) export");
     }
     if data.shelves.len() > 1_000 || data.files.len() > 100_000 {
         return bad("too many items");

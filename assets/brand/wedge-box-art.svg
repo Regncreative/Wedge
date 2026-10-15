@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Store box art (1:1): the mark on a full square, with room around it. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B2C3A"/>
+      <stop offset="1" stop-color="#14151C"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#bg)"/>
+  <g transform="translate(10.3 14) scale(0.5625)">
+    <rect x="23" y="12" width="41" height="11" rx="5.5" fill="#8D97FF"/>
+    <circle cx="29" cy="17.5" r="2.3" fill="#14151C" fill-opacity=".26"/>
+    <rect x="11" y="26.5" width="53" height="11" rx="5.5" fill="#FF7FAC"/>
+    <circle cx="17" cy="32" r="2.3" fill="#14151C" fill-opacity=".26"/>
+    <rect x="27" y="41" width="37" height="11" rx="5.5" fill="#F6BB45"/>
+    <circle cx="33" cy="46.5" r="2.3" fill="#14151C" fill-opacity=".26"/>
+  </g>
+  <rect x="46.3" y="10" width="1.2" height="44" rx=".6" fill="#ECEAE4" fill-opacity=".35"/>
+</svg>

@@ -10,7 +10,7 @@ import { readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const REPO = 'Regncreative/Stash'
+export const REPO = 'Regncreative/Wedge'
 
 /**
  * @param {{ version: string, tag: string, fileName: string, size: number,

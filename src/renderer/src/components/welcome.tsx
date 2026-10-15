@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { ArrowDownToLine, ArrowUpRight, Keyboard, PanelRightOpen } from 'lucide-react'
 import { Dialog } from './dialog'
-import { StashMark } from './mark'
+import { WedgeMark } from './mark'
 import { formatDisplay } from '@/lib/hotkey'
 import { useStashStore } from '@/stores/stash-store'
 import { useT } from '@/lib/i18n'
@@ -15,12 +15,16 @@ export function Welcome() {
   const updateSettings = useStashStore((s) => s.updateSettings)
   const startRef = useRef<HTMLButtonElement>(null)
   const visible = settings !== null && !settings.onboardingDone
+  // Both change the person's Windows, so they are asked here first (and can
+  // be changed later in Settings).
+  const [startWithWindows, setStartWithWindows] = useState(true)
+  const [contextMenu, setContextMenu] = useState(true)
 
   useEffect(() => {
     if (visible) startRef.current?.focus()
   }, [visible])
 
-  const dismiss = () => void updateSettings({ onboardingDone: true })
+  const dismiss = () => void updateSettings({ onboardingDone: true, startWithWindows, contextMenu })
 
   return (
     <AnimatePresence>
@@ -31,7 +35,7 @@ export function Welcome() {
           className="max-w-[380px]"
           onKeyDown={(e) => e.key === 'Escape' && dismiss()}
         >
-          <StashMark size={40} />
+          <WedgeMark size={48} />
           <h2
             id="welcome-title"
             className="display-font mt-3.5 text-[19px] font-semibold text-[var(--fg)]"
@@ -58,6 +62,19 @@ export function Welcome() {
               {t.welcomeHotkeyBody(formatDisplay(settings.openHotkey))}
             </Step>
           </ul>
+          <fieldset className="mt-4 space-y-2 border-t border-[var(--stroke)] pt-3">
+            <legend className="sr-only">{t.welcomeChoices}</legend>
+            <Choice
+              id="welcome-autostart"
+              checked={startWithWindows}
+              onChange={setStartWithWindows}
+            >
+              {t.startWithWindows}
+            </Choice>
+            <Choice id="welcome-context-menu" checked={contextMenu} onChange={setContextMenu}>
+              {t.contextMenuToggle}
+            </Choice>
+          </fieldset>
           <button
             ref={startRef}
             type="button"
@@ -69,6 +86,34 @@ export function Welcome() {
         </Dialog>
       )}
     </AnimatePresence>
+  )
+}
+
+function Choice({
+  id,
+  checked,
+  onChange,
+  children
+}: {
+  id: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  children: ReactNode
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-center gap-2.5 text-[12.5px] text-[var(--fg-2)]"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-[var(--accent)]"
+      />
+      {children}
+    </label>
   )
 }
 

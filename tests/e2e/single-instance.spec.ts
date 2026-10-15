@@ -25,7 +25,7 @@ test('a second launch exits at once and opens the running panel', async () => {
 
     // Only one process may have started up.
     const log = readFileSync(join(first.userData, 'logs', 'main.log'), 'utf8')
-    expect(log.match(/\[stash\] ready/g)).toHaveLength(1)
+    expect(log.match(/\[wedge\] ready/g)).toHaveLength(1)
   } finally {
     await first.close()
     removeProfile(first.userData)

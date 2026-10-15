@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/Regncreative/Stash/security/advisories/new
+    url: https://github.com/Regncreative/Wedge/security/advisories/new
     about: Please report security problems privately.
   - name: Questions and ideas
-    url: https://github.com/Regncreative/Stash/discussions
+    url: https://github.com/Regncreative/Wedge/discussions
     about: Ask a question or discuss an idea.

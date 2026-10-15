@@ -1,10 +1,10 @@
-# Contributing to Stash
+# Contributing to Wedge
 
 Thanks for helping! Issues and pull requests are welcome.
 
 ## Setup
 
-Stash is a Windows app built with [Tauri 2](https://v2.tauri.app): a Rust backend and a React panel rendered by WebView2. You need:
+Wedge is a Windows app built with [Tauri 2](https://v2.tauri.app): a Rust backend and a React panel rendered by WebView2. You need:
 
 - Windows 10 or 11
 - [Node.js 22](https://nodejs.org) (see `.nvmrc`)
@@ -20,7 +20,7 @@ npm run dev
 
 The first Rust build takes a few minutes; later ones are incremental.
 
-`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Stash`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
+`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Wedge`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
 
 ## Checks
 
@@ -30,15 +30,15 @@ npm run typecheck
 npm test              # frontend unit tests (Vitest)
 npm run test:rust     # backend unit tests (cargo test)
 npm run build:e2e     # debug build with the UI embedded
-npm run test:e2e      # Playwright drives the real stash.exe over WebView2
+npm run test:e2e      # Playwright drives the real wedge.exe over WebView2
 npm run test:perf     # performance numbers (opt-in, see below)
 ```
 
-Real Windows drag and drop is tested too, by moving the mouse cursor (`tests/e2e/real-drop.spec.ts`). Those tests only run with `STASH_REAL_INPUT=1`, on a machine nobody is using at the time; the helpers refuse to press or release the mouse anywhere but on Stash's own windows.
+Real Windows drag and drop is tested too, by moving the mouse cursor (`tests/e2e/real-drop.spec.ts`). Those tests only run with `STASH_REAL_INPUT=1`, on a machine nobody is using at the time; the helpers refuse to press or release the mouse anywhere but on Wedge's own windows.
 
 Performance is measured by `npm run test:perf` (`tests/e2e/perf.spec.ts`): start-up, idle CPU and memory, how fast the edge reacts, animation frames, and a shelf with a thousand files. It prints the numbers and checks generous budgets; it is left out of the regular run because timings depend on the machine.
 
-Close any running Stash before the end-to-end tests: Stash is single-instance, so a running copy would swallow the test launches.
+Close any running Wedge before the end-to-end tests: Wedge is single-instance, so a running copy would swallow the test launches.
 
 CI runs all of these on Windows; a pull request can only be merged when they pass.
 

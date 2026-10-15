@@ -1,4 +1,4 @@
-//! The Stash window lives on a screen edge: a column of shelf tabs that is
+//! The Wedge window lives on a screen edge: a column of shelf tabs that is
 //! tucked in at rest (a few pixels show), peeks out under the cursor, comes
 //! out while a file is being dragged anywhere (see dragwatch.rs), and opens
 //! into a drawer. The page draws all of it. The window keeps one size (big

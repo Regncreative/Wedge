@@ -1,7 +1,7 @@
-//! Explorer integration: the "Add to Stash" context-menu entry and files on
+//! Explorer integration: the "Add to Wedge" context-menu entry and files on
 //! the clipboard.
 
-/// Paths passed as `stash.exe --add <path>...` (Explorer's context menu).
+/// Paths passed as `wedge.exe --add <path>...` (Explorer's context menu).
 pub fn paths_from_args(args: &[String]) -> Vec<String> {
     let mut out = Vec::new();
     let mut collecting = false;
@@ -28,12 +28,20 @@ mod imp {
     use winreg::RegKey;
 
     const KEYS: [&str; 2] = [
+        r"Software\Classes\*\shell\Wedge",
+        r"Software\Classes\Directory\shell\Wedge",
+    ];
+    /// The entry Wedge had when it was called Stash.
+    const OLD_KEYS: [&str; 2] = [
         r"Software\Classes\*\shell\Stash",
         r"Software\Classes\Directory\shell\Stash",
     ];
 
     pub fn set_context_menu(enabled: bool, label: &str, exe: &Path) -> std::io::Result<()> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        for key in OLD_KEYS {
+            let _ = hkcu.delete_subkey_all(key);
+        }
         for key in KEYS {
             if !enabled {
                 let _ = hkcu.delete_subkey_all(key);
@@ -106,14 +114,14 @@ mod tests {
     #[test]
     fn reads_paths_after_add() {
         assert_eq!(
-            paths_from_args(&args(&["stash.exe", "--add", "C:\\a.pdf", "C:\\b c.txt"])),
+            paths_from_args(&args(&["wedge.exe", "--add", "C:\\a.pdf", "C:\\b c.txt"])),
             ["C:\\a.pdf", "C:\\b c.txt"]
         );
-        assert!(paths_from_args(&args(&["stash.exe"])).is_empty());
-        assert!(paths_from_args(&args(&["stash.exe", "C:\\stray.txt"])).is_empty());
+        assert!(paths_from_args(&args(&["wedge.exe"])).is_empty());
+        assert!(paths_from_args(&args(&["wedge.exe", "C:\\stray.txt"])).is_empty());
         assert_eq!(
             paths_from_args(&args(&[
-                "stash.exe",
+                "wedge.exe",
                 "--add",
                 "\"C:\\q.txt\"",
                 "--other",
@@ -131,7 +139,7 @@ mod tests {
             return;
         }
         let exe = std::env::current_exe().unwrap();
-        set_context_menu(true, "Add to Stash (test)", &exe).unwrap();
+        set_context_menu(true, "Add to Wedge (test)", &exe).unwrap();
         assert!(context_menu_registered());
         set_context_menu(false, "", &exe).unwrap();
         assert!(!context_menu_registered());

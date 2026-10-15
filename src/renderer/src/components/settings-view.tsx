@@ -596,7 +596,7 @@ export function SettingsView() {
         </Section>
 
         <p className="pb-2 pt-1 text-center text-[11px] text-[var(--fg-3)]">
-          Stash {appVersion ? `v${appVersion}` : ''} · Regncreative
+          Wedge {appVersion ? `v${appVersion}` : ''} · Regncreative
         </p>
       </div>
     </div>

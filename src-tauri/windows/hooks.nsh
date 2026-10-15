@@ -33,6 +33,10 @@
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "com.stash.app"
   ; 1.x's Start menu shortcut, if its uninstaller left it behind.
   Delete "$SMPROGRAMS\Stash.lnk"
+  ; Early 2.0 builds, still called Stash: their start-up entry and menu.
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Stash"
+  DeleteRegKey HKCU "Software\Classes\*\shell\Stash"
+  DeleteRegKey HKCU "Software\Classes\Directory\shell\Stash"
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
@@ -47,21 +51,25 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  ; Explorer's "Add to Stash" entry points at this install; remove it on a
-  ; real uninstall (an update re-registers it on the next start).
+  ; Explorer's "Add to Wedge" entry and the start-with-Windows entry point
+  ; at this install; remove them on a real uninstall (an update registers
+  ; them again on the next start).
   ${If} $UpdateMode <> 1
-    DeleteRegKey HKCU "Software\Classes\*\shell\Stash"
-    DeleteRegKey HKCU "Software\Classes\Directory\shell\Stash"
+    DeleteRegKey HKCU "Software\Classes\*\shell\Wedge"
+    DeleteRegKey HKCU "Software\Classes\Directory\shell\Wedge"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Wedge"
   ${EndIf}
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
   ; The uninstaller's "Delete the application data" checkbox clears Tauri's
-  ; own folders; shelves and settings live in %APPDATA%\Stash (shared with
-  ; 1.x), so clear that too. Never during an update.
+  ; own folders; shelves and settings live in %APPDATA%\Wedge (or still in
+  ; %APPDATA%\Stash, Wedge's old name, if it couldn't be renamed), so clear
+  ; those too. Never during an update.
   ${If} $DeleteAppDataCheckboxState = 1
   ${AndIf} $UpdateMode <> 1
     SetShellVarContext current
+    RMDir /r "$APPDATA\Wedge"
     RMDir /r "$APPDATA\Stash"
   ${EndIf}
 !macroend

@@ -40,7 +40,7 @@ fn open_window(app: &AppHandle, shelf_id: &str, pos: Option<(i32, i32)>) -> Resu
     }
     let url = crate::panel::page_url(app, &format!("view=widget&shelf={shelf_id}"));
     let win = WebviewWindowBuilder::new(app, &label, url)
-        .title("Stash")
+        .title("Wedge")
         .inner_size(280.0, 360.0)
         .min_inner_size(220.0, 200.0)
         .decorations(false)

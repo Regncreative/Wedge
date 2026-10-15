@@ -20,7 +20,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Stash version
+      label: Wedge version
       description: Shown at the bottom of Settings.
       placeholder: 1.0.4
     validations:

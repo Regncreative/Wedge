@@ -87,7 +87,7 @@ pub fn show_properties(path: &str) -> bool {
 }
 
 /// The primary mouse button is held down right now. Asked only when one of
-/// Stash's own drags is about to start: one started after the button was
+/// Wedge's own drags is about to start: one started after the button was
 /// let go would drop at once, wherever the cursor happens to be.
 #[cfg(windows)]
 pub fn primary_button_down() -> bool {

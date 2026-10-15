@@ -138,7 +138,7 @@ test('starts quickly and costs nothing while idle', async () => {
   note('idle CPU (% of one core)', round(cpu))
   note('processes', after.processes)
   note('private memory, all processes (MB)', after.privateMB)
-  note('private memory, Stash itself (MB)', after.mainPrivateMB)
+  note('private memory, Wedge itself (MB)', after.mainPrivateMB)
   note(
     '…by process, at rest (MB)',
     after.each

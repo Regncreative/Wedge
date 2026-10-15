@@ -83,7 +83,7 @@ export interface PhoneSession {
 export interface FilesChanged {
   added: number
   shelfName: string
-  /** 'app': a change made in one of Stash's windows. */
+  /** 'app': a change made in one of Wedge's windows. */
   source: FileSource | 'expiry' | 'app'
 }
 
@@ -133,7 +133,7 @@ export interface AppSettings {
   watchScreenshots: boolean
   /** A small handle on this screen edge: drop files on it, click to open the panel. */
   edgeHandle: EdgeHandle
-  /** "Add to Stash" in Explorer's right-click menu. */
+  /** "Add to Wedge" in Explorer's right-click menu. */
   contextMenu: boolean
 }
 

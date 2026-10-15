@@ -296,6 +296,7 @@ export type Messages = {
   welcomeDragBody: string
   welcomeHotkeyTitle: string
   welcomeHotkeyBody: (hotkey: string) => string
+  welcomeChoices: string
   welcomeStart: string
 }
 

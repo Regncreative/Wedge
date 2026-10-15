@@ -97,14 +97,14 @@ pub fn sanitize_name(raw: &str) -> String {
 fn page(lang: Language) -> String {
     let (title, pick, sending, done, failed) = match lang {
         Language::Tr => (
-            "Stash’e gönder",
+            "Wedge’e gönder",
             "Dosya seç",
             "Gönderiliyor…",
             "Gönderildi ✓",
             "Gönderilemedi",
         ),
         Language::En => (
-            "Send to Stash",
+            "Send to Wedge",
             "Choose files",
             "Sending…",
             "Sent ✓",
@@ -304,7 +304,7 @@ mod tests {
             "GET /tok123 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
             b"",
         );
-        assert!(page.starts_with("HTTP/1.1 200") && page.contains("Send to Stash"));
+        assert!(page.starts_with("HTTP/1.1 200") && page.contains("Send to Wedge"));
 
         let wrong = http(
             port,

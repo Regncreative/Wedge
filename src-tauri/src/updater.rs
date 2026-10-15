@@ -14,11 +14,11 @@ use crate::models::{UpdateChannel, UpdateStatus};
 use crate::state::AppState;
 
 const STABLE_FEED: &str =
-    "https://github.com/Regncreative/Stash/releases/latest/download/latest.json";
+    "https://github.com/Regncreative/Wedge/releases/latest/download/latest.json";
 /// A fixed pre-release ("channel-beta") whose latest.json the Release
 /// workflow points at the newest version, beta or stable.
 const BETA_FEED: &str =
-    "https://github.com/Regncreative/Stash/releases/download/channel-beta/latest.json";
+    "https://github.com/Regncreative/Wedge/releases/download/channel-beta/latest.json";
 
 fn set_status(app: &AppHandle, status: UpdateStatus) {
     let state = app.state::<AppState>();
@@ -133,7 +133,7 @@ pub async fn check(app: &AppHandle, manual: bool) -> UpdateStatus {
             };
             set_status(app, s.clone());
             if manual {
-                notify(app, "Stash", &i18n::up_to_date(lang, &current));
+                notify(app, "Wedge", &i18n::up_to_date(lang, &current));
             }
             s
         }
@@ -202,7 +202,7 @@ async fn download(app: &AppHandle, update: tauri_plugin_updater::Update) -> Upda
     }
 }
 
-/// Run the downloaded installer; Stash exits and the new version starts.
+/// Run the downloaded installer; Wedge exits and the new version starts.
 pub fn install(app: &AppHandle) {
     let pending = app
         .state::<AppState>()

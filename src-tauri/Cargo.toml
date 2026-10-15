@@ -1,10 +1,10 @@
 [package]
-name = "stash"
-version = "2.0.0-alpha.0"
-description = "A modern file shelf for Windows"
+name = "wedge"
+version = "2.0.0"
+description = "A file shelf on the edge of your screen"
 authors = ["Regncreative"]
 license = "MIT"
-repository = "https://github.com/Regncreative/Stash"
+repository = "https://github.com/Regncreative/Wedge"
 edition = "2021"
 rust-version = "1.90"
 

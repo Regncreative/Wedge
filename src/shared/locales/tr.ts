@@ -71,7 +71,7 @@ export const tr: Messages = {
 
   emptyTitle: 'Bu raf boş',
   emptyHint:
-    'Dosyaları buraya sürükle ya da Ctrl+V ile yapıştır. Dosyalar yerinde kalır; Stash yalnızca nerede olduklarını hatırlar.',
+    'Dosyaları buraya sürükle ya da Ctrl+V ile yapıştır. Dosyalar yerinde kalır; Wedge yalnızca nerede olduklarını hatırlar.',
   emptySharedHint:
     'Buraya bıraktığın dosyalar paylaşılan klasöre kopyalanır ve klasörü paylaştığın herkes görür.',
   emptyAllTitle: 'Henüz dosya yok',
@@ -155,7 +155,7 @@ export const tr: Messages = {
   openFolder: 'Klasörü aç',
   deleteShelf: (name) => `“${name}” rafını sil`,
   deleteShelfConfirm: (name) =>
-    `“${name}” rafı silinsin mi? İçindeki dosyalar Stash’ten kalkar, diskten silinmez.`,
+    `“${name}” rafı silinsin mi? İçindeki dosyalar Wedge’ten kalkar, diskten silinmez.`,
   deleteSharedShelfConfirm: (name) =>
     `“${name}” rafı kaldırılsın mı? Paylaşılan klasör ve içindeki dosyalar olduğu gibi kalır.`,
   cannotDeleteLast: 'Son raf silinemez',
@@ -167,7 +167,7 @@ export const tr: Messages = {
   sharedHowSee: 'Klasöre kim ne eklerse herkesin rafında birkaç saniye içinde görünür.',
   sharedHowRemove: 'Raftan kaldırdığın dosya klasörden silinir (Geri Dönüşüm Kutusu’na gider).',
   sharedHowFriend:
-    'Herkesin Drive’ı ayrı olsa da sorun yok: klasörü Drive’da paylaş; arkadaşın “Benimle paylaşılanlar”da klasöre sağ tıklayıp “Kısayol ekle” desin ve kendi Stash’inde aynı klasörü seçsin.',
+    'Herkesin Drive’ı ayrı olsa da sorun yok: klasörü Drive’da paylaş; arkadaşın “Benimle paylaşılanlar”da klasöre sağ tıklayıp “Kısayol ekle” desin ve kendi Wedge’inde aynı klasörü seçsin.',
   sharedHowPrivate: 'Notların, etiketlerin ve sabitlemelerin yalnızca bu bilgisayarda kalır.',
   chooseFolder: 'Klasör seç',
   sharedCreated: (name) => `“${name}” paylaşılan rafı hazır`,
@@ -187,7 +187,7 @@ export const tr: Messages = {
 
   edgeDropTitle: 'Rafa bırak',
   edgeAdded: (n, s) => `${n} dosya → ${s}`,
-  edgeOpen: 'Stash’i aç',
+  edgeOpen: 'Wedge’i aç',
   widgetEmpty: 'Bu raf boş',
 
   generalSection: 'Genel',
@@ -205,7 +205,7 @@ export const tr: Messages = {
   themeDark: 'Koyu',
   accentColor: 'Vurgu rengi',
   startWithWindows: 'Windows ile başlat',
-  startWithWindowsHint: 'Oturum açılınca Stash arka planda açılsın',
+  startWithWindowsHint: 'Oturum açılınca Wedge arka planda açılsın',
   notifications: 'Bildirimler',
   notificationsHint: 'Çekmece kapalıyken gelen dosyaları bildir',
   idleOpacity: 'Boşta saydamlık',
@@ -233,7 +233,7 @@ export const tr: Messages = {
   edgeOff: 'Kapalı',
   edgeLeft: 'Sol',
   edgeRight: 'Sağ',
-  contextMenuToggle: 'Sağ tıkta “Stash’e ekle”',
+  contextMenuToggle: 'Sağ tıkta “Wedge’e ekle”',
   contextMenuHint: 'Windows 11’de “Diğer seçenekleri göster” altında görünür',
   watchDownloads: 'İndirilenler',
   watchDownloadsHint: 'Yeni indirilen dosyalar kendiliğinden rafa düşer',
@@ -280,7 +280,7 @@ export const tr: Messages = {
   updateErrorHint: 'En son kurucuyu sürümler sayfasından indirebilirsin.',
   downloadManually: 'Sürümler sayfasını aç',
 
-  welcomeTitle: 'Stash’e hoş geldin',
+  welcomeTitle: 'Wedge’e hoş geldin',
   welcomeSubtitle:
     'Rafların ekranın kenarında yaşar: dosyaları topla, bul, sürükleyip istediğin yere bırak.',
   welcomeDropTitle: 'Sürükle, kenara bırak',
@@ -294,5 +294,6 @@ export const tr: Messages = {
     'Farklı klasörlerden Cep sekmesine topla, sonra hepsini birden bir yere sürükle.',
   welcomeHotkeyTitle: 'Her yerden aç',
   welcomeHotkeyBody: (k) => `${k} ile paneli aç veya kapat.`,
+  welcomeChoices: 'Windows ile birlikte',
   welcomeStart: 'Başlayalım'
 }

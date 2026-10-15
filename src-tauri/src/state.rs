@@ -50,15 +50,33 @@ impl AppState {
     }
 }
 
-/// %APPDATA%\Stash — shared with Stash 1.x so data carries over. The
-/// STASH_USER_DATA variable points tests (and side-by-side debugging) at
-/// an isolated profile.
+fn app_data() -> PathBuf {
+    std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir)
+}
+
+/// %APPDATA%\Wedge. Wedge used to be called Stash: Stash 1.x and early
+/// 2.0 builds kept everything in %APPDATA%\Stash, which is renamed on the
+/// first start (and used as is if it can't be, e.g. while 1.x still runs).
+/// The STASH_USER_DATA variable points tests (and side-by-side debugging)
+/// at an isolated profile.
 pub fn data_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("STASH_USER_DATA") {
         return PathBuf::from(dir);
     }
-    let base = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    base.join("Stash")
+    let dir = app_data().join("Wedge");
+    let old = app_data().join("Stash");
+    if !dir.exists() && old.join("stash.db").exists() && std::fs::rename(&old, &dir).is_err() {
+        return old;
+    }
+    dir
+}
+
+/// Where the data lived when Wedge was called Stash (None for test profiles).
+pub fn old_data_dir() -> Option<PathBuf> {
+    if std::env::var_os("STASH_USER_DATA").is_some() {
+        return None;
+    }
+    Some(app_data().join("Stash"))
 }

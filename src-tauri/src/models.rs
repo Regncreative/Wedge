@@ -141,7 +141,7 @@ pub struct AppSettings {
     pub watch_screenshots: bool,
     /// A small handle on this screen edge: drop files on it, click to open the panel.
     pub edge_handle: EdgeHandle,
-    /// "Add to Stash" in Explorer's right-click menu.
+    /// "Add to Wedge" in Explorer's right-click menu.
     pub context_menu: bool,
 }
 

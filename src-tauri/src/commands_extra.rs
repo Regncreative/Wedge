@@ -157,7 +157,7 @@ pub async fn zip_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdResul
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default()
     } else {
-        "Stash".to_string()
+        "Wedge".to_string()
     };
     let dest = actions::unique_path(&dir, &stem, "zip");
     let (zip_paths, zip_dest) = (paths.clone(), dest.clone());
@@ -303,10 +303,10 @@ pub async fn start_drag_zip(
         .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
         .take(80)
         .collect();
-    let dest = std::env::temp_dir().join("Stash").join(format!(
+    let dest = std::env::temp_dir().join("Wedge").join(format!(
         "{}.zip",
         if safe.trim().is_empty() {
-            "Stash"
+            "Wedge"
         } else {
             safe.trim()
         }
@@ -351,7 +351,7 @@ fn clips_dir(state: &AppState) -> PathBuf {
     state.data_dir.join("clips")
 }
 
-/// Whether a path lives in Stash's own folders (clips, phone uploads), so
+/// Whether a path lives in Wedge's own folders (clips, phone uploads), so
 /// removing it from the shelf may delete the file too.
 pub fn is_owned(state: &AppState, path: &str) -> bool {
     let p = Path::new(path);
@@ -531,7 +531,7 @@ mod tests {
         assert!(!is_url("see https://example.com later"));
         assert!(!is_url("ftp://example.com"));
         assert_eq!(
-            url_title("https://www.github.com/Regncreative/Stash"),
+            url_title("https://www.github.com/Regncreative/Wedge"),
             "github.com"
         );
     }

@@ -172,8 +172,10 @@ test('notes, tags and reminders from the context menu', async () => {
   await dialog.getByRole('textbox').first().fill('Sign before Friday')
   await dialog.getByRole('textbox').nth(1).fill('legal, urgent')
   await dialog.getByRole('button', { name: ui('Kaydet', 'Save') }).click()
-  await expect(page.getByText('Sign before Friday')).toBeVisible()
-  await expect(page.getByText('urgent', { exact: true })).toBeVisible()
+  // The dialog fades out; then the card shows the note and the tags.
+  await expect(dialog).toHaveCount(0)
+  await expect(row(page, 'contract.pdf').getByText('Sign before Friday')).toBeVisible()
+  await expect(row(page, 'contract.pdf').getByText('urgent', { exact: true })).toBeVisible()
 
   await row(page, 'contract.pdf').click({ button: 'right' })
   await page.getByRole('menuitem', { name: ui('Hatırlat', 'Remind me') }).click()
@@ -201,8 +203,8 @@ test('quick actions: zip a selection and convert an image', async () => {
   await row(page, 'a.txt').click()
   await row(page, 'pic.png').click({ modifiers: ['Shift'] })
   await page.getByRole('toolbar').getByRole('button', { name: 'ZIP' }).click()
-  await expect.poll(() => existsSync(join(work, 'Stash.zip'))).toBe(true)
-  await expect(row(page, 'Stash.zip')).toBeVisible()
+  await expect.poll(() => existsSync(join(work, 'Wedge.zip'))).toBe(true)
+  await expect(row(page, 'Wedge.zip')).toBeVisible()
 
   await page.keyboard.press('Escape')
   await row(page, 'pic.png').click({ button: 'right' })
@@ -348,7 +350,7 @@ test('dragging out never holds up the window', async () => {
   expect(await page.evaluate(() => window.stash.edgeState())).toMatchObject({ mode: 'open' })
   await zipping
   expect(Date.now() - t).toBeLessThan(3000)
-  expect(existsSync(join(tmpdir(), 'Stash', 'Bundle.zip'))).toBe(true)
+  expect(existsSync(join(tmpdir(), 'Wedge', 'Bundle.zip'))).toBe(true)
 })
 
 test('the shelves live on the screen edge: tucked in, out for a drag, open as a drawer', async () => {

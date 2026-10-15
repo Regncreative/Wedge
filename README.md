@@ -1,27 +1,26 @@
 <p align="center">
-  <img src="docs/logo.png" alt="Stash logo" width="96" height="96">
+  <img src="docs/logo.png" alt="Wedge logo: three shelf tabs coming out of a screen edge" width="96" height="96">
 </p>
 
-<h1 align="center">Stash</h1>
+<h1 align="center">Wedge</h1>
 
 <p align="center">
-  <strong>A modern file shelf for Windows</strong><br>
-  Keep files within reach — without cluttering your desktop.
-</p>
-
-<p align="center">
-  <a href="https://stash.regncreative.com"><strong>stash.regncreative.com</strong></a>
+  <strong>A file shelf on the edge of your screen</strong><br>
+  Wedge files into the side of your screen while you work, and drag them out when you need them.
 </p>
 
 <p align="center">
-  <a href="https://stash.regncreative.com"><img src="https://img.shields.io/badge/website-stash.regncreative.com-2563EB" alt="Website"></a>
-  <a href="https://github.com/Regncreative/Stash/actions/workflows/ci.yml"><img src="https://github.com/Regncreative/Stash/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/Regncreative/Stash/actions/workflows/codeql.yml"><img src="https://github.com/Regncreative/Stash/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
-  <a href="https://github.com/Regncreative/Stash/releases/latest"><img src="https://img.shields.io/github/v/release/Regncreative/Stash?label=latest%20release" alt="Latest release"></a>
-  <img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Windows">
+  <a href="https://wedgeshelf.com"><strong>wedgeshelf.com</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://wedgeshelf.com"><img src="https://img.shields.io/badge/website-wedgeshelf.com-8D97FF" alt="Website"></a>
+  <a href="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <a href="https://github.com/Regncreative/Wedge/releases/latest"><img src="https://img.shields.io/github/v/release/Regncreative/Wedge?label=latest%20release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white" alt="Tauri">
   <img src="https://img.shields.io/badge/Rust-backend-B7410E?logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
 
@@ -33,45 +32,50 @@
   <img src="docs/panel-light.png" alt="A shelf pulled out as a drawer, light theme" width="300">
 </p>
 
-## What is Stash?
+> **Wedge was called Stash.** Same app, new name and logo with 2.0. Stash 1.x updates to Wedge by itself and keeps every shelf and setting.
 
-Windows doesn’t have a convenient place to park files while you work — so people pile them on the desktop, spam Downloads, or lose track mid-flow.
+## What is Wedge?
 
-**Stash** puts your shelves on the edge of the screen. Start dragging a file anywhere and colored shelf tabs slide out; drop it on one. Click a tab and that shelf opens like a drawer, ready to drag files back into any app. Stash stores **references only** — your files stay where they are on disk.
+Windows has no good place to park files while you work, so they pile up on the desktop or get lost in Downloads.
 
-Designed to feel like a built-in Windows 11 feature (Fluent Design), and light like one: a **5 MB installer** that uses the WebView2 runtime built into Windows.
+**Wedge** keeps your shelves on the edge of the screen. Start dragging a file anywhere and colored shelf tabs slide out; drop it on one. Click a tab and that shelf opens like a drawer, ready to drag files back into any app. Wedge only remembers where your files are: they stay where they are on disk.
+
+It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Windows, and no CPU use while it waits at the edge.
 
 ## Features
 
 **Collect from anywhere**
-- **Shelves on the screen edge** — tucked-in tabs that slide out the moment you start dragging a file, from Explorer, the desktop or a browser; drop on the shelf you want
-- **Drawers** — click a tab to pull its shelf out; drag a card onto another tab to move it
-- **Pocket** — collect files from different folders, then drag them all out in one go (the pocket empties itself)
-- **Automatic shelves** — new downloads and screenshots appear on their own shelves; rules send files to the right shelf by type
-- **Right-click → Add to Stash** in Explorer, **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
+
+- **Shelves on the screen edge**: tucked-in tabs slide out the moment you start dragging a file from File Explorer, the desktop or a browser; drop on the shelf you want
+- **Drawers**: click a tab to pull its shelf out; drag a card onto another tab to move it
+- **Pocket**: collect files from different folders, then drag them all out in one go (the pocket empties itself)
+- **Automatic shelves**: new downloads and screenshots land on their own shelves; rules send files to the right shelf by type
+- **Right-click → Add to Wedge** in File Explorer (on Windows 11 under _Show more options_), **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
 
 **Share**
-- **Shared shelves** — turn a Google Drive, OneDrive or Dropbox folder into a shelf. Files you drop are copied into the folder; whatever a friend (or your other PC) puts there shows up on your shelf. Everyone keeps their own Drive and just links the same shared folder
+
+- **Shared shelves**: turn a Google Drive, OneDrive or Dropbox folder into a shelf. Files you drop are copied into the folder; whatever a friend (or your other PC) puts there shows up on your shelf
 
 **Find and use**
-- **Previews everywhere** — thumbnails in the list, a grid view, Space for Quick Look, and previews in desktop widgets
-- **Search inside files** — PDF, Word, Excel, PowerPoint, text and code, across every shelf
-- **Quick actions** — ZIP, convert images (JPG, PNG, lossy WebP), **reduce size** (never makes a file bigger), copy into a folder, open all, drag a whole shelf as one ZIP
-- **Notes, tags and reminders** on any file; **temporary shelves** that clean themselves up
-- **Desktop widgets** — pin a shelf to the desktop
+
+- **Real previews**: every card shows the file as File Explorer would; Space opens Quick Look; desktop widgets preview on hover
+- **Search inside files**: PDF, Word, Excel, PowerPoint, OpenDocument, text and code, across every shelf
+- **Quick actions**: ZIP, convert images (JPG, PNG, WebP), **reduce size** (never makes a file bigger), copy into a folder, open all, drag a whole shelf out as one ZIP
+- **Notes, tags and reminders** on any file; **temporary shelves** that clear themselves after 24 hours, 7 or 30 days
+- **Desktop widgets**: pin a shelf to the desktop
 
 **Plus**
-- **Its own look** — colored index tabs, cards with real previews, dark and light themes
-- **System tray integration** — silent background app, always one click away
-- **Multi-select** — Ctrl/Shift+click, then drag, pin or remove several files at once
-- **Keyboard friendly** — navigate, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
-- **Global shortcut** — open the drawer with `Ctrl+Shift+Space` (customizable)
-- **Turkish & English** — full UI + tray localization
-- **Auto update** — updates from GitHub Releases, with an opt-in beta channel; every update is signature-checked
-- **Export / import** — move your shelves and settings to another PC
-- **Small and light** — 5 MB installer, low memory use, browser engine kept up to date by Windows
-- **Missing-file awareness** — deleted or moved files show as unavailable until you clear them
-- **Private by design** — no account, no telemetry ([privacy](PRIVACY.md))
+
+- **Its own look**: colored index tabs, cards with real previews, dark and light themes, a color and an icon per shelf
+- **Multi-select**: Ctrl/Shift+click, then drag, pin or remove several files at once
+- **Keyboard friendly**: move, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
+- **Global shortcut**: open the drawer with `Ctrl+Shift+Space` (customizable)
+- **Steps aside** while a game, a video or a presentation runs full screen
+- **Turkish and English**
+- **Signed updates** from GitHub Releases, with an opt-in beta channel
+- **Export / import**: move your shelves and settings to another PC
+- **Missing-file awareness**: deleted or moved files show as unavailable until you clear them
+- **Private**: no account, no telemetry ([privacy](PRIVACY.md))
 
 ## Screenshots
 
@@ -80,23 +84,21 @@ Designed to feel like a built-in Windows 11 feature (Fluent Design), and light l
   &nbsp;
   <img src="docs/shared-shelf.png" alt="Creating a shared shelf from a cloud folder" width="300">
   &nbsp;
-  <img src="docs/settings.png" alt="Stash settings" width="300">
+  <img src="docs/settings.png" alt="Wedge settings" width="300">
 </p>
 
 ## Installation
 
-### For everyone (recommended)
-
-1. Download from **[stash.regncreative.com](https://stash.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Stash/releases/latest)** (`Stash_<version>_x64-setup.exe`)
-2. Run the installer
-3. Launch **Stash** — it appears in the system tray
+1. Download from **[wedgeshelf.com](https://wedgeshelf.com)** or the **[latest release](https://github.com/Regncreative/Wedge/releases/latest)** (`Wedge_<version>_x64-setup.exe`)
+2. Run the installer; no administrator rights needed
+3. On first start, choose whether Wedge starts with Windows and adds **Add to Wedge** to File Explorer's right-click menu (you can change both later in Settings)
 4. Start dragging a file: your shelves slide out of the right edge of the screen. Or click a tab, the tray icon, or press `Ctrl+Shift+Space`
 
-> Tip: enable **Start with Windows** in Settings so Stash is ready after sign-in.
->
-> Upgrading from 1.x happens automatically: the 2.0 installer replaces the old app and keeps all your shelves and settings.
+Coming from Stash? Installing Wedge replaces Stash 1.x, and your shelves and settings move from `%APPDATA%\Stash` to `%APPDATA%\Wedge` on the first start.
 
-### For developers
+A Microsoft Store release is being prepared ([checklist](docs/microsoft-store.md)).
+
+## For developers
 
 Requires Windows 10/11, [Node.js 22](https://nodejs.org) (`.nvmrc`), [Rust](https://rustup.rs) and the Visual Studio C++ Build Tools ([Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
@@ -105,29 +107,30 @@ npm ci
 npm run dev
 ```
 
-The app starts in the tray with its tabs tucked into the right screen edge. Click a tab, the tray icon or use the hotkey to open the drawer. See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and conventions.
+| Command                                     | What it does                                                                                 |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `npm run dev`                               | Run the app with hot reload                                                                  |
+| `npm run build`                             | Release build and installer (`src-tauri/target/release/bundle/nsis/`)                        |
+| `npm run build:store`                       | Installer for the Microsoft Store (WebView2 included, works offline)                         |
+| `npm test`                                  | Frontend unit tests (Vitest)                                                                 |
+| `npm run test:rust`                         | Backend unit tests (cargo test)                                                              |
+| `npm run build:e2e` then `npm run test:e2e` | End-to-end tests against the real app (Playwright over WebView2)                             |
+| `npm run test:perf`                         | Performance numbers: start-up, idle cost, edge latency, animation frames, a 1,000-file shelf |
+| `npm run icons`                             | Make every app icon from `assets/brand/*.svg`                                                |
+| `npm run typecheck`                         | TypeScript check                                                                             |
+| `npm run lint`                              | ESLint and Clippy                                                                            |
 
-## Development
+See [CONTRIBUTING.md](CONTRIBUTING.md) for tests and conventions.
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Run the app with hot reload |
-| `npm run build` | Release build + installer (`src-tauri/target/release/bundle/nsis/`) |
-| `npm test` | Frontend unit tests (Vitest) |
-| `npm run test:rust` | Backend unit tests (cargo test) |
-| `npm run build:e2e` then `npm run test:e2e` | End-to-end tests against the real app (Playwright over WebView2) |
-| `npm run typecheck` | TypeScript check |
-| `npm run lint` | ESLint + Clippy |
+### Tech stack
 
-## Tech stack
-
-- **Tauri 2** with a **Rust** backend; UI in **React** + **TypeScript** + **Vite**
-- **Tailwind CSS** + **Framer Motion** + **Zustand**
-- **rusqlite** (SQLite), the **windows** crate for shell icons and Properties, **drag** for native drag-out
+- **Tauri 2** with a **Rust** backend; UI in **React**, **TypeScript** and **Vite**
+- **Tailwind CSS**, **Framer Motion**, **Zustand**
+- **rusqlite** (SQLite), the **windows** crate for shell icons, drag detection and the edge window, **drag** for native drag-out
 - Tauri plugins for tray, global shortcut, autostart, notifications, dialogs, logging and signed updates
-- **Vitest**, **cargo test** + **Playwright** for tests, GitHub Actions on Windows for CI and releases
+- **Vitest**, **cargo test** and **Playwright** for tests; GitHub Actions on Windows for CI and releases
 
-## Architecture
+### Architecture
 
 ```text
 ┌─────────────────────────────────────────┐
@@ -147,46 +150,42 @@ The app starts in the tray with its tabs tucked into the right screen edge. Clic
 └─────────────────────────────────────────┘
 ```
 
-## Project structure
+Inside the code the app still goes by its old name in places (`window.stash`, `useStashStore`, `STASH_*` variables); only what people see was renamed.
+
+### Project structure
 
 ```text
+assets/brand/     Logo and tray glyph (SVG sources for every icon)
 src/
   renderer/       React UI (edge tabs, drawer, widgets); lib/api.ts bridges to Rust
   shared/         Types and translations (locales/)
 src-tauri/
   src/            Rust backend: commands, database, edge window, drag watch, shared shelves, updater
-  windows/        Installer hooks (upgrade from 1.x)
+  windows/        Installer hooks (upgrade from Stash 1.x, clean uninstall)
   tauri.conf.json App, window, bundle and updater configuration
 tests/
   unit/           Vitest
-  e2e/            Playwright, driving the real stash.exe
-scripts/          Release helpers
+  e2e/            Playwright, driving the real wedge.exe
+scripts/          Release and icon helpers
 ```
 
 ## Roadmap
 
-- [x] System tray panel
-- [x] Shelves & drag-and-drop
-- [x] Global shortcut
-- [x] Themes, accents, localization (TR/EN)
-- [x] Auto update via GitHub Releases
-- [x] Idle opacity & missing-file cleanup
-- [x] Multi-select, keyboard navigation, export / import
-- [x] Automated, staged releases with a beta channel
-- [x] 2.0: rebuilt on Tauri (5 MB installer, signed updates)
+- [x] Shelves, drag and drop, global shortcut, themes, Turkish and English
+- [x] Signed auto-updates with staged rollouts and a beta channel
+- [x] 2.0: rebuilt on Tauri (5 MB installer)
 - [x] Automatic shelves, rules, content search, Quick Look
 - [x] Phone to PC, desktop widgets, quick actions
 - [x] Shelves on the screen edge, pocket, shared shelves (cloud folders), new design
-- [ ] Share links (needs a hosting decision)
-- [ ] New demo GIF
+- [x] New name and logo: Wedge
 - [ ] Code signing
 - [ ] Microsoft Store and winget
-- [ ] Plugins / extensions
-- [ ] Smarter / AI-assisted search
+- [ ] Share links
+- [ ] Smarter search
 
-## Releases & auto-update
+## Releases and updates
 
-Installed copies check [GitHub Releases](https://github.com/Regncreative/Stash/releases) for updates on launch and from the tray / Settings. Users can opt into beta versions in Settings.
+Installed copies check [GitHub Releases](https://github.com/Regncreative/Wedge/releases) for updates on launch and from the tray or Settings. Users can opt into beta versions in Settings.
 
 Releases are built by GitHub Actions, not on a developer machine: push a version tag and the **Release** workflow tests, builds and uploads the installer to a draft release for review. Rollouts can be staged with the **Rollout** workflow. See [CONTRIBUTING.md](CONTRIBUTING.md#releasing-maintainers).
 

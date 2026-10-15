@@ -6,7 +6,7 @@ import { join, resolve } from 'path'
 
 /** Built by `npm run build:e2e` (tauri build --debug --no-bundle). */
 export const EXE =
-  process.env.STASH_EXE ?? resolve(__dirname, '../../src-tauri/target/debug/stash.exe')
+  process.env.STASH_EXE ?? resolve(__dirname, '../../src-tauri/target/debug/wedge.exe')
 
 export interface LaunchedApp {
   child: ChildProcess
@@ -65,7 +65,7 @@ export async function launchApp(
   let browser: Browser | null = null
   const deadline = Date.now() + 30_000
   while (!browser) {
-    if (child.exitCode !== null) throw new Error(`stash.exe exited with ${child.exitCode}`)
+    if (child.exitCode !== null) throw new Error(`wedge.exe exited with ${child.exitCode}`)
     try {
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
     } catch (err) {

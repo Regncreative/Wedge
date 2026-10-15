@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Tray glyph: the three tabs alone, for 16 px on any taskbar. -->
+  <defs><clipPath id="c"><rect width="16" height="16"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect x="6" y="1.6" width="12" height="3.6" rx="1.8" fill="#8D97FF"/>
+    <rect x="1.4" y="6.2" width="16" height="3.6" rx="1.8" fill="#FF7FAC"/>
+    <rect x="8" y="10.8" width="10" height="3.6" rx="1.8" fill="#F6BB45"/>
+  </g>
+</svg>

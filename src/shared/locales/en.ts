@@ -72,7 +72,7 @@ export const en: Messages = {
 
   emptyTitle: 'This shelf is empty',
   emptyHint:
-    'Drag files here or paste with Ctrl+V. Files stay where they are; Stash only remembers where they live.',
+    'Drag files here or paste with Ctrl+V. Files stay where they are; Wedge only remembers where they live.',
   emptySharedHint:
     'Files you drop here are copied to the shared folder, so everyone it is shared with sees them.',
   emptyAllTitle: 'No files yet',
@@ -156,7 +156,7 @@ export const en: Messages = {
   openFolder: 'Open folder',
   deleteShelf: (name) => `Delete “${name}”`,
   deleteShelfConfirm: (name) =>
-    `Delete the shelf “${name}”? Its files leave Stash but stay on disk.`,
+    `Delete the shelf “${name}”? Its files leave Wedge but stay on disk.`,
   deleteSharedShelfConfirm: (name) =>
     `Remove the shelf “${name}”? The shared folder and its files are left as they are.`,
   cannotDeleteLast: 'The last shelf can’t be deleted',
@@ -170,7 +170,7 @@ export const en: Messages = {
   sharedHowRemove:
     'Removing a file from the shelf deletes it from the folder (to the Recycle Bin).',
   sharedHowFriend:
-    'Separate Drives are fine: share the folder in Drive; your friend right-clicks it in “Shared with me”, picks “Add shortcut to Drive”, and chooses the same folder in their Stash.',
+    'Separate Drives are fine: share the folder in Drive; your friend right-clicks it in “Shared with me”, picks “Add shortcut to Drive”, and chooses the same folder in their Wedge.',
   sharedHowPrivate: 'Your notes, tags and pins stay on this PC.',
   chooseFolder: 'Choose folder',
   sharedCreated: (name) => `Shared shelf “${name}” is ready`,
@@ -190,7 +190,7 @@ export const en: Messages = {
 
   edgeDropTitle: 'Drop on a shelf',
   edgeAdded: (n, s) => `${n} ${n === 1 ? 'file' : 'files'} → ${s}`,
-  edgeOpen: 'Open Stash',
+  edgeOpen: 'Open Wedge',
   widgetEmpty: 'This shelf is empty',
 
   generalSection: 'General',
@@ -208,7 +208,7 @@ export const en: Messages = {
   themeDark: 'Dark',
   accentColor: 'Accent color',
   startWithWindows: 'Start with Windows',
-  startWithWindowsHint: 'Start Stash in the background when you sign in',
+  startWithWindowsHint: 'Start Wedge in the background when you sign in',
   notifications: 'Notifications',
   notificationsHint: 'Tell me about files that arrive while the drawer is closed',
   idleOpacity: 'Idle transparency',
@@ -236,7 +236,7 @@ export const en: Messages = {
   edgeOff: 'Off',
   edgeLeft: 'Left',
   edgeRight: 'Right',
-  contextMenuToggle: '“Add to Stash” on right-click',
+  contextMenuToggle: '“Add to Wedge” on right-click',
   contextMenuHint: 'On Windows 11 it’s under “Show more options”',
   watchDownloads: 'Downloads',
   watchDownloadsHint: 'New downloads land on a shelf by themselves',
@@ -276,14 +276,14 @@ export const en: Messages = {
   updateChecking: 'Checking…',
   updateAvailable: (v) => `Downloading ${v}…`,
   updateDownloading: (n) => `Downloading update… ${n}%`,
-  updateReady: (v) => `${v} is ready; it installs when Stash restarts`,
+  updateReady: (v) => `${v} is ready; it installs when Wedge restarts`,
   updateLatest: 'You’re up to date',
   updateDev: 'Updates only work in the installed app',
   updateError: 'Update failed',
   updateErrorHint: 'You can download the latest installer from the releases page.',
   downloadManually: 'Open releases page',
 
-  welcomeTitle: 'Welcome to Stash',
+  welcomeTitle: 'Welcome to Wedge',
   welcomeSubtitle:
     'Your shelves live on the edge of the screen: collect files, find them, drag them wherever they need to go.',
   welcomeDropTitle: 'Drag to the edge',
@@ -297,5 +297,6 @@ export const en: Messages = {
     'Collect files from different folders in the Pocket tab, then drag them all out in one go.',
   welcomeHotkeyTitle: 'Open from anywhere',
   welcomeHotkeyBody: (k) => `Press ${k} to open or close the panel.`,
+  welcomeChoices: 'With Windows',
   welcomeStart: 'Let’s go'
 }

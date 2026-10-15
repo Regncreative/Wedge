@@ -192,7 +192,7 @@ pub async fn add_files(
         let _ = app
             .notification()
             .builder()
-            .title("Stash")
+            .title("Wedge")
             .body(body)
             .show();
     }
@@ -209,7 +209,7 @@ pub async fn remove_files(state: State<'_, AppState>, ids: Vec<String>) -> CmdRe
             .iter()
             .filter_map(|id| db::get_file(&conn, id).ok().flatten())
             .collect();
-        // Clips and phone uploads live in Stash's own folder; removing them
+        // Clips and phone uploads live in Wedge's own folder; removing them
         // from the shelf deletes the file too, unless another shelf uses it.
         let owned: Vec<String> = files
             .iter()
@@ -488,7 +488,7 @@ pub(crate) async fn drag_icon(path: &std::path::Path) -> Vec<u8> {
     .unwrap_or_else(|| include_bytes!("../icons/tray.png").to_vec())
 }
 
-/// Drag files out of Stash into another app and wait until the drag ends;
+/// Drag files out of Wedge into another app and wait until the drag ends;
 /// returns whether something took them. Everything that can be slow (the
 /// database, the files, the icon) is done before; the UI thread, which OLE
 /// needs for the drag, only runs the drag itself.
@@ -736,13 +736,15 @@ pub fn set_settings(
         }
     }
     let next = db::set_settings(&state.db(), &patch, state.language).map_err(err)?;
-    if patch.start_with_windows.is_some() {
+    // Agreeing on the welcome screen applies both Windows integrations.
+    let agreed = patch.onboarding_done == Some(true);
+    if patch.start_with_windows.is_some() || agreed {
         sync_autostart(&app, next.start_with_windows);
     }
     if patch.watch_downloads.is_some() || patch.watch_screenshots.is_some() {
         crate::services::restart_watchers(&app);
     }
-    if patch.context_menu.is_some() {
+    if patch.context_menu.is_some() || agreed {
         sync_context_menu(&app, next.context_menu);
     }
     if patch.edge_handle.is_some() {
@@ -751,7 +753,7 @@ pub fn set_settings(
     Ok(next)
 }
 
-/// "Add to Stash" in Explorer's right-click menu. Debug builds never register.
+/// "Add to Wedge" in Explorer's right-click menu. Debug builds never register.
 pub fn sync_context_menu(app: &AppHandle, enabled: bool) {
     if cfg!(debug_assertions) {
         return;
@@ -808,7 +810,7 @@ pub fn app_version(app: AppHandle) -> String {
 pub fn open_releases(app: AppHandle) -> bool {
     app.opener()
         .open_url(
-            "https://github.com/Regncreative/Stash/releases/latest",
+            "https://github.com/Regncreative/Wedge/releases/latest",
             None::<&str>,
         )
         .is_ok()
@@ -831,8 +833,8 @@ pub async fn export_data(app: AppHandle, state: State<'_, AppState>) -> CmdResul
     let mut dialog = app
         .dialog()
         .file()
-        .set_file_name(format!("stash-backup-{stamp}.json"))
-        .add_filter("Stash backup", &["json"]);
+        .set_file_name(format!("wedge-backup-{stamp}.json"))
+        .add_filter("Wedge backup", &["json"]);
     if let Ok(docs) = app.path().document_dir() {
         dialog = dialog.set_directory(docs);
     }
@@ -850,7 +852,7 @@ pub async fn export_data(app: AppHandle, state: State<'_, AppState>) -> CmdResul
 
 #[tauri::command]
 pub async fn import_data(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Value> {
-    let mut dialog = app.dialog().file().add_filter("Stash backup", &["json"]);
+    let mut dialog = app.dialog().file().add_filter("Wedge backup", &["json"]);
     if let Some(win) = panel::window(&app) {
         dialog = dialog.set_parent(&win);
     }

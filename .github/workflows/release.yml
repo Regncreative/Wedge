@@ -57,7 +57,7 @@ jobs:
       - run: npm run test:rust
 
       # Code signing (Authenticode): once a certificate is available
-      # (SignPath / Certum), sign stash.exe and the installer here.
+      # (SignPath / Certum), sign wedge.exe and the installer here.
 
       - name: Build signed installer
         run: npx tauri build
@@ -78,7 +78,7 @@ jobs:
       - name: End-to-end tests against the release build
         run: npm run test:e2e
         env:
-          STASH_EXE: src-tauri/target/release/stash.exe
+          STASH_EXE: src-tauri/target/release/wedge.exe
 
       - name: Release notes from CHANGELOG.md
         run: |

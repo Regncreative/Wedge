@@ -1,5 +1,6 @@
-//! SQLite storage. The schema and file location are the same as in Stash 1.x
-//! (%APPDATA%\Stash\stash.db), so upgrading keeps every shelf and setting.
+//! SQLite storage. The schema is the same as in Stash 1.x (Wedge's old
+//! name), whose stash.db is carried over (state::data_dir), so upgrading
+//! keeps every shelf and setting.
 
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -888,9 +889,60 @@ pub fn files_without_text(conn: &Connection, limit: i64) -> Result<Vec<StashFile
     rows.collect()
 }
 
+/// Wedge's own files (clips, phone uploads) moved with the data folder from
+/// `from` to `to`: point their entries at the new place. Returns how many.
+pub fn rebase_paths(conn: &Connection, from: &Path, to: &Path) -> Result<usize> {
+    let with_sep = |p: &Path| {
+        let s = p.to_string_lossy().trim_end_matches('\\').to_string();
+        format!("{s}\\")
+    };
+    conn.execute(
+        "UPDATE files SET absolute_path = ?2 || substr(absolute_path, length(?1) + 1)
+         WHERE lower(substr(absolute_path, 1, length(?1))) = lower(?1)",
+        params![with_sep(from), with_sep(to)],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn files_in_the_old_data_folder_follow_it() {
+        let conn = db();
+        let shelf = list_shelves(&conn).unwrap()[0].id.clone();
+        add_files(
+            &conn,
+            &[
+                file("C:\\Users\\a\\AppData\\Roaming\\Stash\\clips\\shot.png"),
+                file("C:\\Users\\a\\AppData\\Roaming\\StashOther\\x.txt"),
+                file("D:\\Stash\\notes.txt"),
+            ],
+            &shelf,
+        )
+        .unwrap();
+        let moved = rebase_paths(
+            &conn,
+            Path::new("C:\\Users\\a\\AppData\\Roaming\\stash"),
+            Path::new("C:\\Users\\a\\AppData\\Roaming\\Wedge"),
+        )
+        .unwrap();
+        assert_eq!(moved, 1);
+        let mut paths: Vec<_> = list_files(&conn, None)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.absolute_path)
+            .collect();
+        paths.sort();
+        assert_eq!(
+            paths,
+            [
+                "C:\\Users\\a\\AppData\\Roaming\\StashOther\\x.txt",
+                "C:\\Users\\a\\AppData\\Roaming\\Wedge\\clips\\shot.png",
+                "D:\\Stash\\notes.txt",
+            ]
+        );
+    }
 
     fn file(path: &str) -> FileInput {
         FileInput {

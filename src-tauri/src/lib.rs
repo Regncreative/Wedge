@@ -1,4 +1,4 @@
-//! Stash — a file shelf in the Windows system tray.
+//! Wedge — a file shelf on the edge of the screen.
 
 pub mod actions;
 pub mod commands;
@@ -63,7 +63,7 @@ fn add_from_explorer(app: &tauri::AppHandle, paths: Vec<String>) {
             let _ = app
                 .notification()
                 .builder()
-                .title("Stash")
+                .title("Wedge")
                 .body(i18n::files_added(
                     state.language,
                     change.added,
@@ -93,7 +93,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         // Must be first: a second launch only brings up the running panel.
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            // "Add to Stash" from Explorer launches us with --add <path>.
+            // "Add to Wedge" from Explorer launches us with --add <path>.
             let paths = shell::paths_from_args(&argv);
             if paths.is_empty() {
                 panel::show(app);
@@ -121,12 +121,22 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
             log::info!(
-                "[stash] v{} starting (tauri {})",
+                "[wedge] v{} starting (tauri {})",
                 app.package_info().version,
                 tauri::VERSION
             );
             let language = i18n::system_language();
             let conn = db::open(&data_dir.join("stash.db"), language)?;
+            if let Some(old) = state::old_data_dir().filter(|old| *old != data_dir) {
+                match db::rebase_paths(&conn, &old, &data_dir) {
+                    Ok(0) => {}
+                    Ok(n) => log::info!(
+                        "[wedge] {n} files followed the data folder to {}",
+                        data_dir.display()
+                    ),
+                    Err(e) => log::warn!("[wedge] moving file paths: {e}"),
+                }
+            }
             {
                 // The pocket: a tab at the top of the edge that holds files for later.
                 let (name, icon, color) = i18n::kind_shelf(language, "pocket");
@@ -141,7 +151,11 @@ pub fn run() {
                 dragdrop::attach(&panel);
             }
             tray::create(handle)?;
-            commands::sync_context_menu(handle, settings.context_menu);
+            // Explorer's menu and starting with Windows change the person's
+            // Windows: only once they agreed on the welcome screen.
+            if settings.onboarding_done {
+                commands::sync_context_menu(handle, settings.context_menu);
+            }
             watchdog::start(handle);
             panel::prepare(handle);
             panel::apply_side(handle, settings.edge_handle);
@@ -157,11 +171,13 @@ pub fn run() {
                 let _ = handle
                     .notification()
                     .builder()
-                    .title("Stash")
+                    .title("Wedge")
                     .body(i18n::strings(language).hotkey_taken)
                     .show();
             }
-            commands::sync_autostart(handle, settings.start_with_windows);
+            if settings.onboarding_done {
+                commands::sync_autostart(handle, settings.start_with_windows);
+            }
             updater::schedule_startup_check(handle);
             services::restart_watchers(handle);
             services::start_background_jobs(handle);
@@ -178,7 +194,7 @@ pub fn run() {
             if std::env::var_os("STASH_SHOW_ON_START").is_some() {
                 panel::show(handle);
             }
-            log::info!("[stash] ready");
+            log::info!("[wedge] ready");
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -261,7 +277,7 @@ pub fn run() {
             widget::close_widget,
         ])
         .build(tauri::generate_context!())
-        .expect("failed to build Stash");
+        .expect("failed to build Wedge");
 
     app.run(|_app, event| {
         // Stay alive in the tray when the panel is closed; app.exit(code)
