@@ -99,7 +99,7 @@ jobs:
           ' CHANGELOG.md > notes.md
           if [ ! -s notes.md ]; then
             echo "::warning::No CHANGELOG.md section for $VERSION"
-            echo "Stash $VERSION" > notes.md
+            echo "Wedge $VERSION" > notes.md
           fi
 
       - name: Update manifests
@@ -114,7 +114,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          flags=(--draft --title "Stash $VERSION" --notes-file notes.md)
+          flags=(--draft --title "Wedge $VERSION" --notes-file notes.md)
           # Stable users only see non-pre-releases.
           if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" "${flags[@]}" \

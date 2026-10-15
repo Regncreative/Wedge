@@ -1,5 +1,5 @@
 // Writes the update manifests for a release:
-//   latest.json — read by Stash 2.x (Tauri updater; signature-verified)
+//   latest.json — read by Wedge 2.x (Tauri updater; signature-verified)
 //   latest.yml  — read by Stash 1.x (electron-updater), so 1.x installs
 //                 upgrade to 2.x; the 2.x installer removes the old app.
 //
