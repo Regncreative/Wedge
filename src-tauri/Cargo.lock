@@ -5905,7 +5905,7 @@ dependencies = [
  "minisign-verify 0.2.5",
  "notify",
  "pdf-extract",
- "png 0.17.16",
+ "png 0.18.1",
  "qrcode",
  "rusqlite",
  "serde",

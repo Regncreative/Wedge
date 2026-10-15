@@ -34,7 +34,7 @@ uuid = { version = "1", features = ["v4"] }
 log = "0.4"
 tokio = { version = "1", features = ["time", "fs", "sync"] }
 base64 = "0.22"
-png = "0.17"
+png = "0.18"
 sys-locale = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 pdf-extract = "0.9"
