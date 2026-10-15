@@ -123,8 +123,8 @@ export async function edgeArea(page: Page) {
   return { x, y, width, height }
 }
 
-/** The process whose window a click at each point would reach (reads only). */
-export function pidsAt(points: { x: number; y: number }[]): number[] {
+/** The window a click at each point would reach: its process and style bits (reads only). */
+export function windowsAt(points: { x: number; y: number }[]): { pid: number; style: number }[] {
   const out = execFileSync(
     'powershell.exe',
     [
@@ -138,7 +138,18 @@ export function pidsAt(points: { x: number; y: number }[]): number[] {
     ],
     { encoding: 'utf8' }
   )
-  return out.trim().split(/\s+/).map(Number)
+  return out
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => {
+      const [pid, style] = line.trim().split(' ').map(Number)
+      return { pid, style }
+    })
+}
+
+/** The process whose window a click at each point would reach (reads only). */
+export function pidsAt(points: { x: number; y: number }[]): number[] {
+  return windowsAt(points).map((w) => w.pid)
 }
 
 export function removeProfile(userData: string): void {

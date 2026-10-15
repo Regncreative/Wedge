@@ -165,6 +165,73 @@ fn hidden(s: EdgeState) -> bool {
 /// Where a hidden window waits: off every screen.
 const PARKED: i32 = -32000;
 
+/// Keep Windows from painting a title bar onto the page. Undecorated windows
+/// keep a caption style (tao sets it again on every style change), and a
+/// window with a region (see `place`) gets that caption drawn by Windows
+/// itself, over the page, each time it gains or loses focus.
+#[cfg(windows)]
+mod no_caption {
+    use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_STYLE, STYLESTRUCT,
+        SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WM_NCACTIVATE,
+        WM_NCPAINT, WM_STYLECHANGING, WS_CAPTION, WS_SYSMENU, WS_THICKFRAME,
+    };
+
+    const FRAME: u32 = WS_CAPTION.0 | WS_SYSMENU.0 | WS_THICKFRAME.0;
+
+    unsafe extern "system" fn proc(
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        _id: usize,
+        _data: usize,
+    ) -> LRESULT {
+        unsafe {
+            match msg {
+                // (De)activate as usual; -1 tells Windows not to repaint a caption.
+                WM_NCACTIVATE => DefSubclassProc(hwnd, msg, wparam, LPARAM(-1)),
+                // There is no frame to paint.
+                WM_NCPAINT => LRESULT(0),
+                WM_STYLECHANGING if wparam.0 as i32 == GWL_STYLE.0 => {
+                    let change = &mut *(lparam.0 as *mut STYLESTRUCT);
+                    change.styleNew &= !FRAME;
+                    DefSubclassProc(hwnd, msg, wparam, lparam)
+                }
+                _ => DefSubclassProc(hwnd, msg, wparam, lparam),
+            }
+        }
+    }
+
+    /// On the thread that owns the window.
+    pub fn install(hwnd: HWND) {
+        unsafe {
+            let _ = SetWindowSubclass(hwnd, Some(proc), 1, 0);
+            let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+            SetWindowLongPtrW(hwnd, GWL_STYLE, style & !(FRAME as isize));
+            let _ = SetWindowPos(
+                hwnd,
+                None,
+                0,
+                0,
+                0,
+                0,
+                SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+            );
+        }
+    }
+}
+
+/// Get the edge window ready (at startup, on the main thread).
+pub fn prepare(app: &AppHandle) {
+    #[cfg(windows)]
+    if let Some(hwnd) = window(app).and_then(|w| w.hwnd().ok()) {
+        no_caption::install(hwnd);
+    }
+}
+
 /// Place the window and set the part that catches the cursor, without
 /// taking focus. The window is created visible (off-screen, see
 /// tauri.conf.json) and stays "visible" for good: hiding parks it

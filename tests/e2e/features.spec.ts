@@ -17,6 +17,7 @@ import {
   launchApp,
   pidsAt,
   removeProfile,
+  windowsAt,
   showShelf,
   tab,
   TAB_END,
@@ -316,6 +317,12 @@ test('the shelves live on the screen edge: tucked in, out for a drag, open as a 
   // The drawer isn't as tall as the screen.
   const drawer = await page.locator('.drawer').boundingBox()
   expect(drawer!.height).toBeLessThanOrEqual(620)
+  // No caption style for Windows to paint a title bar from (WS_CAPTION, WS_SYSMENU),
+  // even after the window was put on top again.
+  const open = await edgeArea(page)
+  const [win] = windowsAt([{ x: open.x + open.width / 2, y: open.y + open.height / 2 }])
+  expect(win.pid).toBe(stash.child.pid)
+  expect(win.style & (0x00c00000 | 0x00080000)).toBe(0)
 
   // Closing tucks the tabs in to a sliver that can't catch clicks elsewhere:
   // just beside it, a click goes to whatever is below.

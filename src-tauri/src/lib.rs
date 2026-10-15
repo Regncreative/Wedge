@@ -140,6 +140,7 @@ pub fn run() {
             }
             tray::create(handle)?;
             commands::sync_context_menu(handle, settings.context_menu);
+            panel::prepare(handle);
             panel::apply_side(handle, settings.edge_handle);
             panel::start_monitor(handle);
             dragwatch::start(handle);
