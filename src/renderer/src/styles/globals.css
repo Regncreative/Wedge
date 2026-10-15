@@ -34,7 +34,7 @@
   --warning: #f6bb45;
   --shadow-flyout: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 239, 248, 0.08);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-drawer: -24px 0 60px rgba(0, 0, 0, 0.5), inset 1px 0 0 rgba(236, 239, 248, 0.14);
+  --shadow-drawer: -6px 0 22px rgba(0, 0, 0, 0.38), inset 1px 0 0 rgba(236, 239, 248, 0.14);
   --scrollbar: rgba(236, 239, 248, 0.2);
   --thumb-bg: #252935;
   --scrim: rgba(8, 9, 12, 0.6);
@@ -48,7 +48,7 @@
   --tab-w: 196px;
   --tab-h: 52px;
   --drawer-w: 440px;
-  --tab-out: 60px;
+  --tab-out: 72px;
   --spring: cubic-bezier(0.34, 1.45, 0.6, 1);
 }
 
@@ -72,7 +72,7 @@
   --warning: #b9800f;
   --shadow-flyout: 0 18px 44px rgba(20, 22, 30, 0.16), 0 0 0 1px rgba(18, 19, 26, 0.08);
   --shadow-card: 0 1px 2px rgba(20, 22, 30, 0.06), 0 0 0 1px rgba(18, 19, 26, 0.06);
-  --shadow-drawer: -24px 0 60px rgba(20, 22, 30, 0.2), inset 1px 0 0 rgba(18, 19, 26, 0.1);
+  --shadow-drawer: -6px 0 22px rgba(20, 22, 30, 0.14), inset 1px 0 0 rgba(18, 19, 26, 0.1);
   --scrollbar: rgba(18, 19, 26, 0.2);
   --thumb-bg: #e9ebf1;
   --scrim: rgba(20, 22, 30, 0.35);
@@ -152,7 +152,7 @@ input {
   right: 0;
   display: grid;
   gap: 10px;
-  padding: 14px 0;
+  padding: 22px 0;
   transform: translateY(-50%);
   z-index: 1;
 }
@@ -174,11 +174,12 @@ input {
   text-align: left;
   background: var(--c);
   box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.32),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+    0 4px 14px rgba(0, 0, 0, 0.24),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
   transform: translateX(calc(var(--dir) * var(--x, 0px)));
   transition:
     transform 420ms var(--spring),
+    box-shadow 200ms,
     filter 140ms;
   transition-delay: calc(var(--i) * 26ms);
   cursor: pointer;
@@ -257,30 +258,45 @@ input {
   box-shadow: 0 0 0 2px var(--c);
 }
 
-/* Modes: tucked (a sliver shows), peek (icons show), drag (out), open. */
+/*
+ * Modes: tucked in (a sliver shows, no shadow: the window is only a few
+ * pixels wide), out (the cursor is at the edge, or a file is being
+ * dragged), open (tabs hang off the drawer, icons only).
+ */
 .edge-root[data-mode='idle'] .tab {
   --x: calc(var(--tab-w) - 9px);
+  box-shadow: none;
   transition-delay: 0ms;
 }
-.edge-root[data-mode='peek'] .tab {
-  --x: calc(var(--tab-w) - 52px);
-}
+.edge-root[data-mode='peek'] .tab,
 .edge-root[data-mode='drag'] .tab {
   --x: 0px;
 }
+.edge-root[data-mode='peek'] .tab:hover,
 .edge-root[data-mode='drag'] .tab.is-target {
   --x: -20px;
   filter: brightness(1.06);
   transition-delay: 0ms;
 }
 .edge-root[data-mode='open'] .tab {
-  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 12px);
+  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 24px);
   transition-delay: 0ms;
 }
+/* 14px stay free on the outside so the tab's shadow isn't cut off. */
 .edge-root[data-mode='open'] .tab.is-active,
 .edge-root[data-mode='open'] .tab:hover,
 .edge-root[data-mode='open'] .tab.is-target {
-  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out));
+  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 14px);
+}
+.tab .tab-label,
+.tab .tab-stack,
+.tab .tab-count {
+  transition: opacity 160ms;
+}
+.edge-root[data-mode='open'] .tab .tab-label,
+.edge-root[data-mode='open'] .tab .tab-stack,
+.edge-root[data-mode='open'] .tab .tab-count {
+  opacity: 0;
 }
 
 @keyframes tab-bump {
@@ -302,8 +318,11 @@ input {
   border-radius: 22px 0 0 22px;
   background: var(--bg);
   box-shadow: var(--shadow-drawer);
-  transform: translateX(calc(var(--dir) * (100% + 40px)));
-  transition: transform 440ms var(--spring);
+  transform: translateX(calc(var(--dir) * (100% + 60px)));
+  visibility: hidden;
+  transition:
+    transform 440ms var(--spring),
+    visibility 0s linear 440ms;
 }
 .edge-root[data-side='left'] .drawer {
   right: auto;
@@ -312,6 +331,10 @@ input {
 }
 .edge-root[data-mode='open'] .drawer {
   transform: none;
+  visibility: visible;
+  transition:
+    transform 440ms var(--spring),
+    visibility 0s;
 }
 .drawer.is-target {
   box-shadow:

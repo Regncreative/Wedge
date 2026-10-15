@@ -24,7 +24,7 @@ pub const LABEL: &str = "panel";
 pub enum Mode {
     /// Tucked in: only a sliver of each tab shows.
     Idle,
-    /// The cursor is at the edge: the tabs' icons show.
+    /// The cursor is at the edge: the tabs come out.
     Peek,
     /// A file is being dragged: the tabs are out, ready for a drop.
     Drag,
@@ -41,12 +41,13 @@ pub struct EdgeState {
 
 // Logical pixels; keep in step with the page (styles/globals.css, `--tab-*`).
 const TAB_STEP: f64 = 62.0;
-const TABS_PAD: f64 = 14.0;
+const TABS_PAD: f64 = 22.0;
 const IDLE_W: f64 = 14.0;
-const PEEK_W: f64 = 60.0;
-const DRAG_W: f64 = 224.0;
+/// Tabs fully out, with room for one to reach 20px further and for shadows.
+const PEEK_W: f64 = DRAG_W;
+const DRAG_W: f64 = 248.0;
 const DRAWER_W: f64 = 440.0;
-const TAB_OUT: f64 = 60.0;
+const TAB_OUT: f64 = 72.0;
 const MARGIN: f64 = 10.0;
 
 static STATE: Mutex<EdgeState> = Mutex::new(EdgeState {

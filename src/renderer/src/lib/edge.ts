@@ -31,6 +31,12 @@ const SIZE: Record<EdgeMode, number> = { idle: 0, peek: 1, drag: 2, open: 3 }
 
 let shrinkTimer: ReturnType<typeof setTimeout> | null = null
 let backendMode: EdgeMode = 'idle'
+/**
+ * The backend's mode is known. Until then (a fresh page, a reload) the page
+ * asks for nothing: the cursor resting on an open drawer would otherwise
+ * "peek" and shrink it.
+ */
+let known = false
 
 export const useEdge = create<EdgeStore>((set, get) => ({
   mode: 'idle',
@@ -46,6 +52,7 @@ export const useEdge = create<EdgeStore>((set, get) => ({
     setTimeout(() => get().bump === id && set({ bump: null }), 700)
   },
   request: (mode) => {
+    if (!known) return
     if (shrinkTimer) {
       clearTimeout(shrinkTimer)
       shrinkTimer = null
@@ -70,11 +77,13 @@ export function connectEdge(): () => void {
   const offs: Promise<() => void>[] = []
   void window.stash.edgeState().then((s: EdgeState) => {
     backendMode = s.mode
+    known = true
     useEdge.setState({ mode: s.mode, side: s.side })
   })
   offs.push(
     listen<EdgeState>('edge-mode', ({ payload }) => {
       backendMode = payload.mode
+      known = true
       // A pending tuck-in is overridden by whatever the backend decided.
       if (shrinkTimer) {
         clearTimeout(shrinkTimer)
