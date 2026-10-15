@@ -54,6 +54,14 @@ jobs:
       - name: Build app and installer
         run: npx tauri build --debug --config src-tauri/tauri.ci.conf.json
 
+      - name: WebView2 runtime on the runner
+        shell: pwsh
+        run: |
+          $keys = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+                  'HKCU:\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $found = $keys | ForEach-Object { Get-ItemProperty $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
+          if ($found) { "WebView2 runtime $($found.pv)" } else { 'WebView2 runtime: not found' }
+
       - name: End-to-end tests
         run: npm run test:e2e
 

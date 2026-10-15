@@ -1,6 +1,6 @@
 import { chromium, type Browser, type Page } from '@playwright/test'
 import { execFileSync, spawn, type ChildProcess } from 'child_process'
-import { mkdirSync, mkdtempSync, rmSync } from 'fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 
@@ -59,17 +59,32 @@ export async function launchApp(
     env: appEnv(userData, {
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`
     }),
-    stdio: 'ignore'
+    stdio: ['ignore', 'pipe', 'pipe']
   })
+  // The app's own output (debug builds log to it), kept to explain a failed start.
+  let output = ''
+  const keep = (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-6000)
+  }
+  child.stdout?.on('data', keep)
+  child.stderr?.on('data', keep)
+  const failedStart = (why: string) => {
+    const log = join(userData, 'logs', 'main.log')
+    const logText = existsSync(log) ? readFileSync(log, 'utf8').slice(-4000) : '(no main.log)'
+    return new Error([why, '--- app output ---', output, '--- main.log ---', logText].join('\n'))
+  }
 
   let browser: Browser | null = null
   const deadline = Date.now() + 30_000
   while (!browser) {
-    if (child.exitCode !== null) throw new Error(`wedge.exe exited with ${child.exitCode}`)
+    if (child.exitCode !== null) throw failedStart(`wedge.exe exited with ${child.exitCode}`)
     try {
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
     } catch (err) {
-      if (Date.now() > deadline) throw err
+      if (Date.now() > deadline) {
+        child.kill()
+        throw failedStart(`no DevTools endpoint on port ${port}: ${String(err).split('\n')[0]}`)
+      }
       await new Promise((r) => setTimeout(r, 200))
     }
   }
