@@ -61,6 +61,13 @@ jobs:
                   'HKCU:\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
           $found = $keys | ForEach-Object { Get-ItemProperty $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
           if ($found) { "WebView2 runtime $($found.pv)" } else { 'WebView2 runtime: not found' }
+          # Policies that can turn off WebView2's DevTools endpoint the tests use.
+          foreach ($root in 'HKLM:\SOFTWARE\Policies\Microsoft', 'HKCU:\SOFTWARE\Policies\Microsoft') {
+            Get-ChildItem $root -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match 'Edge|WebView' } |
+              ForEach-Object { "== $($_.Name)"; $_.GetValueNames() | ForEach-Object { "   $_" } }
+          }
+          Get-ChildItem env: | Where-Object Name -like 'WEBVIEW2*' | ForEach-Object { "env $($_.Name)=$($_.Value)" }
 
       - name: End-to-end tests
         run: npm run test:e2e

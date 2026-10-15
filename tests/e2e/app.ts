@@ -50,7 +50,8 @@ export function webviewProcesses(pid: number | undefined): string {
     foreach ($p in $all | Where-Object { $ids.ContainsKey([int]$_.ProcessId) -and $_.ProcessId -ne ${pid} }) {
       $cmd = "$($p.CommandLine)"
       $ports = (Get-NetTCPConnection -OwningProcess $p.ProcessId -State Listen -ErrorAction SilentlyContinue | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" }) -join ' '
-      "$($p.ProcessId) $($p.Name) listen=[$ports] $($cmd.Substring(0, [Math]::Min(400, $cmd.Length)))"
+      $debug = ([regex]::Matches($cmd, '--remote-debugging-[a-z]+(=[^ ]*)?') | ForEach-Object { $_.Value }) -join ' '
+      "$($p.ProcessId) $($p.Name) listen=[$ports] debug=[$debug] $($cmd.Substring(0, [Math]::Min(160, $cmd.Length)))"
     }`
   try {
     return (
