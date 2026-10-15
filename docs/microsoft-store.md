@@ -39,7 +39,7 @@ Once there is a certificate, set `bundle.windows.signCommand` (or `certificateTh
    - Installer parameters: `/S`
    - Languages: English, Turkish
    - App type: EXE
-5. **Properties**: category _Productivity_. Wedge collects no personal information; still give the privacy policy URL (`https://wedgeshelf.com/privacy` or `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`).
+5. **Properties**: category _Productivity_. Wedge collects no personal information; still give the privacy policy URL: `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`.
 6. **Age ratings**: answer the questionnaire (no user-to-user content, no purchases, no location).
 7. **Store listing** in English and Turkish (texts below), with:
    - Screenshots: at least 1, 4 or more recommended, PNG.

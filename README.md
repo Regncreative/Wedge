@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <a href="https://wedgeshelf.com"><strong>wedgeshelf.com</strong></a>
+  <a href="https://wedge.regncreative.com"><strong>wedge.regncreative.com</strong></a>
 </p>
 
 <p align="center">
-  <a href="https://wedgeshelf.com"><img src="https://img.shields.io/badge/website-wedgeshelf.com-8D97FF" alt="Website"></a>
+  <a href="https://wedge.regncreative.com"><img src="https://img.shields.io/badge/website-wedge.regncreative.com-8D97FF" alt="Website"></a>
   <a href="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
   <a href="https://github.com/Regncreative/Wedge/releases/latest"><img src="https://img.shields.io/github/v/release/Regncreative/Wedge?label=latest%20release" alt="Latest release"></a>
@@ -89,7 +89,7 @@ It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Win
 
 ## Installation
 
-1. Download from **[wedgeshelf.com](https://wedgeshelf.com)** or the **[latest release](https://github.com/Regncreative/Wedge/releases/latest)** (`Wedge_<version>_x64-setup.exe`)
+1. Download from **[wedge.regncreative.com](https://wedge.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Wedge/releases/latest)** (`Wedge_<version>_x64-setup.exe`)
 2. Run the installer; no administrator rights needed
 3. On first start, choose whether Wedge starts with Windows and adds **Add to Wedge** to File Explorer's right-click menu (you can change both later in Settings)
 4. Start dragging a file: your shelves slide out of the right edge of the screen. Or click a tab, the tray icon, or press `Ctrl+Shift+Space`

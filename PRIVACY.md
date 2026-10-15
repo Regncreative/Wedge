@@ -44,4 +44,4 @@ The panel is drawn by Microsoft Edge WebView2, a part of Windows. Wedge loads no
 
 ## Contact
 
-Questions: open an issue at [github.com/Regncreative/Wedge](https://github.com/Regncreative/Wedge/issues) or use the contact on [wedgeshelf.com](https://wedgeshelf.com).
+Questions: open an issue at [github.com/Regncreative/Wedge](https://github.com/Regncreative/Wedge/issues) or use the contact on [wedge.regncreative.com](https://wedge.regncreative.com).
