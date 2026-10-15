@@ -69,7 +69,7 @@ src-tauri/src/
   transfer.rs           Export / import
   files.rs              Non-blocking file checks
   win.rs                Shell icons, thumbnails, Properties (Win32)
-  panel.rs              The edge window: tab column and drawer, sized per mode
+  panel.rs              The edge window: tab column and drawer; the part that catches the cursor, per mode
   tray.rs               Tray icon and menu
   hotkey.rs             Global shortcuts
   updater.rs            Signed updates, beta feed, staged rollout

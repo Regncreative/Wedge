@@ -1,5 +1,5 @@
 import { chromium, type Browser, type Page } from '@playwright/test'
-import { spawn, type ChildProcess } from 'child_process'
+import { execFileSync, spawn, type ChildProcess } from 'child_process'
 import { mkdirSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -114,6 +114,31 @@ export async function showShelf(page: Page, shelfName: string): Promise<void> {
   if (open && title === shelfName) return
   await tab(page, shelfName).click(TAB_END)
   await page.locator('.drawer header h1', { hasText: shelfName }).waitFor()
+}
+
+/** Where the edge window catches the cursor: physical screen pixels. */
+export async function edgeArea(page: Page) {
+  const area = await page.evaluate(() => window.stash.edgeArea())
+  const [x, y, width, height] = area!
+  return { x, y, width, height }
+}
+
+/** The process whose window a click at each point would reach (reads only). */
+export function pidsAt(points: { x: number; y: number }[]): number[] {
+  const out = execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      join(__dirname, 'helpers', 'window-at.ps1'),
+      '-Points',
+      points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(';')
+    ],
+    { encoding: 'utf8' }
+  )
+  return out.trim().split(/\s+/).map(Number)
 }
 
 export function removeProfile(userData: string): void {

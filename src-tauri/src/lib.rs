@@ -250,6 +250,7 @@ pub fn run() {
             commands_extra::pick_folder,
             panel::edge_state,
             panel::edge_mode,
+            panel::edge_area,
             phone::phone_start,
             phone::phone_stop,
             widget::open_widget,

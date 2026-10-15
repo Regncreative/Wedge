@@ -34,7 +34,7 @@
   --warning: #f6bb45;
   --shadow-flyout: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(236, 239, 248, 0.08);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-drawer: -6px 0 22px rgba(0, 0, 0, 0.38), inset 1px 0 0 rgba(236, 239, 248, 0.14);
+  --shadow-drawer: -6px 8px 24px rgba(0, 0, 0, 0.4), inset 1px 0 0 rgba(236, 239, 248, 0.14);
   --scrollbar: rgba(236, 239, 248, 0.2);
   --thumb-bg: #252935;
   --scrim: rgba(8, 9, 12, 0.6);
@@ -47,7 +47,12 @@
   /* Geometry shared with src-tauri/src/panel.rs (TAB_STEP, DRAWER_W, TAB_OUT). */
   --tab-w: 196px;
   --tab-h: 52px;
+  /* Tabs reach this far past the screen edge, so a tab stepping out stays attached. */
+  --tab-tail: 28px;
   --drawer-w: 440px;
+  --drawer-h: 620px;
+  /* Room around the drawer for its shadow (src-tauri/src/panel.rs, DRAWER_PAD). */
+  --drawer-pad: 32px;
   --tab-out: 72px;
   --spring: cubic-bezier(0.34, 1.45, 0.6, 1);
 }
@@ -72,7 +77,7 @@
   --warning: #b9800f;
   --shadow-flyout: 0 18px 44px rgba(20, 22, 30, 0.16), 0 0 0 1px rgba(18, 19, 26, 0.08);
   --shadow-card: 0 1px 2px rgba(20, 22, 30, 0.06), 0 0 0 1px rgba(18, 19, 26, 0.06);
-  --shadow-drawer: -6px 0 22px rgba(20, 22, 30, 0.14), inset 1px 0 0 rgba(18, 19, 26, 0.1);
+  --shadow-drawer: -6px 8px 24px rgba(20, 22, 30, 0.16), inset 1px 0 0 rgba(18, 19, 26, 0.1);
   --scrollbar: rgba(18, 19, 26, 0.2);
   --thumb-bg: #e9ebf1;
   --scrim: rgba(20, 22, 30, 0.35);
@@ -139,7 +144,9 @@ input {
 .edge-root {
   position: fixed;
   inset: 0;
-  overflow: hidden;
+  /* Not hidden: that can still scroll (focus, scrollIntoView), and the tabs
+     would come off the edge. */
+  overflow: clip;
   --dir: 1;
 }
 .edge-root[data-side='left'] {
@@ -149,7 +156,7 @@ input {
 .tabs {
   position: absolute;
   top: 50%;
-  right: 0;
+  right: calc(-1 * var(--tab-tail));
   display: grid;
   gap: 10px;
   padding: 22px 0;
@@ -158,17 +165,17 @@ input {
 }
 .edge-root[data-side='left'] .tabs {
   right: auto;
-  left: 0;
+  left: calc(-1 * var(--tab-tail));
 }
 
 .tab {
   position: relative;
-  width: var(--tab-w);
+  width: calc(var(--tab-w) + var(--tab-tail));
   height: var(--tab-h);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 14px 0 11px;
+  padding: 0 calc(14px + var(--tab-tail)) 0 11px;
   border-radius: 16px 0 0 16px;
   color: var(--ink);
   text-align: left;
@@ -182,12 +189,13 @@ input {
     box-shadow 200ms,
     filter 140ms;
   transition-delay: calc(var(--i) * 26ms);
+  will-change: transform;
   cursor: pointer;
 }
 .edge-root[data-side='left'] .tab {
   flex-direction: row-reverse;
   text-align: right;
-  padding: 0 11px 0 14px;
+  padding: 0 11px 0 calc(14px + var(--tab-tail));
   border-radius: 0 16px 16px 0;
 }
 .tab .tab-ico {
@@ -259,9 +267,8 @@ input {
 }
 
 /*
- * Modes: tucked in (a sliver shows, no shadow: the window is only a few
- * pixels wide), out (the cursor is at the edge, or a file is being
- * dragged), open (tabs hang off the drawer, icons only).
+ * Modes: tucked in (a sliver shows), out (the cursor is at the edge, or a
+ * file is being dragged), open (tabs hang off the drawer, icons only).
  */
 .edge-root[data-mode='idle'] .tab {
   --x: calc(var(--tab-w) - 9px);
@@ -305,6 +312,7 @@ input {
   }
 }
 
+/* Centred on the tab column, as tall as the screen allows up to --drawer-h. */
 .drawer {
   position: absolute;
   top: 0;
@@ -312,6 +320,9 @@ input {
   right: 0;
   z-index: 2;
   width: var(--drawer-w);
+  height: min(var(--drawer-h), calc(100% - 2 * var(--drawer-pad)));
+  margin-block: auto;
+  will-change: transform;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -1,9 +1,11 @@
 //! The Stash window lives on a screen edge: a column of shelf tabs that is
 //! tucked in at rest (a few pixels show), peeks out under the cursor, comes
 //! out while a file is being dragged anywhere (see dragwatch.rs), and opens
-//! into a drawer. The page draws all of it; this module sizes and places the
-//! window for each mode, so at rest nothing but the visible slivers can
-//! catch a click.
+//! into a drawer. The page draws all of it. The window keeps one size (big
+//! enough for the drawer) and this module sets, per mode, the part of it
+//! that catches the cursor (a window region), so at rest nothing but the
+//! visible slivers can catch a click. Changing the region is instant;
+//! resizing the web view on every hover would stutter.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -39,14 +41,20 @@ pub struct EdgeState {
     pub side: EdgeHandle,
 }
 
-// Logical pixels; keep in step with the page (styles/globals.css, `--tab-*`).
+// Logical pixels; keep in step with the page (styles/globals.css, `--tab-*`,
+// `--drawer-*`).
 const TAB_STEP: f64 = 62.0;
 const TABS_PAD: f64 = 22.0;
+/// Tucked in: the slivers and a few pixels around them.
 const IDLE_W: f64 = 14.0;
-/// Tabs fully out, with room for one to reach 20px further and for shadows.
-const PEEK_W: f64 = DRAG_W;
-const DRAG_W: f64 = 248.0;
+/// Tabs out, with room for one to reach 20px further and for shadows.
+const OUT_W: f64 = 248.0;
 const DRAWER_W: f64 = 440.0;
+/// The drawer's height, when the screen has room for it.
+const DRAWER_H: f64 = 620.0;
+/// Room around the drawer for its shadow.
+const DRAWER_PAD: f64 = 32.0;
+/// Room beside the drawer for the tabs hanging off it.
 const TAB_OUT: f64 = 72.0;
 const MARGIN: f64 = 10.0;
 
@@ -92,10 +100,22 @@ fn tabs_height(app: &AppHandle) -> f64 {
     n * TAB_STEP + TABS_PAD * 2.0
 }
 
-/// Where the window goes for a mode: (x, y, width, height), physical pixels.
-/// The tab column is centred on the work area in every mode, so tabs don't
-/// jump when the window changes size.
-fn geometry(app: &AppHandle, s: EdgeState) -> Option<(i32, i32, i32, i32)> {
+/// The window on screen, physical pixels.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Frame {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    /// The tab column, from the window's top.
+    column_top: i32,
+    column_h: i32,
+    scale: f64,
+}
+
+/// Where the window goes: on the edge of the primary monitor's work area,
+/// centred, tall enough for the drawer and the tab column.
+fn frame(app: &AppHandle, side: EdgeHandle) -> Option<Frame> {
     let monitor = app.primary_monitor().ok().flatten()?;
     let scale = monitor.scale_factor();
     let work = monitor.work_area();
@@ -103,19 +123,39 @@ fn geometry(app: &AppHandle, s: EdgeState) -> Option<(i32, i32, i32, i32)> {
     let (ww, wh) = (work.size.width as i32, work.size.height as i32);
     let max_h = wh as f64 / scale - 2.0 * MARGIN;
     let column = tabs_height(app).min(max_h);
-    let (w, h) = match s.mode {
-        Mode::Open => (DRAWER_W + TAB_OUT, max_h),
-        Mode::Drag => (DRAG_W, column),
-        Mode::Peek => (PEEK_W, column),
-        Mode::Idle => (IDLE_W, column),
-    };
-    let (w, h) = ((w * scale).round() as i32, (h * scale).round() as i32);
-    let y = wy + (wh - h) / 2;
-    let x = match s.side {
+    let h = (DRAWER_H + 2.0 * DRAWER_PAD).max(column).min(max_h);
+    let px = |v: f64| (v * scale).round() as i32;
+    let (w, h, column_h) = (px(DRAWER_W + TAB_OUT), px(h), px(column));
+    let x = match side {
         EdgeHandle::Left => wx,
         _ => wx + ww - w,
     };
-    Some((x, y, w, h))
+    Some(Frame {
+        x,
+        y: wy + (wh - h) / 2,
+        w,
+        h,
+        column_top: (h - column_h) / 2,
+        column_h,
+        scale,
+    })
+}
+
+/// The part of the window that catches the cursor in a mode: (left, top,
+/// right, bottom) from the window's corner, physical pixels. The rest lets
+/// clicks through to whatever is below.
+fn area(f: &Frame, s: EdgeState) -> (i32, i32, i32, i32) {
+    let width = match s.mode {
+        Mode::Open => return (0, 0, f.w, f.h),
+        Mode::Peek | Mode::Drag => OUT_W,
+        Mode::Idle => IDLE_W,
+    };
+    let width = (width * f.scale).round() as i32;
+    let (top, bottom) = (f.column_top, f.column_top + f.column_h);
+    match s.side {
+        EdgeHandle::Left => (0, top, width, bottom),
+        _ => (f.w - width, top, f.w, bottom),
+    }
 }
 
 fn hidden(s: EdgeState) -> bool {
@@ -125,28 +165,44 @@ fn hidden(s: EdgeState) -> bool {
 /// Where a hidden window waits: off every screen.
 const PARKED: i32 = -32000;
 
-/// Move and resize in one step, without taking focus. The window is created
-/// visible (off-screen, see tauri.conf.json) and stays "visible" for good:
-/// hiding parks it off-screen. Showing and hiding through the window API
-/// would activate it, and tao re-hides a window it believes hidden whenever
-/// its style changes.
+/// Place the window and set the part that catches the cursor, without
+/// taking focus. The window is created visible (off-screen, see
+/// tauri.conf.json) and stays "visible" for good: hiding parks it
+/// off-screen. Showing and hiding through the window API would activate it,
+/// and tao re-hides a window it believes hidden whenever its style changes.
 fn place(app: &AppHandle, s: EdgeState) {
     let Some(win) = window(app) else { return };
-    let Some((mut x, mut y, w, h)) = geometry(app, s) else {
+    let Some(f) = frame(app, s.side) else {
         return;
     };
-    if hidden(s) {
-        (x, y) = (PARKED, PARKED);
-    }
+    let (x, y) = if hidden(s) { (PARKED, PARKED) } else { (f.x, f.y) };
     #[cfg(windows)]
     if let Ok(hwnd) = win.hwnd() {
-        use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE};
+        use windows::Win32::Foundation::RECT;
+        use windows::Win32::Graphics::Gdi::{CreateRectRgn, SetWindowRgn};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowRect, SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        };
+        let (l, t, r, b) = area(&f, s);
         unsafe {
-            let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, w, h, SWP_NOACTIVATE);
+            // Move only when needed: a resize, even to the same size, makes
+            // the web view lay out again.
+            let mut now = RECT::default();
+            let _ = GetWindowRect(hwnd, &mut now);
+            let same = (now.left, now.top, now.right - now.left, now.bottom - now.top)
+                == (x, y, f.w, f.h);
+            let flags = if same {
+                SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE
+            } else {
+                SWP_NOACTIVATE
+            };
+            let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, f.w, f.h, flags);
+            // The window owns the region from here on.
+            let _ = SetWindowRgn(hwnd, Some(CreateRectRgn(l, t, r, b)), true);
         }
         return;
     }
-    let _ = win.set_size(tauri::PhysicalSize::new(w as u32, h as u32));
+    let _ = win.set_size(tauri::PhysicalSize::new(f.w as u32, f.h as u32));
     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
 }
 
@@ -253,9 +309,9 @@ pub fn start_monitor(app: &AppHandle) {
         loop {
             std::thread::sleep(Duration::from_millis(1500));
             let busy = fullscreen_app_running();
-            let geometry = geometry(&app, state());
-            if FULLSCREEN.swap(busy, Ordering::SeqCst) != busy || geometry != last {
-                last = geometry;
+            let frame = frame(&app, state().side);
+            if FULLSCREEN.swap(busy, Ordering::SeqCst) != busy || frame != last {
+                last = frame;
                 let handle = app.clone();
                 let _ = app.run_on_main_thread(move || place(&handle, state()));
             }
@@ -288,6 +344,17 @@ pub fn edge_state() -> EdgeState {
     state()
 }
 
+/// Where the window catches the cursor right now: [x, y, width, height] on
+/// screen, physical pixels.
+#[tauri::command]
+pub fn edge_area(app: AppHandle) -> Option<[i32; 4]> {
+    let s = state();
+    let f = frame(&app, s.side)?;
+    let (x, y) = if hidden(s) { (PARKED, PARKED) } else { (f.x, f.y) };
+    let (l, t, r, b) = area(&f, s);
+    Some([x + l, y + t, r - l, b - t])
+}
+
 /// The page asks for a mode (hover → peek, a drag over the sliver → drag,
 /// a tab click → open, done → idle).
 #[tauri::command]
@@ -311,6 +378,26 @@ mod tests {
         );
         let m: Mode = serde_json::from_value(serde_json::json!("open")).unwrap();
         assert_eq!(m, Mode::Open);
+    }
+
+    #[test]
+    fn only_the_slivers_catch_the_cursor_at_rest() {
+        let f = Frame {
+            x: 1408,
+            y: 200,
+            w: 512,
+            h: 684,
+            column_top: 196,
+            column_h: 292,
+            scale: 1.0,
+        };
+        let s = |mode, side| EdgeState { mode, side };
+        assert_eq!(area(&f, s(Mode::Idle, EdgeHandle::Right)), (498, 196, 512, 488));
+        assert_eq!(area(&f, s(Mode::Peek, EdgeHandle::Right)), (264, 196, 512, 488));
+        assert_eq!(area(&f, s(Mode::Drag, EdgeHandle::Left)), (0, 196, 248, 488));
+        assert_eq!(area(&f, s(Mode::Open, EdgeHandle::Right)), (0, 0, 512, 684));
+        let hi = Frame { scale: 1.5, ..f };
+        assert_eq!(area(&hi, s(Mode::Idle, EdgeHandle::Right)).0, 512 - 21);
     }
 
     #[test]

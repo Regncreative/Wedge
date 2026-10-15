@@ -26,7 +26,7 @@ interface EdgeStore {
 }
 
 /** How long the tabs and drawer take to tuck in (styles/globals.css). */
-const SHRINK_MS = 320
+const SHRINK_MS = 440
 const SIZE: Record<EdgeMode, number> = { idle: 0, peek: 1, drag: 2, open: 3 }
 
 let shrinkTimer: ReturnType<typeof setTimeout> | null = null

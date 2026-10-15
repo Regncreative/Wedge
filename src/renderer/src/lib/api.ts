@@ -112,6 +112,8 @@ export interface StashApi {
   edgeState: () => Promise<EdgeState>
   /** Size the edge window for a mode (the page animates the change). */
   edgeMode: (mode: EdgeMode) => Promise<void>
+  /** Where the edge window catches the cursor: [x, y, width, height], physical pixels. */
+  edgeArea: () => Promise<[number, number, number, number] | null>
 
   // Stats & settings
   getStats: () => Promise<ShelfStats>
@@ -225,6 +227,7 @@ export const api: StashApi = {
   pickFolder: () => invoke('pick_folder'),
   edgeState: () => invoke('edge_state'),
   edgeMode: (mode) => invoke('edge_mode', { mode }),
+  edgeArea: () => invoke('edge_area'),
 
   getStats: () => invoke('get_stats'),
   getSettings: () => invoke('get_settings'),

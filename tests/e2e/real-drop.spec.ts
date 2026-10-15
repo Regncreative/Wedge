@@ -3,7 +3,7 @@ import { execFileSync } from 'child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { launchApp, removeProfile, showShelf, type LaunchedApp } from './app'
+import { edgeArea, launchApp, removeProfile, showShelf, type LaunchedApp } from './app'
 
 // Real Windows drag and drop: these move the mouse cursor, so they only run
 // when asked for (STASH_REAL_INPUT=1) on a machine nobody is using.
@@ -134,20 +134,22 @@ test('dropping into the drawer, on a tab, on a widget and on the tucked-in edge'
   }
 
   // 4. On the tucked-in sliver: the tabs come out under the cursor.
-  await expect.poll(() => page.evaluate(() => innerWidth)).toBeLessThan(20)
-  const sliver = await page.evaluate((id) => {
-    const r = document.querySelector(`.tab[data-drop-shelf="${id}"]`)!.getBoundingClientRect()
-    return {
-      x: Math.round((screenX + innerWidth - 4) * devicePixelRatio),
-      y: Math.round((screenY + r.top + r.height / 2) * devicePixelRatio)
-    }
-  }, third.id)
+  const areaWidth = async () => (await edgeArea(page)).width
+  await expect.poll(areaWidth).toBeLessThan(30)
+  const area = await edgeArea(page)
+  const sliver = await page.evaluate(
+    ([id, right]) => {
+      const r = document.querySelector(`.tab[data-drop-shelf="${id}"]`)!.getBoundingClientRect()
+      return { x: right - 4, y: Math.round((screenY + r.top + r.height / 2) * devicePixelRatio) }
+    },
+    [third.id, area.x + area.width] as const
+  )
   const d = join(work, 'on-edge.txt')
   writeFileSync(d, 'd')
   expect(dropFile(d, sliver)).toBe('Copy')
   await expect.poll(() => shelfFiles(page, third.id)).toEqual(['on-edge.txt'])
   // …and tuck back in.
-  await expect.poll(() => page.evaluate(() => innerWidth), { timeout: 5000 }).toBeLessThan(20)
+  await expect.poll(areaWidth, { timeout: 5000 }).toBeLessThan(30)
 })
 
 test('dragging a card onto another shelf tab moves it', async () => {

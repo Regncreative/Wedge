@@ -12,7 +12,16 @@ import {
 import { tmpdir } from 'os'
 import { basename, join } from 'path'
 import { deflateSync } from 'zlib'
-import { launchApp, removeProfile, showShelf, tab, TAB_END, type LaunchedApp } from './app'
+import {
+  edgeArea,
+  launchApp,
+  pidsAt,
+  removeProfile,
+  showShelf,
+  tab,
+  TAB_END,
+  type LaunchedApp
+} from './app'
 
 // UI text is Turkish on Turkish Windows and English elsewhere.
 const ui = (tr: string, en: string) => new RegExp(`^(${tr}|${en})`)
@@ -294,7 +303,8 @@ test('the shelves live on the screen edge: tucked in, out for a drag, open as a 
   await addAndShow(page, {})
   const state = () =>
     page.evaluate(async () => ({
-      width: innerWidth,
+      // Where the window catches the cursor, logical pixels.
+      width: ((await window.stash.edgeArea())?.[2] ?? 0) / devicePixelRatio,
       left: screenX,
       mode: (await window.stash.edgeState()).mode,
       shown: document.querySelector<HTMLElement>('.edge-root')?.dataset.mode
@@ -303,18 +313,32 @@ test('the shelves live on the screen edge: tucked in, out for a drag, open as a 
   // Open (the test harness opens the drawer at start): the drawer plus tab ends.
   expect(await state()).toMatchObject({ mode: 'open', shown: 'open' })
   expect((await state()).width).toBeGreaterThan(400)
+  // The drawer isn't as tall as the screen.
+  const drawer = await page.locator('.drawer').boundingBox()
+  expect(drawer!.height).toBeLessThanOrEqual(620)
 
-  // Closing tucks the tabs in to a sliver that can't catch clicks elsewhere.
+  // Closing tucks the tabs in to a sliver that can't catch clicks elsewhere:
+  // just beside it, a click goes to whatever is below.
   await page
     .getByRole('button', { name: ui('Kapat', 'Close') })
     .first()
     .click()
-  await expect.poll(async () => (await state()).width).toBeLessThan(20)
+  await expect.poll(async () => (await state()).width).toBeLessThan(15)
   expect(await state()).toMatchObject({ mode: 'idle', shown: 'idle' })
+  const sliver = await edgeArea(page)
+  const pid = stash.child.pid!
+  const mid = sliver.y + sliver.height / 2
+  const [onSliver, beside] = pidsAt([
+    { x: sliver.x + sliver.width - 3, y: mid },
+    { x: sliver.x - 40, y: mid }
+  ])
+  expect(onSliver).toBe(pid)
+  expect(beside).not.toBe(pid)
 
   // A drag anywhere brings the tabs out; the pocket is first.
   await page.evaluate(() => window.stash.edgeMode('drag'))
   await expect.poll(async () => (await state()).width).toBeGreaterThan(200)
+  expect(pidsAt([{ x: sliver.x - 40, y: mid }])).toEqual([pid])
   const labels = await page
     .locator('.tab')
     .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
