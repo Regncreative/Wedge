@@ -38,6 +38,32 @@ export function appEnv(userData: string, extra: Record<string, string> = {}): No
   }
 }
 
+/** The app's child processes (WebView2), their command lines and listening ports. */
+export function webviewProcesses(pid: number | undefined): string {
+  if (!pid) return '(no pid)'
+  const script = `
+    $all = Get-CimInstance Win32_Process
+    $ids = @{ ${pid} = $true }
+    do { $more = $false
+      foreach ($p in $all) { if ($ids.ContainsKey([int]$p.ParentProcessId) -and -not $ids.ContainsKey([int]$p.ProcessId)) { $ids[[int]$p.ProcessId] = $true; $more = $true } }
+    } while ($more)
+    foreach ($p in $all | Where-Object { $ids.ContainsKey([int]$_.ProcessId) -and $_.ProcessId -ne ${pid} }) {
+      $cmd = "$($p.CommandLine)"
+      $ports = (Get-NetTCPConnection -OwningProcess $p.ProcessId -State Listen -ErrorAction SilentlyContinue | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" }) -join ' '
+      "$($p.ProcessId) $($p.Name) listen=[$ports] $($cmd.Substring(0, [Math]::Min(400, $cmd.Length)))"
+    }`
+  try {
+    return (
+      execFileSync('powershell.exe', ['-NoProfile', '-Command', script], {
+        encoding: 'utf8',
+        timeout: 20_000
+      }).trim() || '(none)'
+    )
+  } catch (err) {
+    return `(could not list: ${String(err).split('\n')[0]})`
+  }
+}
+
 function waitForExit(child: ChildProcess): Promise<number | null> {
   if (child.exitCode !== null) return Promise.resolve(child.exitCode)
   return new Promise((r) => child.once('exit', (code) => r(code)))
@@ -71,7 +97,17 @@ export async function launchApp(
   const failedStart = (why: string) => {
     const log = join(userData, 'logs', 'main.log')
     const logText = existsSync(log) ? readFileSync(log, 'utf8').slice(-4000) : '(no main.log)'
-    return new Error([why, '--- app output ---', output, '--- main.log ---', logText].join('\n'))
+    return new Error(
+      [
+        why,
+        '--- app output ---',
+        output,
+        '--- main.log ---',
+        logText,
+        '--- WebView2 processes and their ports ---',
+        webviewProcesses(child.pid)
+      ].join('\n')
+    )
   }
 
   let browser: Browser | null = null
@@ -82,8 +118,11 @@ export async function launchApp(
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
     } catch (err) {
       if (Date.now() > deadline) {
+        const error = failedStart(
+          `no DevTools endpoint on port ${port}: ${String(err).split('\n')[0]}`
+        )
         child.kill()
-        throw failedStart(`no DevTools endpoint on port ${port}: ${String(err).split('\n')[0]}`)
+        throw error
       }
       await new Promise((r) => setTimeout(r, 200))
     }
