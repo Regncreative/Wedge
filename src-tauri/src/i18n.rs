@@ -124,7 +124,7 @@ pub fn kind_shelf(lang: Language, kind: &str) -> (&'static str, &'static str, &'
             "#FF8A65",
         ),
         "drop" => (
-            ["Bırakılanlar", "Drop shelf", "Брошенные"],
+            ["Bırakılanlar", "Drop shelf", "Пойманные"],
             "inbox",
             "#2563EB",
         ),
