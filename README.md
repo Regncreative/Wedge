@@ -14,6 +14,10 @@
 </p>
 
 <p align="center">
+  <a href="https://apps.microsoft.com/detail/9nkp6wx9qgl7"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" width="200"></a>
+</p>
+
+<p align="center">
   <a href="https://wedge.regncreative.com"><img src="https://img.shields.io/badge/website-wedge.regncreative.com-8D97FF" alt="Website"></a>
   <a href="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml"><img src="https://github.com/Regncreative/Wedge/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
@@ -95,14 +99,14 @@ It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Win
 
 ## Installation
 
-1. Download from **[wedge.regncreative.com](https://wedge.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Wedge/releases/latest)** (`Wedge_<version>_x64-setup.exe`)
-2. Run the installer; no administrator rights needed
+1. Get **[Wedge Shelf from the Microsoft Store](https://apps.microsoft.com/detail/9nkp6wx9qgl7)** (or `winget install 9NKP6WX9QGL7`), or download the installer from **[wedge.regncreative.com](https://wedge.regncreative.com)** or the **[latest release](https://github.com/Regncreative/Wedge/releases/latest)** (`Wedge_<version>_x64-setup.exe`)
+2. Install it; no administrator rights needed
 3. On first start, choose whether Wedge starts with Windows and adds **Add to Wedge** to File Explorer's right-click menu (you can change both later in Settings)
 4. Start dragging a file: your shelves slide out of the right edge of the screen. Or click a tab, the tray icon, or press `Ctrl+Shift+Space`
 
 Coming from Stash? Installing Wedge replaces Stash 1.x, and your shelves and settings move from `%APPDATA%\Stash` to `%APPDATA%\Wedge` on the first start.
 
-A Microsoft Store release is being prepared ([checklist](docs/microsoft-store.md)).
+The Store version is the same app: the Store installs its updates, and on Windows 11 "Add to Wedge" is in File Explorer's first right-click menu. Its first start takes over the shelves of a Wedge installed from GitHub.
 
 ## For developers
 
@@ -189,13 +193,13 @@ scripts/          Release and icon helpers
 - [ ] Quick notes: a shelf you type into directly, docked to the edge like the others
 - [ ] Portable version: a .zip that keeps its shelves and settings in its own folder ([#17](https://github.com/Regncreative/Wedge/issues/17))
 - [ ] Code signing
-- [ ] Microsoft Store and winget
+- [x] Microsoft Store (and winget)
 - [ ] Share links
 - [ ] Smarter search
 
 ## Releases and updates
 
-Installed copies check [GitHub Releases](https://github.com/Regncreative/Wedge/releases) for updates on launch and from the tray or Settings. Users can opt into beta versions in Settings.
+Installed copies check [GitHub Releases](https://github.com/Regncreative/Wedge/releases) for updates on launch and from the tray or Settings. Users can opt into beta versions in Settings. The Microsoft Store version gets its updates from the Store ([how it's published](docs/microsoft-store.md)).
 
 Releases are built by GitHub Actions, not on a developer machine: push a version tag and the **Release** workflow tests, builds and uploads the installer to a draft release for review. Rollouts can be staged with the **Rollout** workflow. See [CONTRIBUTING.md](CONTRIBUTING.md#releasing-maintainers).
 

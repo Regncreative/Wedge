@@ -1,5 +1,7 @@
 # Publishing Wedge in the Microsoft Store
 
+**Live since 16 October 2026:** [Wedge Shelf](https://apps.microsoft.com/detail/9nkp6wx9qgl7) (Store ID `9NKP6WX9QGL7`, also `winget install 9NKP6WX9QGL7`).
+
 Wedge goes into the Store as an **MSIX package**. The Store signs it (no code-signing certificate needed) and installs its updates; the installer on GitHub Releases stays as it is for everyone else. Requirements are from the [Microsoft Store Policies](https://learn.microsoft.com/windows/apps/publish/store-policies) and the [MSIX submission guide](https://learn.microsoft.com/windows/apps/publish/publish-your-app/msix/create-app-submission).
 
 ## What the Store build does differently
