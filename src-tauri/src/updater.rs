@@ -27,6 +27,10 @@ fn set_status(app: &AppHandle, status: UpdateStatus) {
 }
 
 pub fn status(app: &AppHandle) -> UpdateStatus {
+    // In the Microsoft Store build the Store installs updates.
+    if cfg!(feature = "store") {
+        return UpdateStatus::Store;
+    }
     app.state::<AppState>()
         .update
         .lock()
@@ -79,6 +83,9 @@ pub fn in_rollout(raw: &serde_json::Value, bucket: u64) -> bool {
 }
 
 pub async fn check(app: &AppHandle, manual: bool) -> UpdateStatus {
+    if cfg!(feature = "store") {
+        return UpdateStatus::Store;
+    }
     if cfg!(debug_assertions) {
         set_status(app, UpdateStatus::Dev);
         return UpdateStatus::Dev;
@@ -225,6 +232,9 @@ pub fn install(app: &AppHandle) {
 
 /// Quiet check shortly after launch.
 pub fn schedule_startup_check(app: &AppHandle) {
+    if cfg!(feature = "store") {
+        return;
+    }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(Duration::from_secs(8)).await;

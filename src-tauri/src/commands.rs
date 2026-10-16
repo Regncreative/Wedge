@@ -6,6 +6,7 @@ use std::sync::atomic::Ordering;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, State};
+#[cfg(not(feature = "store"))]
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -774,6 +775,19 @@ pub fn sync_autostart(app: &AppHandle, enabled: bool) {
     if cfg!(debug_assertions) {
         return;
     }
+    #[cfg(feature = "store")]
+    {
+        let _ = app;
+        if let Err(e) = crate::store::set_startup_task(enabled) {
+            log::warn!("startup task: {e}");
+        }
+    }
+    #[cfg(not(feature = "store"))]
+    sync_run_key(app, enabled);
+}
+
+#[cfg(not(feature = "store"))]
+fn sync_run_key(app: &AppHandle, enabled: bool) {
     let launcher = app.autolaunch();
     let current = launcher.is_enabled().unwrap_or(false);
     let result = match (enabled, current) {

@@ -16,6 +16,8 @@ pub mod services;
 pub mod shared;
 pub mod shell;
 pub mod state;
+#[cfg(feature = "store")]
+pub mod store;
 pub mod textract;
 pub mod transfer;
 pub mod tray;

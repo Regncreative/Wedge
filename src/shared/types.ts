@@ -165,6 +165,8 @@ export type UpdateStatus =
   | { state: 'downloaded'; version: string }
   | { state: 'error'; message: string }
   | { state: 'dev' }
+  /** The Microsoft Store build: the Store installs updates. */
+  | { state: 'store' }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',

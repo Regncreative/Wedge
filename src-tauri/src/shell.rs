@@ -24,19 +24,30 @@ mod imp {
     use windows::Win32::System::DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard};
     use windows::Win32::System::Ole::CF_HDROP;
     use windows::Win32::UI::Shell::{DragQueryFileW, HDROP};
+    #[cfg(not(feature = "store"))]
     use winreg::enums::HKEY_CURRENT_USER;
+    #[cfg(not(feature = "store"))]
     use winreg::RegKey;
 
+    // The Store build's entry is declared by its package instead.
+    #[cfg(not(feature = "store"))]
     const KEYS: [&str; 2] = [
         r"Software\Classes\*\shell\Wedge",
         r"Software\Classes\Directory\shell\Wedge",
     ];
     /// The entry Wedge had when it was called Stash.
+    #[cfg(not(feature = "store"))]
     const OLD_KEYS: [&str; 2] = [
         r"Software\Classes\*\shell\Stash",
         r"Software\Classes\Directory\shell\Stash",
     ];
 
+    #[cfg(feature = "store")]
+    pub fn set_context_menu(enabled: bool, _: &str, _: &Path) -> std::io::Result<()> {
+        crate::store::set_context_menu(&crate::state::data_dir(), enabled)
+    }
+
+    #[cfg(not(feature = "store"))]
     pub fn set_context_menu(enabled: bool, label: &str, exe: &Path) -> std::io::Result<()> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         for key in OLD_KEYS {
@@ -58,6 +69,12 @@ mod imp {
         Ok(())
     }
 
+    #[cfg(feature = "store")]
+    pub fn context_menu_registered() -> bool {
+        crate::store::context_menu_registered(&crate::state::data_dir())
+    }
+
+    #[cfg(not(feature = "store"))]
     pub fn context_menu_registered() -> bool {
         RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey(KEYS[0])

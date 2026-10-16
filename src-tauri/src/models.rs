@@ -180,6 +180,7 @@ pub enum UpdateStatus {
     Downloaded { version: String },
     Error { message: String },
     Dev,
+    Store,
 }
 
 #[derive(Debug, Clone, Serialize)]

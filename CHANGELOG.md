@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- A Microsoft Store package (MSIX): the Store installs its updates, starting with Windows uses the package's startup task, and "Add to Wedge" sits in Windows 11's first right-click menu. The installer on GitHub works as before.
+
 ### Fixed
 - A temporary shelf's tab says how long it keeps files ("Keeps 1 day", "1 gün kalır") instead of a label cut off at the edge.
 

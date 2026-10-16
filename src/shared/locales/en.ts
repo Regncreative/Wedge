@@ -279,6 +279,7 @@ export const en: Messages = {
   updateReady: (v) => `${v} is ready; it installs when Wedge restarts`,
   updateLatest: 'You’re up to date',
   updateDev: 'Updates only work in the installed app',
+  updateStore: 'Updates come from the Microsoft Store',
   updateError: 'Update failed',
   updateErrorHint: 'You can download the latest installer from the releases page.',
   downloadManually: 'Open releases page',

@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
-    "build:store": "tauri build --config src-tauri/tauri.microsoftstore.conf.json",
+    "build:msix": "node scripts/build-msix.mjs",
     "dev:web": "vite",
     "build:web": "vite build",
     "typecheck": "tsc -p tsconfig.web.json && tsc -p tsconfig.test.json",
@@ -28,6 +28,7 @@
     "test:e2e": "playwright test",
     "test:perf": "playwright test perf",
     "icons": "node scripts/render-icons.mjs",
+    "msix:assets": "node scripts/render-msix-assets.mjs",
     "lint": "eslint -c eslint.config.cjs . && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\" && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri"

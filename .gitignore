@@ -9,6 +9,7 @@ node_modules/
 dist
 out
 release
+msix/shell-ext/target/
 *.tsbuildinfo
 
 # Env

@@ -65,6 +65,10 @@ windows = { version = "0.62", features = [
   "Win32_System_Threading",
 ] }
 
+[features]
+# The Microsoft Store build, packaged as MSIX (scripts/build-msix.mjs).
+store = ["windows/ApplicationModel", "windows/Storage_Search"]
+
 [dev-dependencies]
 tempfile = "3"
 minisign-verify = "0.2"

@@ -1,52 +1,60 @@
 # Publishing Wedge in the Microsoft Store
 
-Wedge goes into the Store as an **EXE app**: Partner Center links to the installer on GitHub Releases, and Wedge keeps updating itself from there (allowed for EXE apps). Requirements below are from the [Microsoft Store Policies](https://learn.microsoft.com/windows/apps/publish/store-policies) (version 7.20) and the [EXE/MSI submission checklist](https://learn.microsoft.com/windows/apps/publish/publish-your-app/msi/create-app-submission).
+Wedge goes into the Store as an **MSIX package**. The Store signs it (no code-signing certificate needed) and installs its updates; the installer on GitHub Releases stays as it is for everyone else. Requirements are from the [Microsoft Store Policies](https://learn.microsoft.com/windows/apps/publish/store-policies) and the [MSIX submission guide](https://learn.microsoft.com/windows/apps/publish/publish-your-app/msix/create-app-submission).
+
+## What the Store build does differently
+
+`npm run build:msix` builds `wedge.exe` with `--features store` and packages it ([scripts/build-msix.mjs](../scripts/build-msix.mjs), manifest in [msix/AppxManifest.xml](../msix/AppxManifest.xml)):
+
+|                                 | Regular installer                                        | Store package                                                                                                                                         |
+| ------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Updates                         | Wedge checks GitHub Releases and installs signed updates | The Store; Settings says so and has no update buttons                                                                                                 |
+| Start with Windows              | A Run key                                                | The package's startup task (`WedgeStartup`)                                                                                                           |
+| "Add to Wedge" in File Explorer | Registry keys (Windows 11: under _Show more options_)    | A COM extension declared by the package ([msix/shell-ext](../msix/shell-ext)), in the first menu on Windows 11; switching it off in Settings hides it |
+| Data                            | `%APPDATA%\Wedge`                                        | The package's LocalState; on the first start it copies the data of a Wedge installed from GitHub                                                      |
+| Signing                         | Not signed yet                                           | Signed by the Store                                                                                                                                   |
 
 ## Where Wedge stands
 
-| Requirement                                                                                                                        | Policy         | Status                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Installer is an `.exe` or `.msi`                                                                                                   | 10.2.9         | Done: the NSIS installer `Wedge_<version>_x64-setup.exe`                                                                |
-| Installer **and every `.exe`/`.dll` in it** signed with a code-signing certificate from a CA in the Microsoft Trusted Root Program | 10.2.9         | **Missing**: see [Code signing](#code-signing)                                                                          |
-| Versioned HTTPS download URL whose file never changes                                                                              | 10.2.9         | Done: GitHub release assets live under the version tag                                                                  |
-| Silent install, no installer UI (UAC allowed)                                                                                      | 10.2.9         | Done: `/S`                                                                                                              |
-| Standalone installer, not a downloader                                                                                             | 10.2.9         | Done with `npm run build:store`, which puts WebView2 inside the installer (the regular build downloads it if missing)   |
-| Clean uninstall                                                                                                                    | 10.2.7         | Done: the uninstaller removes the File Explorer entry and the start-up entry, and offers to delete shelves and settings |
-| Ask before changing the user's Windows                                                                                             | 10.2.8         | Done: starting with Windows and the File Explorer entry are offered on the welcome screen                               |
-| Responsive, no crashes                                                                                                             | 10.4.2         | Done: drags and slow file work stay off the UI thread; a watchdog logs any freeze                                       |
-| Privacy policy                                                                                                                     | 10.5.1         | Done: [PRIVACY.md](../PRIVACY.md); give its URL in Partner Center                                                       |
-| Publisher name differs from product name                                                                                           | Partner Center | Done: Regncreative / Wedge                                                                                              |
-
-## Code signing
-
-This is the one thing left. The certificate must chain to the [Microsoft Trusted Root Program](https://learn.microsoft.com/security/trusted-root/participants-list), and it signs `wedge.exe`, the uninstaller and the installer. Options:
-
-- **Certum Open Source Code Signing**: low-cost certificates for open-source developers, individuals included, with cloud signing (SimplySign).
-- **SignPath Foundation**: free signing for open-source projects, done in CI; the certificate is issued to SignPath Foundation.
-- **Microsoft's signing service (Azure Trusted Signing)**: cheap per month and signs in CI, but check whether individuals in your country can use it.
-- **A commercial OV certificate** (Sectigo, DigiCert, SSL.com…) on a hardware token or cloud HSM.
-
-Once there is a certificate, set `bundle.windows.signCommand` (or `certificateThumbprint`) in `src-tauri/tauri.conf.json` and fill in the "Code signing" step in `.github/workflows/release.yml`. Signing also ends the SmartScreen warning for everyone downloading from GitHub.
+| Requirement                              | Policy         | Status                                                                                             |
+| ---------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
+| MSIX package with a valid manifest       | 10.2           | Done: `makeappx` validates it on every build                                                       |
+| Package identity from Partner Center     | Partner Center | **To do**: reserve the name, then set the repository variables (below)                             |
+| `runFullTrust` justified                 | 10.2.4         | Text below, for the submission's restricted-capabilities box                                       |
+| Ask before changing the user's Windows   | 10.2.8         | Done: starting with Windows and the File Explorer entry are offered on the welcome screen          |
+| Clean uninstall                          | 10.2.7         | Done by Windows: removing a package removes its startup task, its File Explorer entry and its data |
+| Responsive, no crashes                   | 10.4.2         | Done: drags and slow file work stay off the UI thread; a watchdog logs any freeze                  |
+| Privacy policy                           | 10.5.1         | Done: [PRIVACY.md](../PRIVACY.md); give its URL in Partner Center                                  |
+| Publisher name differs from product name | Partner Center | Done: Regncreative / Wedge                                                                         |
 
 ## Steps
 
-1. **Partner Center**: enroll as an individual developer and reserve the name **Wedge** (_Apps and games → New product → EXE or MSI app_). If the name is taken, the reservation tells you.
-2. **Sign** the builds (above).
-3. **Build the Store installer**: `npm run build:store`. It is bigger than the regular one (WebView2 is inside). Upload it to the version's GitHub release as `Wedge_<version>_x64-store-setup.exe`.
-4. **Packages**:
-   - Package URL: `https://github.com/Regncreative/Wedge/releases/download/v<version>/Wedge_<version>_x64-store-setup.exe`
-   - Architecture: x64
-   - Installer parameters: `/S`
-   - Languages: English, Turkish
-   - App type: EXE
-5. **Properties**: category _Productivity_. Wedge collects no personal information; still give the privacy policy URL: `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`.
+1. **Partner Center**: enroll as an individual developer (free) and reserve the name **Wedge** (_Apps and games → New product → MSIX or PWA app_).
+2. **Identity**: under _Product management → Product identity_, copy `Package/Identity/Name`, `Package/Identity/Publisher` and `Package/Properties/PublisherDisplayName` into the repository's Actions variables `MSIX_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` (or set them as environment variables for a local build).
+3. **Build**: push a version tag; the **Release** workflow also builds `Wedge_<version>_x64.msix` and attaches it to the run as the `wedge-msix` artifact. Locally: `npm run build:msix`.
+4. **Packages**: upload the `.msix`. Device family: Desktop.
+5. **Properties**: category _Productivity_; privacy policy URL `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`.
 6. **Age ratings**: answer the questionnaire (no user-to-user content, no purchases, no location).
 7. **Store listing** in English and Turkish (texts below), with:
-   - Screenshots: at least 1, 4 or more recommended, PNG.
+   - Screenshots: at least 1, 4 or more recommended (the app's own, from `tests/e2e/screens.spec.ts`).
    - Store logo: 1:1 box art, [`assets/store/box-art.png`](../assets/store/box-art.png) (2160 × 2160).
    - License terms: MIT, link to [LICENSE](../LICENSE).
-8. **Notes for certification**: paste the text below.
-9. **Every new version**: upload its Store installer to the release and enter the new versioned URL in Partner Center.
+8. **Submission options**: paste the `runFullTrust` justification and the notes for certification below.
+9. **Every new version**: bump the version, push the tag, upload the new `.msix`. The Store needs a higher version each time.
+
+## Trying the package before submitting
+
+Turn on Developer Mode (_Settings → System → For developers_), build with `npm run build:msix`, quit any running Wedge, then in PowerShell:
+
+```powershell
+Add-AppxPackage -Register src-tauri\target\store\package\AppxManifest.xml
+```
+
+This installs the unpacked package as it will run from the Store (without the Store's signature). Remove it from _Settings → Apps_ when done. A placeholder identity is fine for this.
+
+## runFullTrust justification
+
+> Wedge is a desktop file shelf (Win32, built with Tauri and Rust). It needs full trust to work with files anywhere on the user's disks: it shows files the user drops on its shelves wherever they are, starts drags of those files into other apps, watches the Downloads and Screenshots folders when the user turns that on, and receives files from the user's phone on the local network. It notices that a file drag started anywhere in Windows with an out-of-context WinEvent hook (EVENT_OBJECT_SHOW/HIDE/DESTROY, looking only for the shell's drag image window); it reads no keyboard or mouse input.
 
 ## Listing texts
 
@@ -114,8 +122,8 @@ dosya rafı, sürükle bırak, dosya, masaüstü, verimlilik, raf, pano
 
 ## Notes for certification
 
-> Wedge is a file shelf that lives on the right edge of the screen; no account or server is needed. After installing, it starts in the system tray and shows a welcome screen. Colored tabs sit at the right screen edge. To try it: drag any file from File Explorer; the tabs slide out; drop the file on a tab. Click a tab to open that shelf as a drawer; Ctrl+Shift+Space also opens it. Drag a card from the drawer into any app to use the file.
+> Wedge is a file shelf that lives on the right edge of the screen; no account or server is needed. After installing, it starts in the system tray and shows a welcome screen. Colored tabs sit at the right screen edge. To try it: drag any file from File Explorer; the tabs slide out; drop the file on a tab. Click a tab to open that shelf as a drawer; Ctrl+Shift+Space also opens it. Drag a card from the drawer into any app to use the file. Right-click a file in File Explorer for "Add to Wedge".
 >
 > To notice that a file drag started anywhere, Wedge uses an out-of-context WinEvent hook (SetWinEventHook for EVENT_OBJECT_SHOW, HIDE and DESTROY) and only looks for the shell's drag image window (class "SysDragImage"). It reads no keyboard or mouse input and changes no Windows settings.
 >
-> Starting with Windows and the "Add to Wedge" File Explorer entry are only added after the user agrees on the welcome screen; both can be turned off in Settings, and the uninstaller removes them. Wedge updates itself from GitHub Releases and verifies each update's signature before installing it.
+> Starting with Windows (the package's startup task) is only turned on after the user agrees on the welcome screen, and both it and the File Explorer entry can be switched off in Settings. In this build the Store installs updates; Wedge doesn't update itself.

@@ -281,6 +281,7 @@ export type Messages = {
   updateReady: (v: string) => string
   updateLatest: string
   updateDev: string
+  updateStore: string
   updateError: string
   updateErrorHint: string
   downloadManually: string

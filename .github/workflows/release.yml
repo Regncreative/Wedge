@@ -119,3 +119,19 @@ jobs:
           if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" "${flags[@]}" \
             "$SETUP" "$SETUP.sig" manifests/*
+
+      # The Microsoft Store package, uploaded by hand in Partner Center (the
+      # Store signs it). The identity is in the repository's variables.
+      - name: Microsoft Store package (MSIX)
+        run: node scripts/build-msix.mjs
+        env:
+          MSIX_NAME: ${{ vars.MSIX_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+
+      - name: Upload the MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: wedge-msix
+          path: src-tauri/target/store/*.msix
+          retention-days: 30

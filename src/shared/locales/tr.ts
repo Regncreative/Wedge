@@ -276,6 +276,7 @@ export const tr: Messages = {
   updateReady: (v) => `${v} hazır; yeniden başlatınca kurulur`,
   updateLatest: 'Güncelsin',
   updateDev: 'Güncelleme yalnızca kurulu sürümde çalışır',
+  updateStore: 'Güncellemeler Microsoft Store’dan gelir',
   updateError: 'Güncelleme başarısız',
   updateErrorHint: 'En son kurucuyu sürümler sayfasından indirebilirsin.',
   downloadManually: 'Sürümler sayfasını aç',

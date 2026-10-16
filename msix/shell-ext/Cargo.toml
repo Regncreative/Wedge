@@ -1,0 +1,29 @@
+[package]
+name = "wedge_shell"
+version = "2.0.0"
+edition = "2021"
+publish = false
+description = "Add to Wedge in File Explorer's context menu, for the Microsoft Store (MSIX) build"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# The #[implement] macro expands to windows_core paths.
+windows-core = "0.62"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Globalization",
+  "Win32_System_Com",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Storage_Search",
+] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -41,6 +41,13 @@ jobs:
       - name: Rust formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
+      # The Microsoft Store build and its File Explorer extension (msix/).
+      - name: Clippy (Store build)
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --features store -- -D warnings
+          cargo clippy --manifest-path msix/shell-ext/Cargo.toml -- -D warnings
+          cargo fmt --manifest-path msix/shell-ext/Cargo.toml --check
+
       - run: npm run typecheck
 
       - name: Unit tests (frontend)

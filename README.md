@@ -117,7 +117,7 @@ npm run dev
 | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `npm run dev`                               | Run the app with hot reload                                                                  |
 | `npm run build`                             | Release build and installer (`src-tauri/target/release/bundle/nsis/`)                        |
-| `npm run build:store`                       | Installer for the Microsoft Store (WebView2 included, works offline)                         |
+| `npm run build:msix`                        | Microsoft Store package (MSIX); see [docs/microsoft-store.md](docs/microsoft-store.md)       |
 | `npm test`                                  | Frontend unit tests (Vitest)                                                                 |
 | `npm run test:rust`                         | Backend unit tests (cargo test)                                                              |
 | `npm run build:e2e` then `npm run test:e2e` | End-to-end tests against the real app (Playwright over WebView2)                             |

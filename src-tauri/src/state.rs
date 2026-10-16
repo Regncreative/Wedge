@@ -65,6 +65,10 @@ pub fn data_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("STASH_USER_DATA") {
         return PathBuf::from(dir);
     }
+    #[cfg(feature = "store")]
+    if let Some(dir) = crate::store::data_dir(&app_data()) {
+        return dir;
+    }
     let dir = app_data().join("Wedge");
     let old = app_data().join("Stash");
     if !dir.exists() && old.join("stash.db").exists() && std::fs::rename(&old, &dir).is_err() {
@@ -77,6 +81,10 @@ pub fn data_dir() -> PathBuf {
 pub fn old_data_dir() -> Option<PathBuf> {
     if std::env::var_os("STASH_USER_DATA").is_some() {
         return None;
+    }
+    if cfg!(feature = "store") {
+        // The Store build copies the data of a Wedge installed outside it.
+        return Some(app_data().join("Wedge"));
     }
     Some(app_data().join("Stash"))
 }

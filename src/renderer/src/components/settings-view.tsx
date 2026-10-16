@@ -551,7 +551,7 @@ export function SettingsView() {
 
         <Section title={t.updatesSection}>
           <Row label={t.currentVersion(appVersion || '—')} hint={updateHint(t, update)}>
-            {update.state === 'downloaded' ? (
+            {update.state === 'store' ? null : update.state === 'downloaded' ? (
               <button
                 type="button"
                 className="btn-primary"
@@ -575,13 +575,15 @@ export function SettingsView() {
               </button>
             )}
           </Row>
-          <Row label={t.betaUpdates} hint={t.betaUpdatesHint}>
-            <Switch
-              label={t.betaUpdates}
-              checked={settings.updateChannel === 'beta'}
-              onChange={(v) => void updateSettings({ updateChannel: v ? 'beta' : 'stable' })}
-            />
-          </Row>
+          {update.state !== 'store' && (
+            <Row label={t.betaUpdates} hint={t.betaUpdatesHint}>
+              <Switch
+                label={t.betaUpdates}
+                checked={settings.updateChannel === 'beta'}
+                onChange={(v) => void updateSettings({ updateChannel: v ? 'beta' : 'stable' })}
+              />
+            </Row>
+          )}
           {update.state === 'error' && (
             <Row label={t.updateError} hint={t.updateErrorHint}>
               <button
@@ -617,6 +619,8 @@ function updateHint(t: ReturnType<typeof useT>, s: UpdateStatus): string | undef
       return t.updateLatest
     case 'dev':
       return t.updateDev
+    case 'store':
+      return t.updateStore
     case 'error':
       return t.updateError
     default:
