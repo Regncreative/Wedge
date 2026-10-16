@@ -122,7 +122,7 @@ dosya rafı, sürükle bırak, dosya, masaüstü, verimlilik, raf, pano
 
 ## Notes for certification
 
-> Wedge is a file shelf that lives on the right edge of the screen; no account or server is needed. After installing, it starts in the system tray and shows a welcome screen. Colored tabs sit at the right screen edge. To try it: drag any file from File Explorer; the tabs slide out; drop the file on a tab. Click a tab to open that shelf as a drawer; Ctrl+Shift+Space also opens it. Drag a card from the drawer into any app to use the file. Right-click a file in File Explorer for "Add to Wedge".
+> Wedge is a file shelf that lives on the right edge of the screen; no account or server is needed. When launched, it starts in the system tray and shows a welcome screen; accept it to turn on the File Explorer entry. Colored tabs sit at the right screen edge. To try it: drag any file from File Explorer; the tabs slide out; drop the file on a tab. Click a tab to open that shelf as a drawer; Ctrl+Shift+Space also opens it. Drag a card from the drawer into any app to use the file. Right-click a file in File Explorer and choose "Add to Wedge" (in the first menu on Windows 11).
 >
 > To notice that a file drag started anywhere, Wedge uses an out-of-context WinEvent hook (SetWinEventHook for EVENT_OBJECT_SHOW, HIDE and DESTROY) and only looks for the shell's drag image window (class "SysDragImage"). It reads no keyboard or mouse input and changes no Windows settings.
 >
