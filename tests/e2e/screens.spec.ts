@@ -4,8 +4,8 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { launchApp, removeProfile, showShelf } from './app'
 
-// Retakes the screenshots for the README and the website, in English and
-// Turkish:  STASH_SCREENS=out-folder npx playwright test screens
+// Retakes the screenshots for the README and the website, in English,
+// Turkish and Russian:  STASH_SCREENS=out-folder npx playwright test screens
 // Everything happens on a throwaway profile with made-up files.
 const OUT = process.env.STASH_SCREENS ? resolve(process.env.STASH_SCREENS) : ''
 test.skip(!OUT, 'set STASH_SCREENS=<folder> to retake the screenshots')
@@ -22,7 +22,7 @@ interface Copy {
   pocket: [string, Art?][]
   labels: { settings: string; createShelf: string; sharedShelf: string }
 }
-const COPY: Record<'en' | 'tr', Copy> = {
+const COPY: Record<'en' | 'tr' | 'ru', Copy> = {
   en: {
     shelves: { pocket: 'Pocket', work: 'Work', personal: 'Personal', temp: 'Temporary' },
     // Added oldest first; the newest show first, after the pinned one.
@@ -55,6 +55,26 @@ const COPY: Record<'en' | 'tr', Copy> = {
     temp: [['Biniş kartı.pdf']],
     pocket: [['Duvar kâğıdı.jpg', 'dune'], ['Sayım.xlsx']],
     labels: { settings: 'Ayarlar', createShelf: 'Raf oluştur', sharedShelf: 'Paylaşılan raf…' }
+  },
+  ru: {
+    shelves: { pocket: 'Карман', work: 'Работа', personal: 'Личное', temp: 'Временная' },
+    work: [
+      ['Договор.docx'],
+      ['Презентация.pptx'],
+      ['Бюджет 2027.xlsx'],
+      ['Визуал запуска.jpg', 'arc'],
+      ['Дизайн обложки.jpg', 'bloom'],
+      ['Предложение — октябрь 2026.pdf']
+    ],
+    pinned: {
+      name: 'Предложение — октябрь 2026.pdf',
+      note: 'Подписать до пятницы',
+      tags: 'клиент'
+    },
+    personal: [['Отпуск.jpg', 'lake'], ['Рецепты.pdf']],
+    temp: [['Посадочный талон.pdf']],
+    pocket: [['Обои.jpg', 'dune'], ['Инвентаризация.xlsx']],
+    labels: { settings: 'Настройки', createShelf: 'Создать полку', sharedShelf: 'Общая полка…' }
   }
 }
 
@@ -189,7 +209,7 @@ async function reloadOn(page: Page, shelf: string) {
   await showShelf(page, shelf)
 }
 
-for (const lang of ['en', 'tr'] as const) {
+for (const lang of ['en', 'tr', 'ru'] as const) {
   test(`screenshots (${lang})`, async () => {
     const copy = COPY[lang]
     const dir = join(OUT, lang)
