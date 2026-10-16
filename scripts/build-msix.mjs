@@ -2,11 +2,9 @@
 //
 //   node scripts/build-msix.mjs [--skip-build]
 //
-// The package identity comes from Partner Center (Product identity):
-//   MSIX_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME, and MSIX_DISPLAY_NAME
-//   (the reserved name, when it isn't just "Wedge")
-// Without them a placeholder identity is used, which is fine for trying the
-// package locally but not for the Store.
+// The package identity is Wedge Shelf's in Partner Center (Product identity);
+// MSIX_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME and MSIX_DISPLAY_NAME
+// override it.
 //
 // Output: src-tauri/target/store/Wedge_<version>_x64.msix, and the unpacked
 // package in src-tauri/target/store/package (register it with
@@ -24,13 +22,13 @@ const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).ver
 const msixVersion = `${version.split('-')[0]}.0`
 
 const identity = {
-  NAME: process.env.MSIX_NAME || 'Regncreative.Wedge',
-  PUBLISHER: process.env.MSIX_PUBLISHER || 'CN=Regncreative',
+  NAME: process.env.MSIX_NAME || 'Regncreative.WedgeShelf',
+  PUBLISHER: process.env.MSIX_PUBLISHER || 'CN=72B69D57-C9E8-4280-AF56-B142286B0D20',
   PUBLISHER_DISPLAY_NAME: process.env.MSIX_PUBLISHER_DISPLAY_NAME || 'Regncreative',
-  DISPLAY_NAME: process.env.MSIX_DISPLAY_NAME || 'Wedge',
+  // The name reserved in the Store ("Wedge" was taken); Start says Wedge.
+  DISPLAY_NAME: process.env.MSIX_DISPLAY_NAME || 'Wedge Shelf',
   VERSION: msixVersion,
 }
-if (!process.env.MSIX_NAME) console.warn('MSIX_NAME is not set: using a placeholder identity (not for the Store).')
 
 const run = (cmd, args, env = {}) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit', env: { ...process.env, ...env } })
 

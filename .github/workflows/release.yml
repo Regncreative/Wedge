@@ -121,14 +121,9 @@ jobs:
             "$SETUP" "$SETUP.sig" manifests/*
 
       # The Microsoft Store package, uploaded by hand in Partner Center (the
-      # Store signs it). The identity is in the repository's variables.
+      # Store signs it).
       - name: Microsoft Store package (MSIX)
         run: node scripts/build-msix.mjs
-        env:
-          MSIX_NAME: ${{ vars.MSIX_NAME }}
-          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
-          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
-          MSIX_DISPLAY_NAME: ${{ vars.MSIX_DISPLAY_NAME }}
 
       - name: Upload the MSIX
         uses: actions/upload-artifact@v4

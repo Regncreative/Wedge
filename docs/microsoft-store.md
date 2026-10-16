@@ -19,7 +19,7 @@ Wedge goes into the Store as an **MSIX package**. The Store signs it (no code-si
 | Requirement                              | Policy         | Status                                                                                             |
 | ---------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
 | MSIX package with a valid manifest       | 10.2           | Done: `makeappx` validates it on every build                                                       |
-| Package identity from Partner Center     | Partner Center | **To do**: reserve the name, then set the repository variables (below)                             |
+| Package identity from Partner Center     | Partner Center | Done: **Wedge Shelf** (Store ID `9NKP6WX9QGL7`), in `scripts/build-msix.mjs`                       |
 | `runFullTrust` justified                 | 10.2.4         | Text below, for the submission's restricted-capabilities box                                       |
 | Ask before changing the user's Windows   | 10.2.8         | Done: starting with Windows and the File Explorer entry are offered on the welcome screen          |
 | Clean uninstall                          | 10.2.7         | Done by Windows: removing a package removes its startup task, its File Explorer entry and its data |
@@ -29,8 +29,8 @@ Wedge goes into the Store as an **MSIX package**. The Store signs it (no code-si
 
 ## Steps
 
-1. **Partner Center**: enroll as an individual developer (free) and reserve the name **Wedge** (_Apps and games → New product → MSIX or PWA app_).
-2. **Identity**: under _Product management → Product identity_, copy `Package/Identity/Name`, `Package/Identity/Publisher`, `Package/Properties/PublisherDisplayName` and the reserved `Package/Properties/DisplayName` into the repository's Actions variables `MSIX_NAME`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY_NAME` and `MSIX_DISPLAY_NAME` (or set them as environment variables for a local build). The Start menu keeps saying Wedge.
+1. **Partner Center**: the app is reserved as **Wedge Shelf** (an MSIX or PWA app; "Wedge" was taken). The Store shows that name; Start and the app say Wedge.
+2. **Identity**: `scripts/build-msix.mjs` has the values from _Product management → Product identity_ (`Regncreative.WedgeShelf`, publisher `CN=72B69D57-C9E8-4280-AF56-B142286B0D20`). They never change.
 3. **Build**: push a version tag; the **Release** workflow also builds `Wedge_<version>_x64.msix` and attaches it to the run as the `wedge-msix` artifact. Locally: `npm run build:msix`.
 4. **Packages**: upload the `.msix`. Device family: Desktop.
 5. **Properties**: category _Productivity_; privacy policy URL `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`.
@@ -50,7 +50,7 @@ Turn on Developer Mode (_Settings → System → For developers_), build with `n
 Add-AppxPackage -Register src-tauri\target\store\package\AppxManifest.xml
 ```
 
-This installs the unpacked package as it will run from the Store (without the Store's signature). Remove it from _Settings → Apps_ when done. A placeholder identity is fine for this.
+This installs the unpacked package as it will run from the Store (without the Store's signature). Remove it from _Settings → Apps_ when done.
 
 ## runFullTrust justification
 
