@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - A Microsoft Store package (MSIX): the Store installs its updates, starting with Windows uses the package's startup task, and "Add to Wedge" sits in Windows 11's first right-click menu. The installer on GitHub works as before.
 
 ### Fixed
+- "Add to Wedge" in File Explorer no longer puts files on the Downloads, Screenshots or phone shelf when that was the last one opened; they go to the default shelf instead.
 - A temporary shelf's tab says how long it keeps files ("Keeps 1 day", "1 gün kalır") instead of a label cut off at the edge.
 
 ## [2.0.0] - 2026-10-15

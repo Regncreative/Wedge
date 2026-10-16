@@ -52,9 +52,15 @@ fn add_from_explorer(app: &tauri::AppHandle, paths: Vec<String>) {
         std::thread::sleep(std::time::Duration::from_millis(400));
         let batch = std::mem::take(&mut *pending.lock().unwrap_or_else(|e| e.into_inner()));
         let state = app.state::<AppState>();
-        let (target, notify) = match db::get_settings(&state.db(), state.language) {
-            Ok(s) => (Some(s.last_shelf_id), s.notifications),
-            Err(_) => (None, true),
+        let (target, notify) = {
+            let conn = state.db();
+            match db::get_settings(&conn, state.language) {
+                Ok(s) => (
+                    db::manual_shelf(&conn, &s.last_shelf_id, &s.default_shelf_id).ok(),
+                    s.notifications,
+                ),
+                Err(_) => (None, true),
+            }
         };
         let Some(change) = services::ingest(&app, &batch, "manual", target.as_deref()) else {
             return;
@@ -157,6 +163,14 @@ pub fn run() {
             // Windows: only once they agreed on the welcome screen.
             if settings.onboarding_done {
                 commands::sync_context_menu(handle, settings.context_menu);
+                // The package's startup task starts out off, also when the
+                // settings came from a Wedge installed from GitHub.
+                #[cfg(feature = "store")]
+                {
+                    let handle = handle.clone();
+                    let enabled = settings.start_with_windows;
+                    std::thread::spawn(move || commands::sync_autostart(&handle, enabled));
+                }
             }
             watchdog::start(handle);
             panel::prepare(handle);

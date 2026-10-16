@@ -221,6 +221,29 @@ pub fn list_shelves(conn: &Connection) -> Result<Vec<Shelf>> {
     rows.collect()
 }
 
+/// Where Explorer's "Add to Wedge" puts files: the shelf the user last opened,
+/// unless it's an automatic one (downloads, screenshots, phone), which only
+/// its own source fills; then the default shelf or the first regular one.
+pub fn manual_shelf(conn: &Connection, last: &str, default: &str) -> Result<String> {
+    let shelves = list_shelves(conn)?;
+    let takes_files = |id: &str| {
+        shelves
+            .iter()
+            .any(|s| s.id == id && matches!(s.kind.as_str(), "normal" | "pocket"))
+    };
+    Ok([last, default]
+        .into_iter()
+        .find(|id| takes_files(id))
+        .map(str::to_string)
+        .or_else(|| {
+            shelves
+                .iter()
+                .find(|s| s.kind == "normal")
+                .map(|s| s.id.clone())
+        })
+        .unwrap_or_else(|| last.to_string()))
+}
+
 pub fn create_shelf(
     conn: &Connection,
     name: &str,
@@ -1183,6 +1206,21 @@ mod tests {
         assert_eq!(a.id, b.id);
         assert_eq!(a.kind, "downloads");
         assert_eq!(list_shelves(&conn).unwrap().len(), 4);
+    }
+
+    #[test]
+    fn explorer_adds_skip_automatic_shelves() {
+        let conn = db();
+        let shelves = list_shelves(&conn).unwrap();
+        let shots =
+            ensure_kind_shelf(&conn, "screenshots", "Screenshots", "camera", "#C79BFF").unwrap();
+        let default = &shelves[0].id;
+        assert_eq!(
+            manual_shelf(&conn, &shelves[1].id, default).unwrap(),
+            shelves[1].id
+        );
+        assert_eq!(manual_shelf(&conn, &shots.id, default).unwrap(), *default);
+        assert_eq!(manual_shelf(&conn, &shots.id, &shots.id).unwrap(), *default);
     }
 
     #[test]
