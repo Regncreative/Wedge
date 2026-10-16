@@ -3,7 +3,8 @@
 //   node scripts/build-msix.mjs [--skip-build]
 //
 // The package identity comes from Partner Center (Product identity):
-//   MSIX_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME
+//   MSIX_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME, and MSIX_DISPLAY_NAME
+//   (the reserved name, when it isn't just "Wedge")
 // Without them a placeholder identity is used, which is fine for trying the
 // package locally but not for the Store.
 //
@@ -26,6 +27,7 @@ const identity = {
   NAME: process.env.MSIX_NAME || 'Regncreative.Wedge',
   PUBLISHER: process.env.MSIX_PUBLISHER || 'CN=Regncreative',
   PUBLISHER_DISPLAY_NAME: process.env.MSIX_PUBLISHER_DISPLAY_NAME || 'Regncreative',
+  DISPLAY_NAME: process.env.MSIX_DISPLAY_NAME || 'Wedge',
   VERSION: msixVersion,
 }
 if (!process.env.MSIX_NAME) console.warn('MSIX_NAME is not set: using a placeholder identity (not for the Store).')

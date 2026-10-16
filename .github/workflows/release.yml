@@ -128,6 +128,7 @@ jobs:
           MSIX_NAME: ${{ vars.MSIX_NAME }}
           MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
           MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+          MSIX_DISPLAY_NAME: ${{ vars.MSIX_DISPLAY_NAME }}
 
       - name: Upload the MSIX
         uses: actions/upload-artifact@v4

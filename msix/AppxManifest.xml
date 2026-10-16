@@ -22,7 +22,8 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>Wedge</DisplayName>
+    <!-- The name reserved in Partner Center; Start still says Wedge. -->
+    <DisplayName>{{DISPLAY_NAME}}</DisplayName>
     <PublisherDisplayName>{{PUBLISHER_DISPLAY_NAME}}</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>

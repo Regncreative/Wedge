@@ -30,7 +30,7 @@ Wedge goes into the Store as an **MSIX package**. The Store signs it (no code-si
 ## Steps
 
 1. **Partner Center**: enroll as an individual developer (free) and reserve the name **Wedge** (_Apps and games → New product → MSIX or PWA app_).
-2. **Identity**: under _Product management → Product identity_, copy `Package/Identity/Name`, `Package/Identity/Publisher` and `Package/Properties/PublisherDisplayName` into the repository's Actions variables `MSIX_NAME`, `MSIX_PUBLISHER` and `MSIX_PUBLISHER_DISPLAY_NAME` (or set them as environment variables for a local build).
+2. **Identity**: under _Product management → Product identity_, copy `Package/Identity/Name`, `Package/Identity/Publisher`, `Package/Properties/PublisherDisplayName` and the reserved `Package/Properties/DisplayName` into the repository's Actions variables `MSIX_NAME`, `MSIX_PUBLISHER`, `MSIX_PUBLISHER_DISPLAY_NAME` and `MSIX_DISPLAY_NAME` (or set them as environment variables for a local build). The Start menu keeps saying Wedge.
 3. **Build**: push a version tag; the **Release** workflow also builds `Wedge_<version>_x64.msix` and attaches it to the run as the `wedge-msix` artifact. Locally: `npm run build:msix`.
 4. **Packages**: upload the `.msix`. Device family: Desktop.
 5. **Properties**: category _Productivity_; privacy policy URL `https://github.com/Regncreative/Wedge/blob/main/PRIVACY.md`.
