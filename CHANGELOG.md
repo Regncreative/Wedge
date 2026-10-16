@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-16
+
 ### Added
 - A Microsoft Store package (MSIX): the Store installs its updates, starting with Windows uses the package's startup task, and "Add to Wedge" sits in Windows 11's first right-click menu. The installer on GitHub works as before.
 
@@ -95,7 +97,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/Regncreative/Wedge/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Regncreative/Wedge/compare/v1.0.4...v2.0.0
 [1.0.4]: https://github.com/Regncreative/Wedge/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/Regncreative/Wedge/compare/v1.0.2...v1.0.3
