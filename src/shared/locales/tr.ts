@@ -44,7 +44,7 @@ export const tr: Messages = {
   filtersLabel: 'Türe göre süz',
 
   tabSubNormal: 'KALICI',
-  tabSubTemp: (l) => `GEÇİCİ · ${l.toLocaleUpperCase('tr')}`,
+  tabSubTemp: (l) => `${l.toLocaleUpperCase('tr')} KALIR`,
   tabSubShared: 'PAYLAŞILAN',
   tabSubAuto: 'OTOMATİK',
   tabSubPocket: 'SONRA SÜRÜKLE',

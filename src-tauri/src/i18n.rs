@@ -3,9 +3,13 @@
 
 use crate::models::Language;
 
-/// Turkish for Turkish Windows; English for everything else.
+/// Turkish for Turkish Windows; English for everything else. STASH_LANG
+/// (`en` or `tr`) overrides it, so tests and screenshots don't depend on the machine.
 pub fn system_language() -> Language {
-    language_for(sys_locale::get_locale().as_deref())
+    match std::env::var("STASH_LANG") {
+        Ok(lang) if !lang.is_empty() => language_for(Some(&lang)),
+        _ => language_for(sys_locale::get_locale().as_deref()),
+    }
 }
 
 pub fn language_for(locale: Option<&str>) -> Language {

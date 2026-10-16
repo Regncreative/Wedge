@@ -96,7 +96,8 @@ function waitForExit(child: ChildProcess): Promise<number | null> {
  * Playwright to its WebView2 through the Chrome DevTools Protocol.
  */
 export async function launchApp(
-  userData = mkdtempSync(join(tmpdir(), 'stash-e2e-'))
+  userData = mkdtempSync(join(tmpdir(), 'stash-e2e-')),
+  env: Record<string, string> = {}
 ): Promise<LaunchedApp> {
   const port = nextPort++
   const downloads = join(userData, 'test-downloads')
@@ -106,7 +107,8 @@ export async function launchApp(
   rmSync(DEVTOOLS_ACTIVE_PORT, { force: true })
   const child = spawn(EXE, [], {
     env: appEnv(userData, {
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+      ...env
     }),
     stdio: ['ignore', 'pipe', 'pipe']
   })

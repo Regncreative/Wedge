@@ -44,7 +44,7 @@ export const en: Messages = {
   filtersLabel: 'Filter by type',
 
   tabSubNormal: 'KEEPS',
-  tabSubTemp: (l) => `TEMPORARY · ${l.toUpperCase()}`,
+  tabSubTemp: (l) => `KEEPS ${l.toUpperCase()}`,
   tabSubShared: 'SHARED',
   tabSubAuto: 'AUTOMATIC',
   tabSubPocket: 'DRAG LATER',

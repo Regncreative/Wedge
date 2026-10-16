@@ -20,7 +20,9 @@ npm run dev
 
 The first Rust build takes a few minutes; later ones are incremental.
 
-`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Wedge`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`.
+`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Wedge`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`. `STASH_LANG=en` or `tr` sets the language instead of following Windows.
+
+`STASH_SCREENS=<folder> npx playwright test screens` retakes the screenshots used in this README and on the website, in English and Turkish, on a throwaway profile.
 
 ## Checks
 

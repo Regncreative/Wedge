@@ -25,11 +25,17 @@
 </p>
 
 <p align="center">
-  <img src="docs/edge-tabs.png" alt="Shelf tabs sliding out of the screen edge during a drag" width="224">
+  <img src="docs/screens/edge-tabs.jpg" alt="Shelf tabs sliding out of the screen edge during a drag" width="260">
   &nbsp;
-  <img src="docs/panel-dark.png" alt="A shelf pulled out as a drawer, dark theme" width="300">
+  <img src="docs/screens/drawer-dark.jpg" alt="A shelf pulled out as a drawer, dark theme" width="260">
   &nbsp;
-  <img src="docs/panel-light.png" alt="A shelf pulled out as a drawer, light theme" width="300">
+  <img src="docs/screens/drawer-light.jpg" alt="A shelf pulled out as a drawer, light theme" width="260">
+</p>
+
+<p align="center">
+  <a href="https://wedge.regncreative.com/#film"><img src="docs/film.jpg" alt="Watch the 56-second film about Wedge" width="640"></a>
+  <br>
+  <sub><a href="https://wedge.regncreative.com/#film">▶ Watch the 56-second film</a></sub>
 </p>
 
 > **Wedge was called Stash.** Same app, new name and logo with 2.0. Stash 1.x updates to Wedge by itself and keeps every shelf and setting.
@@ -80,11 +86,11 @@ It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Win
 ## Screenshots
 
 <p align="center">
-  <img src="docs/pocket.png" alt="The pocket: collect files, drag them out together" width="300">
+  <img src="docs/screens/pocket.jpg" alt="The pocket: collect files, drag them out together" width="260">
   &nbsp;
-  <img src="docs/shared-shelf.png" alt="Creating a shared shelf from a cloud folder" width="300">
+  <img src="docs/screens/shared-shelf.jpg" alt="Creating a shared shelf from a cloud folder" width="260">
   &nbsp;
-  <img src="docs/settings.png" alt="Wedge settings" width="300">
+  <img src="docs/screens/settings.jpg" alt="Wedge settings" width="260">
 </p>
 
 ## Installation

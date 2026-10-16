@@ -11,9 +11,12 @@ import { cn } from '@/lib/utils'
 
 const AUTOMATIC = new Set(['downloads', 'screenshots', 'phone', 'clipboard'])
 
+// Short enough for the tab ("KEEPS 30 DAYS", "30 GÜN KALIR").
 function expiry(hours: number, lang: string): string {
-  if (hours % 24 === 0) return lang === 'tr' ? `${hours / 24} gün` : `${hours / 24} d`
-  return lang === 'tr' ? `${hours} sa` : `${hours} h`
+  const days = hours / 24
+  if (hours % 24 === 0)
+    return lang === 'tr' ? `${days} gün` : `${days} ${days === 1 ? 'day' : 'days'}`
+  return lang === 'tr' ? `${hours} saat` : `${hours} h`
 }
 
 function subLabel(t: Messages, s: Shelf, lang: string): string {

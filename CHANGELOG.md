@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- A temporary shelf's tab says how long it keeps files ("Keeps 1 day", "1 gün kalır") instead of a label cut off at the edge.
+
 ## [2.0.0] - 2026-10-15
 
 Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri with a new design. Your shelves and settings carry over, and the app is much smaller and safer.
