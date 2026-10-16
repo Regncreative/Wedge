@@ -185,6 +185,7 @@ scripts/          Release and icon helpers
 - [x] Shelves on the screen edge, pocket, shared shelves (cloud folders), new design
 - [x] New name and logo: Wedge
 - [ ] Next version: choose which display (and edge) the shelves live on, for multi-monitor setups
+- [ ] Quick notes: a shelf you type into directly, docked to the edge like the others
 - [ ] Code signing
 - [ ] Microsoft Store and winget
 - [ ] Share links
