@@ -46,7 +46,7 @@ webp = { version = "0.3", default-features = false }
 trash = "5"
 
 [target.'cfg(windows)'.dependencies]
-winreg = "0.55"
+winreg = "0.56"
 webview2-com = "0.39"
 windows = { version = "0.62", features = [
   "Win32_Foundation",
