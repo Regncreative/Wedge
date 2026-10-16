@@ -1,6 +1,7 @@
 import type { AppLanguage } from './types'
 import { en } from './locales/en'
 import { tr } from './locales/tr'
+import { ru } from './locales/ru'
 
 export type { AppLanguage }
 
@@ -301,19 +302,20 @@ export type Messages = {
   welcomeStart: string
 }
 
-export const dictionaries: Record<AppLanguage, Messages> = { tr, en }
+export const dictionaries: Record<AppLanguage, Messages> = { tr, en, ru }
 
-/** Turkish UI only for Turkish system locales; everything else → English. */
+/** Turkish or Russian UI for those system locales; everything else → English. */
 export function resolveSystemLanguage(locale: string | null | undefined): AppLanguage {
   const raw = String(locale ?? '')
     .toLowerCase()
     .replace(/_/g, '-')
   if (raw === 'tr' || raw.startsWith('tr-')) return 'tr'
+  if (raw === 'ru' || raw.startsWith('ru-')) return 'ru'
   return 'en'
 }
 
 export function normalizeLanguage(value: string | null | undefined): AppLanguage {
-  return value === 'en' ? 'en' : value === 'tr' ? 'tr' : 'en'
+  return value === 'tr' || value === 'ru' ? value : 'en'
 }
 
 export function getMessages(lang: string | null | undefined): Messages {

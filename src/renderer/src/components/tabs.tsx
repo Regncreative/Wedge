@@ -11,12 +11,25 @@ import { cn } from '@/lib/utils'
 
 const AUTOMATIC = new Set(['downloads', 'screenshots', 'phone', 'clipboard'])
 
-// Short enough for the tab ("KEEPS 30 DAYS", "30 GÜN KALIR").
+// Russian: 1 день, 2 дня, 5 дней.
+function ruPlural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few
+  return many
+}
+
+// Short enough for the tab ("KEEPS 30 DAYS", "30 GÜN KALIR", "ХРАНИТ 30 ДНЕЙ").
 function expiry(hours: number, lang: string): string {
   const days = hours / 24
-  if (hours % 24 === 0)
-    return lang === 'tr' ? `${days} gün` : `${days} ${days === 1 ? 'day' : 'days'}`
-  return lang === 'tr' ? `${hours} saat` : `${hours} h`
+  if (hours % 24 === 0) {
+    if (lang === 'tr') return `${days} gün`
+    if (lang === 'ru') return `${days} ${ruPlural(days, 'день', 'дня', 'дней')}`
+    return `${days} ${days === 1 ? 'day' : 'days'}`
+  }
+  if (lang === 'tr') return `${hours} saat`
+  return lang === 'ru' ? `${hours} ч` : `${hours} h`
 }
 
 function subLabel(t: Messages, s: Shelf, lang: string): string {

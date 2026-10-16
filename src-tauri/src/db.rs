@@ -173,6 +173,11 @@ pub fn default_shelves(lang: Language) -> [(&'static str, &'static str, &'static
             ("Personal", "heart", "#FF7FAC"),
             ("Temporary", "clock", "#F6BB45"),
         ],
+        Language::Ru => [
+            ("Работа", "briefcase", "#8D97FF"),
+            ("Личное", "heart", "#FF7FAC"),
+            ("Временная", "clock", "#F6BB45"),
+        ],
     }
 }
 
@@ -998,6 +1003,16 @@ mod tests {
     fn turkish_defaults() {
         let conn = open_in_memory(Language::Tr).unwrap();
         assert_eq!(list_shelves(&conn).unwrap()[0].name, "İş");
+    }
+
+    #[test]
+    fn russian_defaults() {
+        let conn = open_in_memory(Language::Ru).unwrap();
+        assert_eq!(list_shelves(&conn).unwrap()[0].name, "Работа");
+        assert_eq!(
+            get_settings(&conn, Language::Ru).unwrap().language,
+            Language::Ru
+        );
     }
 
     #[test]

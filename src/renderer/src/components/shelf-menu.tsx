@@ -21,30 +21,33 @@ import { useT } from '@/lib/i18n'
 const EXPIRY_OPTIONS: (number | null)[] = [null, 24, 24 * 7, 24 * 30]
 
 /** Tab colors (dark ink reads on all of them). New shelves take the next one. */
-const SHELF_COLORS: [string, string, string][] = [
-  ['#8D97FF', 'İris', 'Iris'],
-  ['#43D8AA', 'Nane', 'Mint'],
-  ['#FF7FAC', 'Gül', 'Rose'],
-  ['#F6BB45', 'Safran', 'Saffron'],
-  ['#5CC8FF', 'Gök', 'Sky'],
-  ['#FF8A65', 'Mercan', 'Coral'],
-  ['#B5E655', 'Limon', 'Lime'],
-  ['#C79BFF', 'Leylak', 'Lilac']
+// [value, Turkish, English, Russian]
+const SHELF_COLORS: [string, string, string, string][] = [
+  ['#8D97FF', 'İris', 'Iris', 'Ирис'],
+  ['#43D8AA', 'Nane', 'Mint', 'Мята'],
+  ['#FF7FAC', 'Gül', 'Rose', 'Роза'],
+  ['#F6BB45', 'Safran', 'Saffron', 'Шафран'],
+  ['#5CC8FF', 'Gök', 'Sky', 'Небо'],
+  ['#FF8A65', 'Mercan', 'Coral', 'Коралл'],
+  ['#B5E655', 'Limon', 'Lime', 'Лайм'],
+  ['#C79BFF', 'Leylak', 'Lilac', 'Сирень']
 ]
-const PICKABLE_ICONS: [string, string, string][] = [
-  ['folder', 'Klasör', 'Folder'],
-  ['briefcase', 'Çanta', 'Briefcase'],
-  ['heart', 'Kalp', 'Heart'],
-  ['star', 'Yıldız', 'Star'],
-  ['image', 'Resim', 'Picture'],
-  ['music', 'Müzik', 'Music'],
-  ['book', 'Kitap', 'Book'],
-  ['code', 'Kod', 'Code'],
-  ['package', 'Paket', 'Package'],
-  ['graduation', 'Okul', 'School'],
-  ['clock', 'Saat', 'Clock'],
-  ['inbox', 'Gelen kutusu', 'Inbox']
+const PICKABLE_ICONS: [string, string, string, string][] = [
+  ['folder', 'Klasör', 'Folder', 'Папка'],
+  ['briefcase', 'Çanta', 'Briefcase', 'Портфель'],
+  ['heart', 'Kalp', 'Heart', 'Сердце'],
+  ['star', 'Yıldız', 'Star', 'Звезда'],
+  ['image', 'Resim', 'Picture', 'Картинка'],
+  ['music', 'Müzik', 'Music', 'Музыка'],
+  ['book', 'Kitap', 'Book', 'Книга'],
+  ['code', 'Kod', 'Code', 'Код'],
+  ['package', 'Paket', 'Package', 'Посылка'],
+  ['graduation', 'Okul', 'School', 'Учёба'],
+  ['clock', 'Saat', 'Clock', 'Часы'],
+  ['inbox', 'Gelen kutusu', 'Inbox', 'Входящие']
 ]
+const pick = (lang: string, tr: string, en: string, ru: string) =>
+  lang === 'tr' ? tr : lang === 'ru' ? ru : en
 
 /** Right-click menu for a shelf (rail) and the header's shelf options. */
 export function ShelfMenu() {
@@ -112,8 +115,8 @@ export function ShelfMenu() {
       label: t.shelfColor,
       icon: Palette,
       separated: true,
-      children: SHELF_COLORS.map(([color, tr, en]) => ({
-        label: lang === 'tr' ? tr : en,
+      children: SHELF_COLORS.map(([color, tr, en, ru]) => ({
+        label: pick(lang, tr, en, ru),
         swatch: color,
         checked: shelf.color.toLowerCase() === color.toLowerCase(),
         action: async () => {
@@ -125,8 +128,8 @@ export function ShelfMenu() {
     {
       label: t.shelfIcon,
       icon: Shapes,
-      children: PICKABLE_ICONS.filter(([i]) => SHELF_ICONS[i]).map(([name, tr, en]) => ({
-        label: lang === 'tr' ? tr : en,
+      children: PICKABLE_ICONS.filter(([i]) => SHELF_ICONS[i]).map(([name, tr, en, ru]) => ({
+        label: pick(lang, tr, en, ru),
         icon: SHELF_ICONS[name],
         action: async () => {
           await window.stash.setShelfStyle(shelf.id, name, shelf.color)

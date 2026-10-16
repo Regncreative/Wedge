@@ -77,7 +77,7 @@ It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Win
 - **Keyboard friendly**: move, open, pin and remove without the mouse ([shortcuts](docs/FAQ.md#keyboard-shortcuts))
 - **Global shortcut**: open the drawer with `Ctrl+Shift+Space` (customizable)
 - **Steps aside** while a game, a video or a presentation runs full screen
-- **Turkish and English**
+- **English, Turkish and Russian** (Russian by [@alkidnn](https://github.com/alkidnn))
 - **Signed updates** from GitHub Releases, with an opt-in beta channel
 - **Export / import**: move your shelves and settings to another PC
 - **Missing-file awareness**: deleted or moved files show as unavailable until you clear them
@@ -178,6 +178,7 @@ scripts/          Release and icon helpers
 ## Roadmap
 
 - [x] Shelves, drag and drop, global shortcut, themes, Turkish and English
+- [x] Russian
 - [x] Signed auto-updates with staged rollouts and a beta channel
 - [x] 2.0: rebuilt on Tauri (5 MB installer)
 - [x] Automatic shelves, rules, content search, Quick Look

@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Russian, by [@alkidnn](https://github.com/alkidnn): Wedge speaks Russian on Russian Windows, including the tray menu, notifications, the phone page and File Explorer's entry.
+
+### Fixed
+- In the Microsoft Store version, Settings no longer says the File Explorer entry is under "Show more options" on Windows 11; there it's in the first menu.
+
 ## [2.0.1] - 2026-10-16
 
 ### Added

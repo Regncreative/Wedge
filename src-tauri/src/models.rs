@@ -89,6 +89,7 @@ pub enum Theme {
 pub enum Language {
     Tr,
     En,
+    Ru,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

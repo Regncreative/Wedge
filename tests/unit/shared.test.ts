@@ -5,7 +5,7 @@ import {
   formatBytes,
   normalizeSettings
 } from '../../src/shared/types'
-import { dictionaries } from '../../src/shared/i18n'
+import { dictionaries, resolveSystemLanguage } from '../../src/shared/i18n'
 
 describe('normalizeSettings', () => {
   it('fills defaults for missing or empty input', () => {
@@ -65,6 +65,19 @@ describe('formatBytes', () => {
     [10 * 1024 * 1024, '10 MB']
   ])('%d → %s', (bytes, expected) => {
     expect(formatBytes(bytes)).toBe(expected)
+  })
+})
+
+describe('resolveSystemLanguage', () => {
+  it.each([
+    ['tr-TR', 'tr'],
+    ['ru-RU', 'ru'],
+    ['ru', 'ru'],
+    ['en-US', 'en'],
+    ['uk-UA', 'en'],
+    [null, 'en']
+  ])('%s → %s', (locale, expected) => {
+    expect(resolveSystemLanguage(locale)).toBe(expected)
   })
 })
 

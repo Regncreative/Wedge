@@ -51,9 +51,14 @@ fn wedge_exe() -> Option<PathBuf> {
     Some(dll.parent()?.join("wedge.exe"))
 }
 
-/// Turkish Windows gets the Turkish label, like the rest of Wedge.
-fn turkish() -> bool {
-    (unsafe { GetUserDefaultUILanguage() } & 0x3ff) == 0x1f
+/// The label in Windows' language, like the rest of Wedge: Turkish
+/// (LANG_TURKISH) and Russian (LANG_RUSSIAN), English otherwise.
+fn title() -> PCWSTR {
+    match unsafe { GetUserDefaultUILanguage() } & 0x3ff {
+        0x1f => w!("Wedge’e ekle"),
+        0x19 => w!("Добавить в Wedge"),
+        _ => w!("Add to Wedge"),
+    }
 }
 
 fn switched_on() -> bool {
@@ -87,13 +92,7 @@ struct AddToWedge;
 
 impl IExplorerCommand_Impl for AddToWedge_Impl {
     fn GetTitle(&self, _: Ref<IShellItemArray>) -> Result<PWSTR> {
-        unsafe {
-            SHStrDupW(if turkish() {
-                w!("Wedge’e ekle")
-            } else {
-                w!("Add to Wedge")
-            })
-        }
+        unsafe { SHStrDupW(title()) }
     }
 
     fn GetIcon(&self, _: Ref<IShellItemArray>) -> Result<PWSTR> {

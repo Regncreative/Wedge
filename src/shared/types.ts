@@ -1,7 +1,7 @@
 /** Shared domain types for Stash */
 
 export type ThemeMode = 'system' | 'light' | 'dark'
-export type AppLanguage = 'tr' | 'en'
+export type AppLanguage = 'tr' | 'en' | 'ru'
 export type FileSort = 'added' | 'name' | 'recent' | 'size'
 export type UpdateChannel = 'stable' | 'beta'
 /** Where the edge handle sits (a drop target and panel opener on the screen edge). */
@@ -191,7 +191,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 /** Ensure settings always have valid numeric/enum fields (older DBs / partial IPC). */
 export function normalizeSettings(raw: Partial<AppSettings> | null | undefined): AppSettings {
   const s = { ...DEFAULT_SETTINGS, ...(raw ?? {}) }
-  s.language = s.language === 'tr' ? 'tr' : 'en'
+  s.language = s.language === 'tr' || s.language === 'ru' ? s.language : 'en'
   const idle = Number(s.idleOpacity)
   s.idleOpacity = Number.isFinite(idle)
     ? Math.min(0.7, Math.max(0.1, idle))

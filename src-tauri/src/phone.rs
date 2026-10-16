@@ -110,6 +110,13 @@ fn page(lang: Language) -> String {
             "Sent ✓",
             "Failed",
         ),
+        Language::Ru => (
+            "Отправить в Wedge",
+            "Выбрать файлы",
+            "Отправка…",
+            "Отправлено ✓",
+            "Ошибка",
+        ),
     };
     format!(
         r#"<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

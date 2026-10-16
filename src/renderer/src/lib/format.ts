@@ -2,6 +2,13 @@ import { formatBytes } from '@shared/types'
 
 export { formatBytes }
 
+const WORDS: Record<string, { today: string; yesterday: string }> = {
+  en: { today: 'Today', yesterday: 'Yesterday' },
+  tr: { today: 'Bugün', yesterday: 'Dün' },
+  ru: { today: 'Сегодня', yesterday: 'Вчера' }
+}
+const words = (lang: string) => WORDS[lang] ?? WORDS.en
+
 function sameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -19,7 +26,7 @@ export function formatWhen(ts: number, lang: string): string {
   if (sameDay(d, now)) return time
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
-  if (sameDay(d, yesterday)) return `${lang === 'tr' ? 'Dün' : 'Yesterday'} ${time}`
+  if (sameDay(d, yesterday)) return `${words(lang).yesterday} ${time}`
   if (d.getFullYear() === now.getFullYear()) {
     return d.toLocaleDateString(lang, { day: 'numeric', month: 'short' })
   }
@@ -40,8 +47,8 @@ export function formatStamp(ts: number, lang: string): string {
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   const upper = (s: string) => s.toLocaleUpperCase(lang)
-  if (sameDay(d, now)) return `${lang === 'tr' ? 'BUGÜN' : 'TODAY'} ${time}`
-  if (sameDay(d, yesterday)) return `${lang === 'tr' ? 'DÜN' : 'YESTERDAY'} ${time}`
+  if (sameDay(d, now)) return `${upper(words(lang).today)} ${time}`
+  if (sameDay(d, yesterday)) return `${upper(words(lang).yesterday)} ${time}`
   const opts: Intl.DateTimeFormatOptions =
     d.getFullYear() === now.getFullYear()
       ? { day: 'numeric', month: 'short' }

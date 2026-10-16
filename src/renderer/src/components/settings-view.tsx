@@ -464,7 +464,10 @@ export function SettingsView() {
               ]}
             />
           </Row>
-          <Row label={t.contextMenuToggle} hint={t.contextMenuHint}>
+          <Row
+            label={t.contextMenuToggle}
+            hint={update.state === 'store' ? undefined : t.contextMenuHint}
+          >
             <Switch
               label={t.contextMenuToggle}
               checked={settings.contextMenu}
