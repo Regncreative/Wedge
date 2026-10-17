@@ -2,6 +2,13 @@ import type { AppLanguage } from './types'
 import { en } from './locales/en'
 import { tr } from './locales/tr'
 import { ru } from './locales/ru'
+import { fr } from './locales/fr'
+import { es } from './locales/es'
+import { de } from './locales/de'
+import { pt } from './locales/pt'
+import { it } from './locales/it'
+import { plPL } from './locales/pl'
+import { ja } from './locales/ja'
 
 export type { AppLanguage }
 
@@ -310,22 +317,59 @@ export type Messages = {
   welcomeHotkeyBody: (hotkey: string) => string
   welcomeChoices: string
   welcomeStart: string
+
+  // Dates on cards, and the temporary shelf's tab ("KEEPS 1 DAY").
+  today: string
+  yesterday: string
+  expiryDays: (n: number) => string
+  expiryHours: (n: number) => string
+  // Shelf menu: color and icon names.
+  colorNames: Record<ShelfColorName, string>
+  iconNames: Record<ShelfIconName, string>
 }
 
-export const dictionaries: Record<AppLanguage, Messages> = { tr, en, ru }
+export type ShelfColorName =
+  'iris' | 'mint' | 'rose' | 'saffron' | 'sky' | 'coral' | 'lime' | 'lilac'
+export type ShelfIconName =
+  | 'folder'
+  | 'briefcase'
+  | 'heart'
+  | 'star'
+  | 'image'
+  | 'music'
+  | 'book'
+  | 'code'
+  | 'package'
+  | 'graduation'
+  | 'clock'
+  | 'inbox'
 
-/** Turkish or Russian UI for those system locales; everything else → English. */
+export const dictionaries: Record<AppLanguage, Messages> = {
+  tr,
+  en,
+  ru,
+  fr,
+  es,
+  de,
+  pt,
+  it,
+  pl: plPL,
+  ja
+}
+
+const isLanguage = (v: string): v is AppLanguage => Object.hasOwn(dictionaries, v)
+
+/** The UI language for a system locale such as "pt-BR"; unsupported ones → English. */
 export function resolveSystemLanguage(locale: string | null | undefined): AppLanguage {
-  const raw = String(locale ?? '')
+  const prefix = String(locale ?? '')
     .toLowerCase()
     .replace(/_/g, '-')
-  if (raw === 'tr' || raw.startsWith('tr-')) return 'tr'
-  if (raw === 'ru' || raw.startsWith('ru-')) return 'ru'
-  return 'en'
+    .split('-')[0]
+  return isLanguage(prefix) ? prefix : 'en'
 }
 
 export function normalizeLanguage(value: string | null | undefined): AppLanguage {
-  return value === 'tr' || value === 'ru' ? value : 'en'
+  return typeof value === 'string' && isLanguage(value) ? value : 'en'
 }
 
 export function getMessages(lang: string | null | undefined): Messages {

@@ -117,6 +117,55 @@ fn page(lang: Language) -> String {
             "Отправлено ✓",
             "Ошибка",
         ),
+        Language::Fr => (
+            "Envoyer à Wedge",
+            "Choisir des fichiers",
+            "Envoi…",
+            "Envoyé ✓",
+            "Échec",
+        ),
+        Language::Es => (
+            "Enviar a Wedge",
+            "Elegir archivos",
+            "Enviando…",
+            "Enviado ✓",
+            "Error",
+        ),
+        Language::De => (
+            "An Wedge senden",
+            "Dateien auswählen",
+            "Wird gesendet…",
+            "Gesendet ✓",
+            "Fehlgeschlagen",
+        ),
+        Language::Pt => (
+            "Enviar ao Wedge",
+            "Escolher arquivos",
+            "Enviando…",
+            "Enviado ✓",
+            "Falhou",
+        ),
+        Language::It => (
+            "Invia a Wedge",
+            "Scegli i file",
+            "Invio…",
+            "Inviato ✓",
+            "Non riuscito",
+        ),
+        Language::Pl => (
+            "Wyślij do Wedge",
+            "Wybierz pliki",
+            "Wysyłanie…",
+            "Wysłano ✓",
+            "Błąd",
+        ),
+        Language::Ja => (
+            "Wedge に送る",
+            "ファイルを選ぶ",
+            "送信中…",
+            "送信しました ✓",
+            "失敗しました",
+        ),
     };
     format!(
         r#"<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

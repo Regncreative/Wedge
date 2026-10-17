@@ -83,6 +83,15 @@
   --scrim: rgba(20, 22, 30, 0.35);
 }
 
+/* Japanese: the Latin faces have no kana or kanji, and the monospace fallback would be MS Gothic. */
+:root:lang(ja) {
+  --display:
+    'Bricolage Grotesque Variable', 'Segoe UI Variable Display', 'Yu Gothic UI', 'Meiryo UI',
+    sans-serif;
+  --body: 'Instrument Sans', 'Segoe UI Variable Text', 'Yu Gothic UI', 'Meiryo UI', sans-serif;
+  --mono: 'Martian Mono', 'Cascadia Mono', 'Yu Gothic UI', 'Meiryo UI', monospace;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

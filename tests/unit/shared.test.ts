@@ -24,7 +24,7 @@ describe('normalizeSettings', () => {
     const s = normalizeSettings({
       idleOpacity: NaN,
       fileSort: 'bogus' as never,
-      language: 'de' as never,
+      language: 'nl' as never,
       notifications: undefined
     })
     expect(s.idleOpacity).toBe(DEFAULT_SETTINGS.idleOpacity)
@@ -73,8 +73,18 @@ describe('resolveSystemLanguage', () => {
     ['tr-TR', 'tr'],
     ['ru-RU', 'ru'],
     ['ru', 'ru'],
+    ['fr-CA', 'fr'],
+    ['es-MX', 'es'],
+    ['de_AT', 'de'],
+    ['pt-BR', 'pt'],
+    ['pt-PT', 'pt'],
+    ['it-IT', 'it'],
+    ['pl-PL', 'pl'],
+    ['ja-JP', 'ja'],
     ['en-US', 'en'],
     ['uk-UA', 'en'],
+    ['zh-Hans-CN', 'en'],
+    ['', 'en'],
     [null, 'en']
   ])('%s → %s', (locale, expected) => {
     expect(resolveSystemLanguage(locale)).toBe(expected)

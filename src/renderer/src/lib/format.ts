@@ -1,13 +1,9 @@
 import { formatBytes } from '@shared/types'
+import { getMessages } from '@shared/i18n'
 
 export { formatBytes }
 
-const WORDS: Record<string, { today: string; yesterday: string }> = {
-  en: { today: 'Today', yesterday: 'Yesterday' },
-  tr: { today: 'Bugün', yesterday: 'Dün' },
-  ru: { today: 'Сегодня', yesterday: 'Вчера' }
-}
-const words = (lang: string) => WORDS[lang] ?? WORDS.en
+const words = (lang: string) => getMessages(lang)
 
 function sameDay(a: Date, b: Date): boolean {
   return (

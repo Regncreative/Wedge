@@ -306,5 +306,34 @@ export const tr: Messages = {
   welcomeHotkeyTitle: 'Her yerden aç',
   welcomeHotkeyBody: (k) => `${k} ile paneli aç veya kapat.`,
   welcomeChoices: 'Windows ile birlikte',
-  welcomeStart: 'Başlayalım'
+  welcomeStart: 'Başlayalım',
+
+  today: 'Bugün',
+  yesterday: 'Dün',
+  expiryDays: (n) => `${n} gün`,
+  expiryHours: (n) => `${n} saat`,
+  colorNames: {
+    iris: 'İris',
+    mint: 'Nane',
+    rose: 'Gül',
+    saffron: 'Safran',
+    sky: 'Gök',
+    coral: 'Mercan',
+    lime: 'Limon',
+    lilac: 'Leylak'
+  },
+  iconNames: {
+    folder: 'Klasör',
+    briefcase: 'Çanta',
+    heart: 'Kalp',
+    star: 'Yıldız',
+    image: 'Resim',
+    music: 'Müzik',
+    book: 'Kitap',
+    code: 'Kod',
+    package: 'Paket',
+    graduation: 'Okul',
+    clock: 'Saat',
+    inbox: 'Gelen kutusu'
+  }
 }

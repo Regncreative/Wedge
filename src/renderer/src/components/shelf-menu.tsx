@@ -17,37 +17,36 @@ import { Menu, type MenuEntry } from './menu'
 import { dragOut } from '@/lib/file-drop'
 import { useStashStore } from '@/stores/stash-store'
 import { useT } from '@/lib/i18n'
+import type { ShelfColorName, ShelfIconName } from '@shared/i18n'
 
 const EXPIRY_OPTIONS: (number | null)[] = [null, 24, 24 * 7, 24 * 30]
 
 /** Tab colors (dark ink reads on all of them). New shelves take the next one. */
-// [value, Turkish, English, Russian]
-const SHELF_COLORS: [string, string, string, string][] = [
-  ['#8D97FF', 'İris', 'Iris', 'Ирис'],
-  ['#43D8AA', 'Nane', 'Mint', 'Мята'],
-  ['#FF7FAC', 'Gül', 'Rose', 'Роза'],
-  ['#F6BB45', 'Safran', 'Saffron', 'Шафран'],
-  ['#5CC8FF', 'Gök', 'Sky', 'Небо'],
-  ['#FF8A65', 'Mercan', 'Coral', 'Коралл'],
-  ['#B5E655', 'Limon', 'Lime', 'Лайм'],
-  ['#C79BFF', 'Leylak', 'Lilac', 'Сирень']
+// Names come from the dictionaries (colorNames, iconNames).
+const SHELF_COLORS: [string, ShelfColorName][] = [
+  ['#8D97FF', 'iris'],
+  ['#43D8AA', 'mint'],
+  ['#FF7FAC', 'rose'],
+  ['#F6BB45', 'saffron'],
+  ['#5CC8FF', 'sky'],
+  ['#FF8A65', 'coral'],
+  ['#B5E655', 'lime'],
+  ['#C79BFF', 'lilac']
 ]
-const PICKABLE_ICONS: [string, string, string, string][] = [
-  ['folder', 'Klasör', 'Folder', 'Папка'],
-  ['briefcase', 'Çanta', 'Briefcase', 'Портфель'],
-  ['heart', 'Kalp', 'Heart', 'Сердце'],
-  ['star', 'Yıldız', 'Star', 'Звезда'],
-  ['image', 'Resim', 'Picture', 'Картинка'],
-  ['music', 'Müzik', 'Music', 'Музыка'],
-  ['book', 'Kitap', 'Book', 'Книга'],
-  ['code', 'Kod', 'Code', 'Код'],
-  ['package', 'Paket', 'Package', 'Посылка'],
-  ['graduation', 'Okul', 'School', 'Учёба'],
-  ['clock', 'Saat', 'Clock', 'Часы'],
-  ['inbox', 'Gelen kutusu', 'Inbox', 'Входящие']
+const PICKABLE_ICONS: ShelfIconName[] = [
+  'folder',
+  'briefcase',
+  'heart',
+  'star',
+  'image',
+  'music',
+  'book',
+  'code',
+  'package',
+  'graduation',
+  'clock',
+  'inbox'
 ]
-const pick = (lang: string, tr: string, en: string, ru: string) =>
-  lang === 'tr' ? tr : lang === 'ru' ? ru : en
 
 /** Right-click menu for a shelf (rail) and the header's shelf options. */
 export function ShelfMenu() {
@@ -63,7 +62,6 @@ export function ShelfMenu() {
   const { refresh, askPrompt, askConfirm, showToast } = useStashStore.getState()
   const ids = files.filter((f) => f.shelfId === shelf.id && f.exists).map((f) => f.id)
   const pocket = shelf.kind === 'pocket'
-  const lang = useStashStore.getState().settings?.language ?? 'en'
   const expiryLabel = (h: number | null) =>
     h === null ? t.expiryOff : h === 24 ? t.expiry24h : h === 24 * 7 ? t.expiry7d : t.expiry30d
 
@@ -115,8 +113,8 @@ export function ShelfMenu() {
       label: t.shelfColor,
       icon: Palette,
       separated: true,
-      children: SHELF_COLORS.map(([color, tr, en, ru]) => ({
-        label: pick(lang, tr, en, ru),
+      children: SHELF_COLORS.map(([color, name]) => ({
+        label: t.colorNames[name],
         swatch: color,
         checked: shelf.color.toLowerCase() === color.toLowerCase(),
         action: async () => {
@@ -128,8 +126,8 @@ export function ShelfMenu() {
     {
       label: t.shelfIcon,
       icon: Shapes,
-      children: PICKABLE_ICONS.filter(([i]) => SHELF_ICONS[i]).map(([name, tr, en, ru]) => ({
-        label: pick(lang, tr, en, ru),
+      children: PICKABLE_ICONS.filter((name) => SHELF_ICONS[name]).map((name) => ({
+        label: t.iconNames[name],
         icon: SHELF_ICONS[name],
         action: async () => {
           await window.stash.setShelfStyle(shelf.id, name, shelf.color)

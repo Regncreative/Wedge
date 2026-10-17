@@ -11,31 +11,15 @@ import { cn } from '@/lib/utils'
 
 const AUTOMATIC = new Set(['downloads', 'screenshots', 'phone', 'clipboard'])
 
-// Russian: 1 день, 2 дня, 5 дней.
-function ruPlural(n: number, one: string, few: string, many: string): string {
-  const mod10 = n % 10
-  const mod100 = n % 100
-  if (mod10 === 1 && mod100 !== 11) return one
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few
-  return many
-}
-
 // Short enough for the tab ("KEEPS 30 DAYS", "30 GÜN KALIR", "ХРАНИТ 30 ДНЕЙ").
-function expiry(hours: number, lang: string): string {
-  const days = hours / 24
-  if (hours % 24 === 0) {
-    if (lang === 'tr') return `${days} gün`
-    if (lang === 'ru') return `${days} ${ruPlural(days, 'день', 'дня', 'дней')}`
-    return `${days} ${days === 1 ? 'day' : 'days'}`
-  }
-  if (lang === 'tr') return `${hours} saat`
-  return lang === 'ru' ? `${hours} ч` : `${hours} h`
+function expiry(t: Messages, hours: number): string {
+  return hours % 24 === 0 ? t.expiryDays(hours / 24) : t.expiryHours(hours)
 }
 
-function subLabel(t: Messages, s: Shelf, lang: string): string {
+function subLabel(t: Messages, s: Shelf): string {
   if (s.kind === 'pocket') return t.tabSubPocket
   if (s.folder) return t.tabSubShared
-  if (s.expireHours) return t.tabSubTemp(expiry(s.expireHours, lang))
+  if (s.expireHours) return t.tabSubTemp(expiry(t, s.expireHours))
   if (AUTOMATIC.has(s.kind)) return t.tabSubAuto
   return t.tabSubNormal
 }
@@ -53,7 +37,6 @@ export function Tabs() {
   const shelves = useStashStore((s) => s.shelves)
   const files = useStashStore((s) => s.files)
   const activeShelfId = useStashStore((s) => s.activeShelfId)
-  const lang = useStashStore((s) => s.settings?.language ?? 'en')
   const mode = useEdge((s) => s.mode)
   const target = useEdge((s) => s.target)
   const bump = useEdge((s) => s.bump)
@@ -164,7 +147,7 @@ export function Tabs() {
             </span>
             <span className="tab-label">
               <span className="tab-name">{shelf.name}</span>
-              <span className="tab-sub">{subLabel(t, shelf, lang)}</span>
+              <span className="tab-sub">{subLabel(t, shelf)}</span>
             </span>
             {pocket && items.length > 0 && (
               <span className="tab-stack" aria-hidden>

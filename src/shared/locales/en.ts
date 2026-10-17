@@ -309,5 +309,34 @@ export const en: Messages = {
   welcomeHotkeyTitle: 'Open from anywhere',
   welcomeHotkeyBody: (k) => `Press ${k} to open or close the panel.`,
   welcomeChoices: 'With Windows',
-  welcomeStart: 'Let’s go'
+  welcomeStart: 'Let’s go',
+
+  today: 'Today',
+  yesterday: 'Yesterday',
+  expiryDays: (n) => `${n} ${n === 1 ? 'day' : 'days'}`,
+  expiryHours: (n) => `${n} h`,
+  colorNames: {
+    iris: 'Iris',
+    mint: 'Mint',
+    rose: 'Rose',
+    saffron: 'Saffron',
+    sky: 'Sky',
+    coral: 'Coral',
+    lime: 'Lime',
+    lilac: 'Lilac'
+  },
+  iconNames: {
+    folder: 'Folder',
+    briefcase: 'Briefcase',
+    heart: 'Heart',
+    star: 'Star',
+    image: 'Picture',
+    music: 'Music',
+    book: 'Book',
+    code: 'Code',
+    package: 'Package',
+    graduation: 'School',
+    clock: 'Clock',
+    inbox: 'Inbox'
+  }
 }

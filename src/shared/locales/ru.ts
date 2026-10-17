@@ -315,5 +315,34 @@ export const ru: Messages = {
   welcomeHotkeyTitle: 'Открывайте откуда угодно',
   welcomeHotkeyBody: (k) => `Нажмите ${k}, чтобы открыть или закрыть панель.`,
   welcomeChoices: 'С Windows',
-  welcomeStart: 'Поехали'
+  welcomeStart: 'Поехали',
+
+  today: 'Сегодня',
+  yesterday: 'Вчера',
+  expiryDays: (n) => `${n} ${getPluralForm(n, 'день', 'дня', 'дней')}`,
+  expiryHours: (n) => `${n} ч`,
+  colorNames: {
+    iris: 'Ирис',
+    mint: 'Мята',
+    rose: 'Роза',
+    saffron: 'Шафран',
+    sky: 'Небо',
+    coral: 'Коралл',
+    lime: 'Лайм',
+    lilac: 'Сирень'
+  },
+  iconNames: {
+    folder: 'Папка',
+    briefcase: 'Портфель',
+    heart: 'Сердце',
+    star: 'Звезда',
+    image: 'Картинка',
+    music: 'Музыка',
+    book: 'Книга',
+    code: 'Код',
+    package: 'Посылка',
+    graduation: 'Учёба',
+    clock: 'Часы',
+    inbox: 'Входящие'
+  }
 }

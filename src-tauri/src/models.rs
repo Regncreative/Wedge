@@ -90,6 +90,13 @@ pub enum Language {
     Tr,
     En,
     Ru,
+    Fr,
+    Es,
+    De,
+    Pt,
+    It,
+    Pl,
+    Ja,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

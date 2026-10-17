@@ -178,6 +178,41 @@ pub fn default_shelves(lang: Language) -> [(&'static str, &'static str, &'static
             ("Личное", "heart", "#FF7FAC"),
             ("Временная", "clock", "#F6BB45"),
         ],
+        Language::Fr => [
+            ("Travail", "briefcase", "#8D97FF"),
+            ("Personnel", "heart", "#FF7FAC"),
+            ("Temporaire", "clock", "#F6BB45"),
+        ],
+        Language::Es => [
+            ("Trabajo", "briefcase", "#8D97FF"),
+            ("Personal", "heart", "#FF7FAC"),
+            ("Temporal", "clock", "#F6BB45"),
+        ],
+        Language::De => [
+            ("Arbeit", "briefcase", "#8D97FF"),
+            ("Privat", "heart", "#FF7FAC"),
+            ("Temporär", "clock", "#F6BB45"),
+        ],
+        Language::Pt => [
+            ("Trabalho", "briefcase", "#8D97FF"),
+            ("Pessoal", "heart", "#FF7FAC"),
+            ("Temporária", "clock", "#F6BB45"),
+        ],
+        Language::It => [
+            ("Lavoro", "briefcase", "#8D97FF"),
+            ("Personale", "heart", "#FF7FAC"),
+            ("Temporaneo", "clock", "#F6BB45"),
+        ],
+        Language::Pl => [
+            ("Praca", "briefcase", "#8D97FF"),
+            ("Osobiste", "heart", "#FF7FAC"),
+            ("Na chwilę", "clock", "#F6BB45"),
+        ],
+        Language::Ja => [
+            ("仕事", "briefcase", "#8D97FF"),
+            ("プライベート", "heart", "#FF7FAC"),
+            ("一時保管", "clock", "#F6BB45"),
+        ],
     }
 }
 
@@ -1014,6 +1049,16 @@ mod tests {
     fn turkish_defaults() {
         let conn = open_in_memory(Language::Tr).unwrap();
         assert_eq!(list_shelves(&conn).unwrap()[0].name, "İş");
+    }
+
+    #[test]
+    fn japanese_defaults() {
+        let conn = open_in_memory(Language::Ja).unwrap();
+        assert_eq!(list_shelves(&conn).unwrap()[0].name, "仕事");
+        assert_eq!(
+            get_settings(&conn, Language::Ja).unwrap().language,
+            Language::Ja
+        );
     }
 
     #[test]

@@ -20,7 +20,7 @@ npm run dev
 
 The first Rust build takes a few minutes; later ones are incremental.
 
-`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Wedge`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`. `STASH_LANG=en`, `tr` or `ru` sets the language instead of following Windows.
+`STASH_USER_DATA=<folder>` runs the app on a separate profile instead of `%APPDATA%\Wedge`, which is handy for trying things without touching your own shelves. The end-to-end tests also set `STASH_DOWNLOADS_DIR` / `STASH_SCREENSHOTS_DIR` (folders to watch instead of the real ones), `STASH_TRASH_DIR` (where shared-shelf removals go instead of the Recycle Bin), `STASH_PHONE_LOOPBACK` (phone server on 127.0.0.1 only) and `STASH_SHOW_ON_START`. `STASH_LANG` (`en`, `tr`, `ru`, `fr`, `es`, `de`, `pt`, `it`, `pl` or `ja`) sets the language instead of following Windows.
 
 `STASH_SCREENS=<folder> npx playwright test screens` retakes the screenshots used in this README and on the website, in English and Turkish, on a throwaway profile.
 
@@ -96,9 +96,10 @@ Rules of thumb:
 
 Translations live in `src/shared/locales/`. To add a language:
 
-1. Copy `en.ts` to `<code>.ts` (for example `de.ts`) and translate the strings.
-2. Register it in `dictionaries` and `resolveSystemLanguage` in `src/shared/i18n.ts`, and add the code to `AppLanguage` in `src/shared/types.ts`.
-3. Add the tray and notification strings to `src-tauri/src/i18n.rs`.
+1. Copy `en.ts` to `<code>.ts` (for example `nl.ts`) and translate the strings.
+2. Register it in `dictionaries` in `src/shared/i18n.ts` and add the code to `LANGUAGES` in `src/shared/types.ts`. Windows locales are matched on their language part (`nl-BE` → `nl`).
+3. On the native side, add the language to `Language` in `src-tauri/src/models.rs`, then fill in what the compiler asks for: tray and notification strings and automatic shelf names (`src-tauri/src/i18n.rs`), the default shelves (`db.rs`) and the phone page (`phone.rs`).
+4. Add File Explorer's label to `title()` in `msix/shell-ext/src/lib.rs` and the language to `<Resources>` in `msix/AppxManifest.xml`.
 
 TypeScript fails the build if a string is missing, and a unit test checks that every language has the same keys.
 

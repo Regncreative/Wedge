@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Added
 - Choose the display the shelves live on (the main one, the one with the mouse, or a given display) and their position on the edge (top, middle or bottom), in Settings. If the chosen display is unplugged, the shelves wait on the main one until it's back.
 - Russian, by [@alkidnn](https://github.com/alkidnn): Wedge speaks Russian on Russian Windows, including the tray menu, notifications, the phone page and File Explorer's entry.
+- French, Spanish, German, Portuguese (Brazil), Italian, Polish and Japanese, picked the same way from Windows' language. Corrections from native speakers are welcome.
 
 ### Fixed
 - On some Windows 10 PCs the tabs never showed and dragging a file did nothing, because Windows reported a full-screen app that wasn't there. Wedge now checks for a full-screen window itself, only on the monitor with the tabs, and writes to its log when the tabs step aside.

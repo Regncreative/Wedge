@@ -51,12 +51,19 @@ fn wedge_exe() -> Option<PathBuf> {
     Some(dll.parent()?.join("wedge.exe"))
 }
 
-/// The label in Windows' language, like the rest of Wedge: Turkish
-/// (LANG_TURKISH) and Russian (LANG_RUSSIAN), English otherwise.
+/// The label in Windows' language, like the rest of Wedge (matched on the
+/// primary LANG_* id, so every regional variant counts); English otherwise.
 fn title() -> PCWSTR {
     match unsafe { GetUserDefaultUILanguage() } & 0x3ff {
         0x1f => w!("Wedge’e ekle"),
         0x19 => w!("Добавить в Wedge"),
+        0x0c => w!("Ajouter à Wedge"),
+        0x0a => w!("Añadir a Wedge"),
+        0x07 => w!("Zu Wedge hinzufügen"),
+        0x16 => w!("Adicionar ao Wedge"),
+        0x10 => w!("Aggiungi a Wedge"),
+        0x15 => w!("Dodaj do Wedge"),
+        0x11 => w!("Wedge に追加"),
         _ => w!("Add to Wedge"),
     }
 }
