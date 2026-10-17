@@ -737,6 +737,9 @@ pub fn set_settings(
     if patch.edge_handle.is_some() {
         panel::apply_side(&app, next.edge_handle);
     }
+    if patch.edge_auto_hide.is_some() {
+        panel::apply_auto_hide(&app, next.edge_auto_hide);
+    }
     if patch.edge_monitor.is_some() || patch.edge_align.is_some() {
         panel::apply_placement(&app, &next.edge_monitor, next.edge_align);
     }
@@ -817,6 +820,12 @@ pub fn open_releases(app: AppHandle) -> bool {
             None::<&str>,
         )
         .is_ok()
+}
+
+/// Settings → Quit Wedge, for when the tray icon is hidden away.
+#[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    crate::tray::quit(&app);
 }
 
 #[tauri::command]

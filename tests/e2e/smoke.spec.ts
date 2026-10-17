@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { launchApp, removeProfile } from './app'
+import { launchApp, removeProfile, waitForExit } from './app'
 
 let workDir: string
 
@@ -90,5 +90,23 @@ test('keeps shelves and settings across restarts', async () => {
   } finally {
     await second.close()
     removeProfile(userData)
+  }
+})
+
+test('quits from Settings, for when the tray icon is out of sight', async () => {
+  const app = await launchApp(undefined, { STASH_LANG: 'en' })
+  try {
+    const { page } = app
+    await page.evaluate(() => window.stash.setSettings({ onboardingDone: true }))
+    await page.reload()
+    await page.locator('.tabs').waitFor()
+    await page.evaluate(() => window.stash.edgeMode('open'))
+    await page.getByRole('button', { name: 'Settings', exact: true }).click()
+    await page.getByRole('tab', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'Quit Wedge' }).click()
+    expect(await waitForExit(app.child)).toBe(0)
+  } finally {
+    await app.close()
+    removeProfile(app.userData)
   }
 })

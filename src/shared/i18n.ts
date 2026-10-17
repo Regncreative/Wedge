@@ -222,6 +222,9 @@ export type Messages = {
   missingFiles: string
   cleanUp: string
   logsFolder: string
+  edgeAutoHide: string
+  edgeAutoHideHint: string
+  quitApp: string
   theme: string
   themeSystem: string
   themeLight: string

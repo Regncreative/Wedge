@@ -208,6 +208,10 @@ export const en: Messages = {
   missingFiles: 'Missing files',
   cleanUp: 'Clear',
   logsFolder: 'Log folder',
+  edgeAutoHide: 'Hide when not in use',
+  edgeAutoHideHint:
+    'Nothing stays on the edge; the tabs come out when the mouse touches it or a drag starts',
+  quitApp: 'Quit Wedge',
   theme: 'Theme',
   themeSystem: 'System',
   themeLight: 'Light',

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { launchApp, removeProfile, type LaunchedApp } from './app'
+import { edgeArea, launchApp, pidsAt, removeProfile, type LaunchedApp } from './app'
 
 let workDir: string
 let stash: LaunchedApp
@@ -173,4 +173,68 @@ test('puts the tabs at the top, middle or bottom of the edge, on a display that 
   // The display with the mouse: wherever the cursor is, on screen.
   await page.evaluate(() => window.stash.setSettings({ edgeMonitor: 'cursor' }))
   expect((await page.evaluate(() => window.stash.edgeArea()))![0]).toBeGreaterThan(-30000)
+})
+
+test('hides the tabs away entirely when asked, and they still come out', async () => {
+  const { page } = stash
+  await page.evaluate(() =>
+    window.stash.setSettings({ onboardingDone: true, edgeMonitor: 'primary', edgeHandle: 'right' })
+  )
+  await page.reload()
+  await page.locator('.tabs').waitFor()
+  const width = async () => (await page.evaluate(() => window.stash.edgeArea()))![2]
+  // Where the window's right edge (the screen's) cuts the leftmost tab.
+  const showing = () =>
+    page.evaluate(() =>
+      Math.max(
+        ...Array.from(
+          document.querySelectorAll('.tab'),
+          (t) => innerWidth - t.getBoundingClientRect().left
+        )
+      )
+    )
+  // Tucked in, with the cursor away from the panel.
+  const tuckIn = async () => {
+    await page.mouse.move(-20, -20)
+    await page.evaluate(() => window.stash.edgeMode('idle'))
+    await expect
+      .poll(() => page.evaluate(async () => (await window.stash.edgeState()).mode))
+      .toBe('idle')
+  }
+  await tuckIn()
+  await expect.poll(showing).toBeGreaterThan(4)
+  await expect.poll(showing).toBeLessThan(20)
+  const sliver = await width()
+
+  await page.evaluate(() => window.stash.setSettings({ edgeAutoHide: true }))
+  await page.reload()
+  await page.locator('.tabs').waitFor()
+  await tuckIn()
+  // Nothing of the tabs on screen, and only the edge itself takes the cursor.
+  await expect.poll(showing).toBeLessThanOrEqual(0)
+  expect(await width()).toBeLessThan(sliver)
+  expect(await width()).toBeGreaterThan(0)
+  // Windows sends the cursor at the very edge to Wedge, though nothing shows
+  // there; a few pixels in, it goes to whatever is below.
+  const strip = await edgeArea(page)
+  const mid = strip.y + strip.height / 2
+  const [onEdge, inside] = pidsAt([
+    { x: strip.x + strip.width - 1, y: mid },
+    { x: strip.x - 6, y: mid }
+  ])
+  expect(onEdge).toBe(stash.child.pid)
+  expect(inside).not.toBe(stash.child.pid)
+
+  // The cursor at the edge still brings them out.
+  const box = (await page.locator('.tabs').boundingBox())!
+  const edge = await page.evaluate(() => innerWidth - 1)
+  await page.mouse.move(edge, box.y + box.height / 2)
+  await expect
+    .poll(() => page.evaluate(async () => (await window.stash.edgeState()).mode))
+    .toBe('peek')
+  await expect.poll(showing).toBeGreaterThan(100)
+
+  await page.evaluate(() => window.stash.setSettings({ edgeAutoHide: false }))
+  await page.reload()
+  await tuckIn()
 })

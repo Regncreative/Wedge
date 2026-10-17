@@ -212,6 +212,10 @@ export const it: Messages = {
   missingFiles: 'File mancanti',
   cleanUp: 'Pulisci',
   logsFolder: 'Cartella dei log',
+  edgeAutoHide: 'Nascondi quando non servono',
+  edgeAutoHideHint:
+    'Sul bordo non resta niente; le linguette escono quando il mouse lo tocca o inizi a trascinare',
+  quitApp: 'Esci da Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',
   themeLight: 'Chiaro',

@@ -150,6 +150,8 @@ export interface AppSettings {
   /** 'primary', 'cursor' (the display with the mouse) or a display's id. */
   edgeMonitor: string
   edgeAlign: EdgeAlign
+  /** Tucked in, the tabs leave the screen entirely (no sliver). */
+  edgeAutoHide: boolean
   /** "Add to Wedge" in Explorer's right-click menu. */
   contextMenu: boolean
 }
@@ -204,6 +206,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   edgeHandle: 'right',
   edgeMonitor: 'primary',
   edgeAlign: 'center',
+  edgeAutoHide: false,
   contextMenu: true
 }
 
@@ -232,6 +235,7 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   s.contextMenu = s.contextMenu !== false
   s.edgeMonitor = typeof s.edgeMonitor === 'string' && s.edgeMonitor ? s.edgeMonitor : 'primary'
   s.edgeAlign = s.edgeAlign === 'top' || s.edgeAlign === 'bottom' ? s.edgeAlign : 'center'
+  s.edgeAutoHide = s.edgeAutoHide === true
   return s
 }
 

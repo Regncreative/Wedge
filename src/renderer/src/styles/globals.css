@@ -321,6 +321,10 @@ input {
   box-shadow: none;
   transition-delay: 0ms;
 }
+/* Hidden away (for OLED screens): nothing of the tabs stays on screen. */
+.edge-root[data-hide][data-mode='idle'] .tab {
+  --x: calc(var(--tab-w) + 4px / var(--tabs-fit, 1));
+}
 .edge-root[data-mode='peek'] .tab,
 .edge-root[data-mode='drag'] .tab {
   --x: 0px;

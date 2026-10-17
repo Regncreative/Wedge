@@ -213,6 +213,10 @@ export const de: Messages = {
   missingFiles: 'Fehlende Dateien',
   cleanUp: 'Aufräumen',
   logsFolder: 'Protokollordner',
+  edgeAutoHide: 'Ausblenden, wenn ungenutzt',
+  edgeAutoHideHint:
+    'Am Rand bleibt nichts stehen; die Reiter kommen, wenn die Maus ihn berührt oder du etwas ziehst',
+  quitApp: 'Wedge beenden',
   theme: 'Design',
   themeSystem: 'System',
   themeLight: 'Hell',

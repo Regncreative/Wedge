@@ -214,6 +214,10 @@ export const es: Messages = {
   missingFiles: 'Archivos que faltan',
   cleanUp: 'Limpiar',
   logsFolder: 'Carpeta de registros',
+  edgeAutoHide: 'Ocultar cuando no se usan',
+  edgeAutoHideHint:
+    'No queda nada en el borde; las pestañas salen al tocarlo con el ratón o al empezar a arrastrar',
+  quitApp: 'Salir de Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',
   themeLight: 'Claro',

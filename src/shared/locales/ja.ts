@@ -207,6 +207,10 @@ export const ja: Messages = {
   missingFiles: '見つからないファイル',
   cleanUp: '片付ける',
   logsFolder: 'ログフォルダー',
+  edgeAutoHide: '使わないときは隠す',
+  edgeAutoHideHint:
+    '端には何も残りません。マウスが端に触れるか、ドラッグを始めるとタブが出てきます',
+  quitApp: 'Wedge を終了',
   theme: 'テーマ',
   themeSystem: 'システム',
   themeLight: 'ライト',

@@ -176,6 +176,7 @@ pub fn run() {
             watchdog::start(handle);
             panel::prepare(handle);
             panel::apply_placement(handle, &settings.edge_monitor, settings.edge_align);
+            panel::apply_auto_hide(handle, settings.edge_auto_hide);
             panel::apply_side(handle, settings.edge_handle);
             panel::start_monitor(handle);
             dragwatch::start(handle);
@@ -264,6 +265,7 @@ pub fn run() {
             commands::app_ready,
             commands::open_releases,
             commands::open_logs_folder,
+            commands::quit_app,
             commands::export_data,
             commands::import_data,
             commands::check_for_updates,

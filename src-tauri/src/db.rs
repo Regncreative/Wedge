@@ -660,6 +660,7 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
             m => m,
         },
         edge_align: enum_or(stored.get("edgeAlign"), EdgeAlign::Center),
+        edge_auto_hide: bool_of("edgeAutoHide", false),
         context_menu: bool_of("contextMenu", true),
     };
 
@@ -747,6 +748,9 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     }
     if let Some(v) = patch.edge_align {
         put("edgeAlign", serde_json::to_value(v).unwrap_or_default())?;
+    }
+    if let Some(v) = patch.edge_auto_hide {
+        put("edgeAutoHide", Value::Bool(v))?;
     }
     if let Some(v) = patch.context_menu {
         put("contextMenu", Value::Bool(v))?;

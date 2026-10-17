@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 - Choose the display the shelves live on (the main one, the one with the mouse, or a given display) and their position on the edge (top, middle or bottom), in Settings. If the chosen display is unplugged, the shelves wait on the main one until it's back.
+- The tabs can hide away completely when not in use, so no colored sliver stays on the edge (kinder to OLED screens). They still come out when the mouse touches the edge or a file is dragged. In Settings → Appearance.
+- Quit Wedge from Settings → More, for when the tray icon is hidden under the taskbar's ^ arrow.
 - Russian, by [@alkidnn](https://github.com/alkidnn): Wedge speaks Russian on Russian Windows, including the tray menu, notifications, the phone page and File Explorer's entry.
 - French, Spanish, German, Portuguese (Brazil), Italian, Polish and Japanese, picked the same way from Windows' language. Corrections from native speakers are welcome.
 

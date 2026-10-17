@@ -181,6 +181,9 @@ pub struct AppSettings {
     pub edge_monitor: String,
     /// Where along the edge the tabs sit.
     pub edge_align: EdgeAlign,
+    /// Tucked in, the tabs leave the screen entirely (no sliver, for OLED
+    /// screens); they come out when the cursor touches the edge or a drag starts.
+    pub edge_auto_hide: bool,
     /// "Add to Wedge" in Explorer's right-click menu.
     pub context_menu: bool,
 }
@@ -208,6 +211,7 @@ pub struct SettingsPatch {
     pub edge_handle: Option<EdgeHandle>,
     pub edge_monitor: Option<String>,
     pub edge_align: Option<EdgeAlign>,
+    pub edge_auto_hide: Option<bool>,
     pub context_menu: Option<bool>,
 }
 

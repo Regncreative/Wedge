@@ -127,6 +127,7 @@ export interface StashApi {
   appReady: () => Promise<void>
   openReleases: () => Promise<boolean>
   openLogsFolder: () => Promise<string>
+  quit: () => Promise<void>
   exportData: () => Promise<{ ok: boolean; canceled?: boolean }>
   importData: () => Promise<
     { ok: true; shelves: number; files: number } | { ok: false; canceled: boolean }
@@ -240,6 +241,7 @@ export const api: StashApi = {
   appReady: () => invoke('app_ready'),
   openReleases: () => invoke('open_releases'),
   openLogsFolder: () => invoke('open_logs_folder'),
+  quit: () => invoke('quit_app'),
   exportData: () => invoke('export_data'),
   importData: () => invoke('import_data'),
 

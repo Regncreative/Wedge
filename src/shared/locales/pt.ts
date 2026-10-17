@@ -211,6 +211,10 @@ export const pt: Messages = {
   missingFiles: 'Arquivos ausentes',
   cleanUp: 'Limpar',
   logsFolder: 'Pasta de logs',
+  edgeAutoHide: 'Ocultar quando sem uso',
+  edgeAutoHideHint:
+    'Nada fica na borda; as abas aparecem quando o mouse toca nela ou ao começar a arrastar',
+  quitApp: 'Sair do Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',
   themeLight: 'Claro',

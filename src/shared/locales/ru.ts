@@ -214,6 +214,10 @@ export const ru: Messages = {
   missingFiles: 'Отсутствующие файлы',
   cleanUp: 'Очистить',
   logsFolder: 'Папка с логами',
+  edgeAutoHide: 'Скрывать, когда не нужны',
+  edgeAutoHideHint:
+    'На краю ничего не остаётся; вкладки выезжают, когда мышь касается края или начинается перетаскивание',
+  quitApp: 'Выйти из Wedge',
   theme: 'Тема',
   themeSystem: 'Системная',
   themeLight: 'Светлая',

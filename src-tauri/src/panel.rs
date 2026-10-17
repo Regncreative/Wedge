@@ -47,6 +47,9 @@ const TAB_STEP: f64 = 62.0;
 const TABS_PAD: f64 = 22.0;
 /// Tucked in: the slivers and a few pixels around them.
 const IDLE_W: f64 = 14.0;
+/// Tucked in and hidden away: just the edge itself, so the strip doesn't
+/// take clicks meant for the scroll bar of a window beside it.
+const HIDDEN_W: f64 = 3.0;
 /// Tabs out, with room for one to reach 20px further and for shadows.
 const OUT_W: f64 = 248.0;
 const DRAWER_W: f64 = 440.0;
@@ -64,6 +67,8 @@ static STATE: Mutex<EdgeState> = Mutex::new(EdgeState {
 });
 /// A full-screen app (game, video, presentation) is in front.
 static FULLSCREEN: AtomicBool = AtomicBool::new(false);
+/// The tabs leave the screen when tucked in (the edgeAutoHide setting).
+static AUTO_HIDE: AtomicBool = AtomicBool::new(false);
 
 /// Which display and where along its edge (Settings).
 struct Placement {
@@ -245,10 +250,11 @@ fn display_number(name: &str) -> u32 {
 /// The part of the window that catches the cursor in a mode: (left, top,
 /// right, bottom) from the window's corner, physical pixels. The rest lets
 /// clicks through to whatever is below.
-fn area(f: &Frame, s: EdgeState) -> (i32, i32, i32, i32) {
+fn area(f: &Frame, s: EdgeState, auto_hide: bool) -> (i32, i32, i32, i32) {
     let width = match s.mode {
         Mode::Open => return (0, 0, f.w, f.h),
         Mode::Peek | Mode::Drag => OUT_W,
+        Mode::Idle if auto_hide => HIDDEN_W,
         Mode::Idle => IDLE_W,
     };
     let width = (width * f.scale).round() as i32;
@@ -355,7 +361,7 @@ fn place(app: &AppHandle, s: EdgeState) {
         use windows::Win32::UI::WindowsAndMessaging::{
             GetWindowRect, SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
         };
-        let (l, t, r, b) = area(&f, s);
+        let (l, t, r, b) = area(&f, s, AUTO_HIDE.load(Ordering::SeqCst));
         unsafe {
             // Move only when needed: a resize, even to the same size, makes
             // the web view lay out again.
@@ -446,6 +452,12 @@ pub fn apply_placement(app: &AppHandle, monitor: &str, align: EdgeAlign) {
         p.align = align;
     }
     follow_cursor(app);
+    place(app, state());
+}
+
+/// The hide-away setting changed (or at startup).
+pub fn apply_auto_hide(app: &AppHandle, on: bool) {
+    AUTO_HIDE.store(on, Ordering::SeqCst);
     place(app, state());
 }
 
@@ -660,7 +672,7 @@ pub fn edge_area(app: AppHandle) -> Option<[i32; 4]> {
     } else {
         (f.x, f.y)
     };
-    let (l, t, r, b) = area(&f, s);
+    let (l, t, r, b) = area(&f, s, AUTO_HIDE.load(Ordering::SeqCst));
     Some([x + l, y + t, r - l, b - t])
 }
 
@@ -702,20 +714,32 @@ mod tests {
         };
         let s = |mode, side| EdgeState { mode, side };
         assert_eq!(
-            area(&f, s(Mode::Idle, EdgeHandle::Right)),
+            area(&f, s(Mode::Idle, EdgeHandle::Right), false),
             (498, 196, 512, 488)
         );
+        // Hidden away: only the edge catches the cursor.
         assert_eq!(
-            area(&f, s(Mode::Peek, EdgeHandle::Right)),
+            area(&f, s(Mode::Idle, EdgeHandle::Right), true),
+            (509, 196, 512, 488)
+        );
+        assert_eq!(area(&f, s(Mode::Peek, EdgeHandle::Right), true).0, 264);
+        assert_eq!(
+            area(&f, s(Mode::Peek, EdgeHandle::Right), false),
             (264, 196, 512, 488)
         );
         assert_eq!(
-            area(&f, s(Mode::Drag, EdgeHandle::Left)),
+            area(&f, s(Mode::Drag, EdgeHandle::Left), false),
             (0, 196, 248, 488)
         );
-        assert_eq!(area(&f, s(Mode::Open, EdgeHandle::Right)), (0, 0, 512, 684));
+        assert_eq!(
+            area(&f, s(Mode::Open, EdgeHandle::Right), false),
+            (0, 0, 512, 684)
+        );
         let hi = Frame { scale: 1.5, ..f };
-        assert_eq!(area(&hi, s(Mode::Idle, EdgeHandle::Right)).0, 512 - 21);
+        assert_eq!(
+            area(&hi, s(Mode::Idle, EdgeHandle::Right), false).0,
+            512 - 21
+        );
     }
 
     #[test]

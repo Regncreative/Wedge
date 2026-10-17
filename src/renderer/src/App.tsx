@@ -20,6 +20,7 @@ export default function App() {
   const mode = useEdge((s) => s.mode)
   const side = useEdge((s) => s.side)
   const align = useStashStore((s) => s.settings?.edgeAlign ?? 'center')
+  const autoHide = useStashStore((s) => s.settings?.edgeAutoHide === true)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -198,6 +199,7 @@ export default function App() {
       data-side={side === 'left' ? 'left' : 'right'}
       data-mode={mode}
       data-align={align}
+      data-hide={autoHide || undefined}
       onPointerEnter={() => {
         cancelLater()
         if (useEdge.getState().mode === 'idle') useEdge.getState().request('peek')

@@ -219,6 +219,10 @@ export const plPL: Messages = {
   missingFiles: 'Brakujące pliki',
   cleanUp: 'Usuń',
   logsFolder: 'Folder dzienników',
+  edgeAutoHide: 'Ukrywaj, gdy nieużywane',
+  edgeAutoHideHint:
+    'Przy krawędzi nic nie zostaje; zakładki wysuwają się, gdy mysz jej dotknie albo zaczniesz przeciągać',
+  quitApp: 'Zamknij Wedge',
   theme: 'Motyw',
   themeSystem: 'Systemowy',
   themeLight: 'Jasny',

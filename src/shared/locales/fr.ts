@@ -213,6 +213,10 @@ export const fr: Messages = {
   missingFiles: 'Fichiers manquants',
   cleanUp: 'Nettoyer',
   logsFolder: 'Dossier des journaux',
+  edgeAutoHide: 'Masquer hors utilisation',
+  edgeAutoHideHint:
+    'Rien ne reste sur le bord ; les onglets sortent quand la souris le touche ou qu’un glissement commence',
+  quitApp: 'Quitter Wedge',
   theme: 'Thème',
   themeSystem: 'Système',
   themeLight: 'Clair',

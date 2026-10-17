@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Power, RefreshCw, Trash2, X } from 'lucide-react'
 import type { EdgeAlign, FileSort, MonitorInfo, Rule, ThemeMode, UpdateStatus } from '@shared/types'
 import { HotkeyRecorder } from './hotkey-recorder'
 import { ShelfIcon } from './file-icon'
@@ -494,6 +494,15 @@ export function SettingsView() {
             </select>
           </Row>
         )}
+        {edgeOn && (
+          <Row label={t.edgeAutoHide} hint={t.edgeAutoHideHint}>
+            <Switch
+              label={t.edgeAutoHide}
+              checked={settings.edgeAutoHide}
+              onChange={(v) => void updateSettings({ edgeAutoHide: v })}
+            />
+          </Row>
+        )}
         <Row label={t.edgeTabs} hint={t.edgeTabsHint}>
           <Switch
             label={t.edgeTabs}
@@ -693,6 +702,10 @@ export function SettingsView() {
           </button>
         </Row>
       </Section>
+      <button type="button" className="btn mb-3 w-full" onClick={() => void window.stash.quit()}>
+        <Power size={14} strokeWidth={1.75} />
+        {t.quitApp}
+      </button>
       <p className="pb-2 pt-1 text-center text-[11px] text-[var(--fg-3)]">
         Wedge {appVersion ? `v${appVersion}` : ''} · Regncreative
       </p>
