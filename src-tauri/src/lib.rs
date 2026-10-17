@@ -286,6 +286,7 @@ pub fn run() {
             commands_extra::open_files,
             commands_extra::start_drag_zip,
             commands_extra::paste_clipboard,
+            commands_extra::save_clip,
             commands_extra::quick_look,
             commands_extra::pick_folder,
             panel::edge_state,

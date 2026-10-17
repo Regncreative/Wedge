@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
-import { mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { edgeArea, launchApp, pidsAt, removeProfile, type LaunchedApp } from './app'
+import { edgeArea, launchApp, pidsAt, removeProfile, tab, type LaunchedApp } from './app'
 
 let workDir: string
 let stash: LaunchedApp
@@ -237,4 +237,58 @@ test('hides the tabs away entirely when asked, and they still come out', async (
   await page.evaluate(() => window.stash.setSettings({ edgeAutoHide: false }))
   await page.reload()
   await tuckIn()
+})
+
+test('takes a link or text dragged from another app onto a tab', async () => {
+  const { page } = stash
+  await page.evaluate(() => window.stash.setSettings({ onboardingDone: true }))
+  await page.reload()
+  await page.locator('.tabs').waitFor()
+  const shelves = await page.evaluate(() => window.stash.listShelves())
+  const work = shelves.find((s) => s.icon === 'briefcase')!
+  const names = () =>
+    page.evaluate((id) => window.stash.listFiles(id).then((f) => f.map((x) => x.name)), work.id)
+  // What a browser or an editor hands over in a drag, dropped on the tab.
+  const drop = async (data: Record<string, string>) => {
+    await page.evaluate(() => window.stash.edgeMode('drag'))
+    const box = (await tab(page, work.name).boundingBox())!
+    await page.evaluate(
+      ({ data, x, y }) => {
+        const transfer = new DataTransfer()
+        for (const [format, value] of Object.entries(data)) transfer.setData(format, value)
+        const at = document.elementFromPoint(x, y)!
+        for (const type of ['dragenter', 'dragover', 'drop']) {
+          at.dispatchEvent(
+            new DragEvent(type, {
+              dataTransfer: transfer,
+              clientX: x,
+              clientY: y,
+              bubbles: true,
+              cancelable: true
+            })
+          )
+        }
+      },
+      { data, x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    )
+  }
+
+  const url = 'https://example.com/notes'
+  await drop({
+    'text/uri-list': url,
+    'text/plain': url,
+    'text/html': `<a href="${url}">Meeting notes</a>`
+  })
+  await expect.poll(names).toContain('Meeting notes.url')
+  await drop({ 'text/plain': 'Call Ada\nabout the invoice' })
+  await expect.poll(names).toContain('Call Ada.txt')
+
+  // Saved like Ctrl+V saves them: a shortcut to the page, and the whole text.
+  const files = await page.evaluate((id) => window.stash.listFiles(id), work.id)
+  const note = files.find((f) => f.name === 'Call Ada.txt')!
+  const link = files.find((f) => f.name === 'Meeting notes.url')!
+  expect(readFileSync(note.absolutePath, 'utf8')).toBe('Call Ada\nabout the invoice')
+  expect(readFileSync(link.absolutePath, 'utf8')).toContain(`URL=${url}`)
+  await page.evaluate((ids) => window.stash.removeFiles(ids), [note.id, link.id])
+  await page.evaluate(() => window.stash.edgeMode('idle'))
 })

@@ -60,7 +60,7 @@ It is small and quiet: a 5 MB installer, the WebView2 engine that comes with Win
 - **Drawers**: click a tab to pull its shelf out; drag a card onto another tab to move it
 - **Pocket**: collect files from different folders, then drag them all out in one go (the pocket empties itself)
 - **Automatic shelves**: new downloads and screenshots land on their own shelves; rules send files to the right shelf by type
-- **Right-click → Add to Wedge** in File Explorer (on Windows 11 under _Show more options_), **Ctrl+V** for files, images, links and text, and **from your phone** by scanning a QR code
+- **Right-click → Add to Wedge** in File Explorer (on Windows 11 under _Show more options_), **Ctrl+V** for files, images, links and text (or drag a link or text onto a tab), and **from your phone** by scanning a QR code
 
 **Share**
 

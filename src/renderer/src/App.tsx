@@ -4,7 +4,7 @@ import { Tabs } from './components/tabs'
 import { Drawer } from './components/drawer'
 import { ContextMenu } from './components/context-menu'
 import { AddShelfMenu, ShelfMenu } from './components/shelf-menu'
-import { addPaths } from './lib/file-actions'
+import { addDroppedText, addPaths } from './lib/file-actions'
 import { shelfAt } from './lib/file-drop'
 import { connectEdge, useEdge } from './lib/edge'
 import { useStashStore } from './stores/stash-store'
@@ -42,12 +42,24 @@ export default function App() {
     if (edge.mode === 'drag' || edge.mode === 'peek') edge.request('idle')
   }
 
-  // Files dragged in from Explorer: onto a tab, or into the open drawer.
+  // Files dragged in from Explorer (or links and text from other apps): onto
+  // a tab, or into the open drawer.
   useEffect(
     () =>
       window.stash.onFileDrop((event) => {
         const store = useStashStore.getState()
         const edge = useEdge.getState()
+        const dropped = (x: number, y: number) => {
+          store.setDropActive(false)
+          edge.setTarget(null)
+          const target =
+            shelfAt(x, y) ??
+            (edge.mode === 'open' ? store.activeShelfId : null) ??
+            store.dropShelfId()
+          if (target) edge.flash(target)
+          if (edge.mode === 'drag') later(tuckIn, AFTER_DROP_MS)
+          return target
+        }
         switch (event.type) {
           case 'enter':
             cancelLater()
@@ -67,18 +79,12 @@ export default function App() {
           case 'internal-over':
             edge.setTarget(event.shelfId)
             break
-          case 'drop': {
-            store.setDropActive(false)
-            edge.setTarget(null)
-            const target =
-              shelfAt(event.x, event.y) ??
-              (edge.mode === 'open' ? store.activeShelfId : null) ??
-              store.dropShelfId()
-            if (target) edge.flash(target)
-            void addPaths(event.paths, target)
-            if (edge.mode === 'drag') later(tuckIn, AFTER_DROP_MS)
+          case 'drop':
+            void addPaths(event.paths, dropped(event.x, event.y))
             break
-          }
+          case 'drop-text':
+            void addDroppedText(event.text, event.title, dropped(event.x, event.y))
+            break
         }
       }),
     []

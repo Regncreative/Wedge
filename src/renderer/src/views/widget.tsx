@@ -111,6 +111,12 @@ export function WidgetView({ shelfId }: { shelfId: string }) {
         else if (event.type === 'drop') {
           setOver(false)
           void window.stash.addFiles(event.paths, shelfId).then(() => load())
+        } else if (event.type === 'drop-text') {
+          setOver(false)
+          void window.stash
+            .saveClip(event.text, event.title)
+            .then((clip) => window.stash.addFiles([clip.path], shelfId))
+            .then(() => load())
         }
       }),
     [shelfId, load]

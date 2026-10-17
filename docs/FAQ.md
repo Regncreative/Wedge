@@ -28,10 +28,10 @@ The pale tab at the top. Drop files there from different folders, then drag them
 It closes when you click somewhere else, like a menu. Pin it with the pin button in its header (*Keep open*) to keep it out.
 
 ### How do files get onto shelves automatically?
-With *Settings → Automatic shelves* on, new files in **Downloads** and new screenshots (Win+Shift+S, when Snipping Tool saves them) appear on their own shelves. *Settings → Rules* sends files elsewhere, e.g. "PDFs from Downloads → Invoices".
+With *Settings → Automation* on, new files in **Downloads** and new screenshots (Win+Shift+S, when Snipping Tool saves them) appear on their own shelves. Rules, on the same tab, send files elsewhere, e.g. "PDFs from Downloads → Invoices".
 
 ### Can I add files without opening Wedge?
-- The **tabs on the screen edge** (see above).
+- The **tabs on the screen edge** (see above). Links and text work too: drag a link or some selected text from a browser or another app onto a tab, and it's kept as a shortcut or a note.
 - Explorer: right-click → **Add to Wedge** (on Windows 11 under *Show more options*).
 - Clipboard: copy files, an image ("Copy image" in a browser), a link or text, then press **Ctrl+V** in the drawer.
 - Phone: click the phone icon in the drawer and scan the QR code. Your phone and PC must be on the same Wi-Fi; the page works for 15 minutes, only with the code's secret link.

@@ -88,6 +88,8 @@ export interface StashApi {
   pasteClipboard: (
     shelfId?: string | null
   ) => Promise<{ kind: 'files' | 'image' | 'link' | 'text' | 'empty'; added: number }>
+  /** Save a dropped link or text in Wedge's clips folder, as Ctrl+V would; add it with addFiles. */
+  saveClip: (text: string, title?: string) => Promise<{ path: string; kind: 'link' | 'text' }>
 
   // Shelves
   listShelves: () => Promise<Shelf[]>
@@ -209,6 +211,7 @@ export const api: StashApi = {
   openFiles: (ids) => invoke('open_files', { ids }),
   startDragZip: (ids, name) => invoke('start_drag_zip', { ids, name }),
   pasteClipboard: (shelfId) => invoke('paste_clipboard', { shelfId: shelfId ?? null }),
+  saveClip: (text, title) => invoke('save_clip', { text, title: title ?? null }),
 
   listShelves: () => invoke('list_shelves'),
   createShelf: (input) => invoke('create_shelf', { input }),

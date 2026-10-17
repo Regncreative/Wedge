@@ -39,6 +39,29 @@ export async function addPaths(paths: string[], shelfId: string | null): Promise
   }
 }
 
+/**
+ * A link or text dropped on a shelf: saved as a shortcut or a note, as
+ * Ctrl+V does, and added to that shelf like a dropped file.
+ */
+export async function addDroppedText(
+  text: string,
+  title: string | undefined,
+  shelfId: string | null
+): Promise<void> {
+  const t = messages()
+  const { refresh, showToast } = useStashStore.getState()
+  if (shelfId && isShared(shelfId)) showToast(t.copying, true)
+  try {
+    const clip = await window.stash.saveClip(text, title)
+    const result = await window.stash.addFiles([clip.path], shelfId)
+    await refresh()
+    if (result.added > 0) showToast(clip.kind === 'link' ? t.pastedLink : t.pastedText)
+    else useStashStore.getState().clearToast()
+  } catch {
+    useStashStore.getState().clearToast()
+  }
+}
+
 /** Remove files from their shelves, after confirming. Shared files go to the Recycle Bin. */
 export async function removeFiles(ids: string[]): Promise<void> {
   if (ids.length === 0) return

@@ -392,6 +392,85 @@ pub struct PasteResult {
     added: usize,
 }
 
+/// More text than this isn't a note any more.
+const MAX_CLIP_CHARS: usize = 1_000_000;
+
+/// A file name for a clip: its first line, without what Windows forbids.
+fn clip_name(text: &str, fallback: &str) -> String {
+    let name: String = text
+        .lines()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or_default()
+        .chars()
+        .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
+        .take(40)
+        .collect();
+    // Windows drops trailing dots and spaces from names.
+    let name = name.trim().trim_end_matches(['.', ' ']);
+    if name.is_empty() {
+        fallback.to_string()
+    } else {
+        name.to_string()
+    }
+}
+
+/// Save a link as an Internet shortcut (named after its title, or its host)
+/// or text as a note, in `dir`. Returns the file and "link" or "text".
+fn write_clip(
+    dir: &Path,
+    text: &str,
+    title: Option<&str>,
+) -> std::io::Result<(PathBuf, &'static str)> {
+    if is_url(text) {
+        let name = match title.map(|t| clip_name(t, "")) {
+            Some(name) if !name.is_empty() => name,
+            _ => clip_name(&url_title(text), "link"),
+        };
+        let dest = actions::unique_path(dir, &name, "url");
+        std::fs::write(
+            &dest,
+            format!("[InternetShortcut]\r\nURL={}\r\n", text.trim()),
+        )?;
+        Ok((dest, "link"))
+    } else {
+        let dest = actions::unique_path(dir, &clip_name(text, "note"), "txt");
+        std::fs::write(&dest, text)?;
+        Ok((dest, "text"))
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Clip {
+    path: String,
+    kind: &'static str,
+}
+
+/// Text or a link dragged onto a shelf (from a browser, an editor…), saved
+/// the way Ctrl+V saves it. The page then adds the file like a dropped one,
+/// so it lands on the shelf it was dropped on.
+#[tauri::command]
+pub fn save_clip(
+    state: State<'_, AppState>,
+    text: String,
+    title: Option<String>,
+) -> CmdResult<Clip> {
+    if text.trim().is_empty() {
+        return Err("nothing to save".into());
+    }
+    if text.chars().count() > MAX_CLIP_CHARS {
+        return Err("text too large".into());
+    }
+    let title = title.filter(|t| t.chars().count() <= 500);
+    let dir = clips_dir(&state);
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    let (path, kind) = write_clip(&dir, &text, title.as_deref()).map_err(err)?;
+    Ok(Clip {
+        path: path.to_string_lossy().into_owned(),
+        kind,
+    })
+}
+
 /// Ctrl+V in the panel: files copied in Explorer, an image (e.g. "Copy image"
 /// in a browser), a link, or text.
 #[tauri::command]
@@ -454,29 +533,10 @@ pub async fn paste_clipboard(
             added: 0,
         });
     }
-    if text.chars().count() > 1_000_000 {
+    if text.chars().count() > MAX_CLIP_CHARS {
         return Err("clipboard text too large".into());
     }
-    let (dest, body, kind) = if is_url(&text) {
-        let dest = actions::unique_path(&dir, &url_title(&text), "url");
-        (
-            dest,
-            format!("[InternetShortcut]\r\nURL={}\r\n", text.trim()),
-            "link",
-        )
-    } else {
-        let first_line: String = text
-            .lines()
-            .find(|l| !l.trim().is_empty())
-            .unwrap_or("note")
-            .chars()
-            .filter(|c| !r#"<>:"/\|?*"#.contains(*c) && !c.is_control())
-            .take(40)
-            .collect();
-        let dest = actions::unique_path(&dir, first_line.trim(), "txt");
-        (dest, text, "text")
-    };
-    std::fs::write(&dest, body).map_err(err)?;
+    let (dest, kind) = write_clip(&dir, &text, None).map_err(err)?;
     let n = added_to(vec![dest.to_string_lossy().into_owned()], "clipboard");
     Ok(PasteResult { kind, added: n })
 }
@@ -534,5 +594,39 @@ mod tests {
             url_title("https://www.github.com/Regncreative/Wedge"),
             "github.com"
         );
+    }
+
+    #[test]
+    fn saves_dropped_links_and_text_as_shortcuts_and_notes() {
+        let dir = tempfile::tempdir().unwrap();
+        let read = |p: &Path| std::fs::read_to_string(p).unwrap();
+
+        // A link is named after its title when there is one, else its host.
+        let (link, kind) = write_clip(
+            dir.path(),
+            "https://example.com/a",
+            Some("Release notes: 2.1"),
+        )
+        .unwrap();
+        assert_eq!(kind, "link");
+        assert_eq!(link.file_name().unwrap(), "Release notes 2.1.url");
+        assert_eq!(
+            read(&link),
+            "[InternetShortcut]\r\nURL=https://example.com/a\r\n"
+        );
+        let (bare, _) = write_clip(dir.path(), "https://www.github.com/x", Some("  ")).unwrap();
+        assert_eq!(bare.file_name().unwrap(), "github.com.url");
+
+        // Text keeps every line, and its first line names it.
+        let text = "\n  Shopping list?\nmilk\n";
+        let (note, kind) = write_clip(dir.path(), text, None).unwrap();
+        assert_eq!(kind, "text");
+        assert_eq!(note.file_name().unwrap(), "Shopping list.txt");
+        assert_eq!(read(&note), text);
+        // Nothing usable for a name, or a name Windows would cut short.
+        let (odd, _) = write_clip(dir.path(), "???", None).unwrap();
+        assert_eq!(odd.file_name().unwrap(), "note.txt");
+        let (dots, _) = write_clip(dir.path(), "Wait...", None).unwrap();
+        assert_eq!(dots.file_name().unwrap(), "Wait.txt");
     }
 }
