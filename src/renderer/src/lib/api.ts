@@ -7,6 +7,7 @@ import type {
   AppSettings,
   ConvertResult,
   FilesChanged,
+  MonitorInfo,
   PhoneSession,
   Preview,
   Rule,
@@ -114,6 +115,7 @@ export interface StashApi {
   edgeMode: (mode: EdgeMode) => Promise<void>
   /** Where the edge window catches the cursor: [x, y, width, height], physical pixels. */
   edgeArea: () => Promise<[number, number, number, number] | null>
+  listMonitors: () => Promise<MonitorInfo[]>
 
   // Stats & settings
   getStats: () => Promise<ShelfStats>
@@ -228,6 +230,7 @@ export const api: StashApi = {
   edgeState: () => invoke('edge_state'),
   edgeMode: (mode) => invoke('edge_mode', { mode }),
   edgeArea: () => invoke('edge_area'),
+  listMonitors: () => invoke('list_monitors'),
 
   getStats: () => invoke('get_stats'),
   getSettings: () => invoke('get_settings'),

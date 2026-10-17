@@ -14,7 +14,7 @@ import {
   Users,
   X
 } from 'lucide-react'
-import type { FileSort, Rule, ThemeMode, UpdateStatus } from '@shared/types'
+import type { FileSort, MonitorInfo, Rule, ThemeMode, UpdateStatus } from '@shared/types'
 import { HotkeyRecorder } from './hotkey-recorder'
 import { ShelfIcon } from './file-icon'
 import { useStashStore } from '@/stores/stash-store'
@@ -303,6 +303,11 @@ export function SettingsView() {
   const appVersion = useStashStore((s) => s.appVersion)
   const [update, setUpdate] = useState<UpdateStatus>({ state: 'idle' })
   const [clearing, setClearing] = useState(false)
+  const [monitors, setMonitors] = useState<MonitorInfo[]>([])
+
+  useEffect(() => {
+    void window.stash.listMonitors().then(setMonitors)
+  }, [])
 
   useEffect(() => {
     void window.stash.getUpdateStatus().then(setUpdate)
@@ -461,6 +466,41 @@ export function SettingsView() {
                 { id: 'right', label: t.edgeRight },
                 { id: 'left', label: t.edgeLeft },
                 { id: 'off', label: t.edgeOff }
+              ]}
+            />
+          </Row>
+          {monitors.length > 1 && (
+            <Row label={t.edgeMonitor} hint={t.edgeMonitorHint}>
+              <select
+                className="field w-[170px]"
+                aria-label={t.edgeMonitor}
+                value={settings.edgeMonitor}
+                onChange={(e) => void updateSettings({ edgeMonitor: e.target.value })}
+              >
+                <option value="primary">{t.monitorPrimary}</option>
+                <option value="cursor">{t.monitorCursor}</option>
+                {monitors.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {t.monitorName(m.number, m.width, m.height, m.primary)}
+                  </option>
+                ))}
+                {/* Chosen but unplugged: the shelves are on the main display until it's back. */}
+                {settings.edgeMonitor !== 'primary' &&
+                  settings.edgeMonitor !== 'cursor' &&
+                  !monitors.some((m) => m.id === settings.edgeMonitor) && (
+                    <option value={settings.edgeMonitor}>{t.monitorGone}</option>
+                  )}
+              </select>
+            </Row>
+          )}
+          <Row label={t.edgeAlign}>
+            <Segmented
+              value={settings.edgeAlign}
+              onChange={(v) => void updateSettings({ edgeAlign: v })}
+              options={[
+                { id: 'top', label: t.alignTop },
+                { id: 'center', label: t.alignCenter },
+                { id: 'bottom', label: t.alignBottom }
               ]}
             />
           </Row>

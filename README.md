@@ -189,7 +189,7 @@ scripts/          Release and icon helpers
 - [x] Phone to PC, desktop widgets, quick actions
 - [x] Shelves on the screen edge, pocket, shared shelves (cloud folders), new design
 - [x] New name and logo: Wedge
-- [ ] Next version: choose which display (and edge) the shelves live on, for multi-monitor setups
+- [x] Choose which display (and edge) the shelves live on, for multi-monitor setups
 - [ ] Quick notes: a shelf you type into directly, docked to the edge like the others
 - [ ] Portable version: a .zip that keeps its shelves and settings in its own folder ([#17](https://github.com/Regncreative/Wedge/issues/17))
 - [ ] Code signing

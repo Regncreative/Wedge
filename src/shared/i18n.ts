@@ -240,6 +240,16 @@ export type Messages = {
   edgeOff: string
   edgeLeft: string
   edgeRight: string
+  edgeMonitor: string
+  edgeMonitorHint: string
+  monitorPrimary: string
+  monitorCursor: string
+  monitorName: (n: number, width: number, height: number, primary: boolean) => string
+  monitorGone: string
+  edgeAlign: string
+  alignTop: string
+  alignCenter: string
+  alignBottom: string
   contextMenuToggle: string
   contextMenuHint: string
   watchDownloads: string

@@ -134,3 +134,43 @@ test('keeps every tab on screen when there are more shelves than room', async ()
     )
     .toBe(true)
 })
+
+test('puts the tabs at the top, middle or bottom of the edge, on a display that exists', async () => {
+  const { page } = stash
+  await page.evaluate(() => window.stash.setSettings({ onboardingDone: true }))
+  await page.reload()
+  const top = async (edgeAlign: 'top' | 'center' | 'bottom') => {
+    await page.evaluate((a) => window.stash.setSettings({ edgeAlign: a }), edgeAlign)
+    return (await page.evaluate(() => window.stash.edgeArea()))![1]
+  }
+  const [high, middle, low] = [await top('top'), await top('center'), await top('bottom')]
+  expect(high).toBeLessThan(middle)
+  expect(middle).toBeLessThan(low)
+
+  // At the top, the first tab lines up with the open drawer's top. (The page
+  // reads the setting from its store, which Settings keeps up to date.)
+  await page.evaluate(() => window.stash.setSettings({ edgeAlign: 'top' }))
+  await page.reload()
+  await page.evaluate(() => window.stash.edgeMode('open'))
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const drawer = document.querySelector('.drawer')!.getBoundingClientRect()
+        const first = document.querySelector('.tab')!.getBoundingClientRect()
+        return Math.abs(first.top - drawer.top) <= 1
+      })
+    )
+    .toBe(true)
+  await page.evaluate(() => window.stash.edgeMode('idle'))
+
+  // A display that isn't there (unplugged) leaves the tabs on the main one.
+  const monitors = await page.evaluate(() => window.stash.listMonitors())
+  expect(monitors.some((m) => m.primary)).toBe(true)
+  await page.evaluate(() => window.stash.setSettings({ edgeMonitor: '\\.\DISPLAY99' }))
+  const [x, y] = (await page.evaluate(() => window.stash.edgeArea()))!
+  expect(x).toBeGreaterThan(-30000)
+  expect(y).toBeGreaterThan(-30000)
+  // The display with the mouse: wherever the cursor is, on screen.
+  await page.evaluate(() => window.stash.setSettings({ edgeMonitor: 'cursor' }))
+  expect((await page.evaluate(() => window.stash.edgeArea()))![0]).toBeGreaterThan(-30000)
+})

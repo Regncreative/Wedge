@@ -71,6 +71,11 @@ pub fn check_shelf_name(name: &str) -> CmdResult<String> {
 
 pub fn check_settings_patch(p: &SettingsPatch) -> CmdResult<()> {
     let bad = |what: &str| Err(format!("Invalid arguments: {what}"));
+    if let Some(m) = &p.edge_monitor {
+        if m.is_empty() || m.chars().count() > 64 || m.chars().any(char::is_control) {
+            return bad("edgeMonitor");
+        }
+    }
     if let Some(c) = &p.accent_color {
         if !db::is_hex_color(c) {
             return bad("accentColor");
@@ -731,6 +736,9 @@ pub fn set_settings(
     }
     if patch.edge_handle.is_some() {
         panel::apply_side(&app, next.edge_handle);
+    }
+    if patch.edge_monitor.is_some() || patch.edge_align.is_some() {
+        panel::apply_placement(&app, &next.edge_monitor, next.edge_align);
     }
     Ok(next)
 }

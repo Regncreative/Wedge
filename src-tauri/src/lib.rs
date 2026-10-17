@@ -175,6 +175,7 @@ pub fn run() {
             }
             watchdog::start(handle);
             panel::prepare(handle);
+            panel::apply_placement(handle, &settings.edge_monitor, settings.edge_align);
             panel::apply_side(handle, settings.edge_handle);
             panel::start_monitor(handle);
             dragwatch::start(handle);
@@ -288,6 +289,7 @@ pub fn run() {
             panel::edge_state,
             panel::edge_mode,
             panel::edge_area,
+            panel::list_monitors,
             phone::phone_start,
             phone::phone_stop,
             widget::open_widget,

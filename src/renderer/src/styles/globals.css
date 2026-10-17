@@ -171,6 +171,32 @@ input {
   left: calc(-1 * var(--tab-tail));
   transform-origin: var(--tab-tail) 50%;
 }
+/* At the top or bottom of the edge (Settings; panel.rs puts the window
+   there) the first or last tab lines up with the drawer: 22px is the
+   column's padding. */
+.edge-root[data-align='top'] .tabs {
+  top: calc(var(--drawer-pad) - 22px * var(--tabs-fit, 1));
+  transform: scale(var(--tabs-fit, 1));
+  transform-origin: calc(100% - var(--tab-tail)) 0;
+}
+.edge-root[data-align='bottom'] .tabs {
+  top: auto;
+  bottom: calc(var(--drawer-pad) - 22px * var(--tabs-fit, 1));
+  transform: scale(var(--tabs-fit, 1));
+  transform-origin: calc(100% - var(--tab-tail)) 100%;
+}
+.edge-root[data-side='left'][data-align='top'] .tabs {
+  transform-origin: var(--tab-tail) 0;
+}
+.edge-root[data-side='left'][data-align='bottom'] .tabs {
+  transform-origin: var(--tab-tail) 100%;
+}
+.edge-root[data-align='top'] .drawer {
+  margin-block: var(--drawer-pad) auto;
+}
+.edge-root[data-align='bottom'] .drawer {
+  margin-block: auto var(--drawer-pad);
+}
 
 .tab {
   position: relative;

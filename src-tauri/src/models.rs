@@ -109,6 +109,33 @@ pub enum EdgeHandle {
     Right,
 }
 
+/// Where along the edge the tabs sit.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EdgeAlign {
+    Top,
+    Center,
+    Bottom,
+}
+
+/// "primary": the main display. "cursor": the display with the mouse when
+/// the tabs come out. Anything else: a display's device name ("\\.\DISPLAY2").
+pub const MONITOR_PRIMARY: &str = "primary";
+pub const MONITOR_CURSOR: &str = "cursor";
+
+/// A display, for the setting's list.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorInfo {
+    /// Its device name, what the setting stores.
+    pub id: String,
+    /// 1, 2, … as Windows numbers them.
+    pub number: u32,
+    pub width: u32,
+    pub height: u32,
+    pub primary: bool,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum UpdateChannel {
@@ -142,6 +169,11 @@ pub struct AppSettings {
     pub watch_screenshots: bool,
     /// A small handle on this screen edge: drop files on it, click to open the panel.
     pub edge_handle: EdgeHandle,
+    /// Which display the shelves live on (MONITOR_PRIMARY, MONITOR_CURSOR or
+    /// a device name).
+    pub edge_monitor: String,
+    /// Where along the edge the tabs sit.
+    pub edge_align: EdgeAlign,
     /// "Add to Wedge" in Explorer's right-click menu.
     pub context_menu: bool,
 }
@@ -167,6 +199,8 @@ pub struct SettingsPatch {
     pub watch_downloads: Option<bool>,
     pub watch_screenshots: Option<bool>,
     pub edge_handle: Option<EdgeHandle>,
+    pub edge_monitor: Option<String>,
+    pub edge_align: Option<EdgeAlign>,
     pub context_menu: Option<bool>,
 }
 

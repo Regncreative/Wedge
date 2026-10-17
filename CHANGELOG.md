@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Choose the display the shelves live on (the main one, the one with the mouse, or a given display) and their position on the edge (top, middle or bottom), in Settings. If the chosen display is unplugged, the shelves wait on the main one until it's back.
 - Russian, by [@alkidnn](https://github.com/alkidnn): Wedge speaks Russian on Russian Windows, including the tray menu, notifications, the phone page and File Explorer's entry.
 
 ### Fixed

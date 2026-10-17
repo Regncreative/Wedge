@@ -620,6 +620,11 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         watch_downloads: bool_of("watchDownloads", true),
         watch_screenshots: bool_of("watchScreenshots", true),
         edge_handle: enum_or(stored.get("edgeHandle"), EdgeHandle::Right),
+        edge_monitor: match str_of("edgeMonitor") {
+            m if m.is_empty() => MONITOR_PRIMARY.into(),
+            m => m,
+        },
+        edge_align: enum_or(stored.get("edgeAlign"), EdgeAlign::Center),
         context_menu: bool_of("contextMenu", true),
     };
 
@@ -701,6 +706,12 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     }
     if let Some(v) = patch.edge_handle {
         put("edgeHandle", serde_json::to_value(v).unwrap_or_default())?;
+    }
+    if let Some(v) = &patch.edge_monitor {
+        put("edgeMonitor", Value::String(v.clone()))?;
+    }
+    if let Some(v) = patch.edge_align {
+        put("edgeAlign", serde_json::to_value(v).unwrap_or_default())?;
     }
     if let Some(v) = patch.context_menu {
         put("contextMenu", Value::Bool(v))?;

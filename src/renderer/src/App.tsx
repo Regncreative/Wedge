@@ -19,6 +19,7 @@ export default function App() {
   const init = useStashStore((s) => s.init)
   const mode = useEdge((s) => s.mode)
   const side = useEdge((s) => s.side)
+  const align = useStashStore((s) => s.settings?.edgeAlign ?? 'center')
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -196,6 +197,7 @@ export default function App() {
       className="edge-root"
       data-side={side === 'left' ? 'left' : 'right'}
       data-mode={mode}
+      data-align={align}
       onPointerEnter={() => {
         cancelLater()
         if (useEdge.getState().mode === 'idle') useEdge.getState().request('peek')

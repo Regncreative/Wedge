@@ -6,6 +6,19 @@ export type FileSort = 'added' | 'name' | 'recent' | 'size'
 export type UpdateChannel = 'stable' | 'beta'
 /** Where the edge handle sits (a drop target and panel opener on the screen edge). */
 export type EdgeHandle = 'off' | 'left' | 'right'
+/** Where along the edge the tabs sit. */
+export type EdgeAlign = 'top' | 'center' | 'bottom'
+
+/** A display, for the setting (src-tauri/src/panel.rs, list_monitors). */
+export interface MonitorInfo {
+  /** Its device name, what `edgeMonitor` stores. */
+  id: string
+  /** 1, 2, … as Windows numbers them. */
+  number: number
+  width: number
+  height: number
+  primary: boolean
+}
 /** How a file got onto a shelf. */
 export type FileSource = 'manual' | 'downloads' | 'screenshots' | 'phone' | 'clipboard' | 'shared'
 /** Automatic shelves are filled by Stash itself; shared shelves mirror a folder. */
@@ -133,6 +146,9 @@ export interface AppSettings {
   watchScreenshots: boolean
   /** A small handle on this screen edge: drop files on it, click to open the panel. */
   edgeHandle: EdgeHandle
+  /** 'primary', 'cursor' (the display with the mouse) or a display's id. */
+  edgeMonitor: string
+  edgeAlign: EdgeAlign
   /** "Add to Wedge" in Explorer's right-click menu. */
   contextMenu: boolean
 }
@@ -185,6 +201,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   watchDownloads: true,
   watchScreenshots: true,
   edgeHandle: 'right',
+  edgeMonitor: 'primary',
+  edgeAlign: 'center',
   contextMenu: true
 }
 
@@ -211,6 +229,8 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   s.watchScreenshots = s.watchScreenshots !== false
   s.edgeHandle = s.edgeHandle === 'left' || s.edgeHandle === 'off' ? s.edgeHandle : 'right'
   s.contextMenu = s.contextMenu !== false
+  s.edgeMonitor = typeof s.edgeMonitor === 'string' && s.edgeMonitor ? s.edgeMonitor : 'primary'
+  s.edgeAlign = s.edgeAlign === 'top' || s.edgeAlign === 'bottom' ? s.edgeAlign : 'center'
   return s
 }
 

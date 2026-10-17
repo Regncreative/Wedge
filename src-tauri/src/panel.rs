@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
 use crate::db;
-use crate::models::EdgeHandle;
+use crate::models::{EdgeAlign, EdgeHandle, MonitorInfo, MONITOR_CURSOR, MONITOR_PRIMARY};
 use crate::state::AppState;
 
 pub const LABEL: &str = "panel";
@@ -65,6 +65,18 @@ static STATE: Mutex<EdgeState> = Mutex::new(EdgeState {
 /// A full-screen app (game, video, presentation) is in front.
 static FULLSCREEN: AtomicBool = AtomicBool::new(false);
 
+/// Which display and where along its edge (Settings).
+struct Placement {
+    monitor: String,
+    align: EdgeAlign,
+}
+static PLACEMENT: Mutex<Placement> = Mutex::new(Placement {
+    monitor: String::new(),
+    align: EdgeAlign::Center,
+});
+/// With "the display with the mouse": the display the tabs are on now.
+static CURSOR_MONITOR: Mutex<Option<String>> = Mutex::new(None);
+
 pub fn window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(LABEL)
 }
@@ -113,10 +125,61 @@ struct Frame {
     scale: f64,
 }
 
-/// Where the window goes: on the edge of the primary monitor's work area,
-/// centred, tall enough for the drawer and the tab column.
+/// The display the tabs live on. While the chosen one is gone (unplugged),
+/// the main display, until it's back.
+fn monitor(app: &AppHandle) -> Option<tauri::Monitor> {
+    let wanted = match PLACEMENT
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .monitor
+        .as_str()
+    {
+        MONITOR_CURSOR => CURSOR_MONITOR
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone(),
+        MONITOR_PRIMARY | "" => None,
+        name => Some(name.to_string()),
+    };
+    wanted
+        .and_then(|name| {
+            app.available_monitors()
+                .ok()?
+                .into_iter()
+                .find(|m| m.name().is_some_and(|n| *n == name))
+        })
+        .or_else(|| app.primary_monitor().ok().flatten())
+}
+
+/// With "the display with the mouse": take the display the cursor is on.
+/// Called while the tabs are tucked in, and as they come out.
+fn follow_cursor(app: &AppHandle) {
+    if PLACEMENT.lock().unwrap_or_else(|e| e.into_inner()).monitor != MONITOR_CURSOR {
+        return;
+    }
+    let Ok(pos) = app.cursor_position() else {
+        return;
+    };
+    if let Ok(Some(m)) = app.monitor_from_point(pos.x, pos.y) {
+        *CURSOR_MONITOR.lock().unwrap_or_else(|e| e.into_inner()) = m.name().cloned();
+    }
+}
+
+/// The tab column's top in a window `h` tall: at the top, middle or bottom,
+/// where the page puts it (globals.css, `data-align`).
+fn column_top(align: EdgeAlign, h: i32, column_h: i32, inset: i32) -> i32 {
+    match align {
+        EdgeAlign::Top => inset.min(h - column_h),
+        EdgeAlign::Center => (h - column_h) / 2,
+        EdgeAlign::Bottom => (h - column_h - inset).max(0),
+    }
+}
+
+/// Where the window goes: on the edge of the chosen display's work area, at
+/// the top, middle or bottom, tall enough for the drawer and the tab column.
 fn frame(app: &AppHandle, side: EdgeHandle) -> Option<Frame> {
-    let monitor = app.primary_monitor().ok().flatten()?;
+    let monitor = monitor(app)?;
+    let align = PLACEMENT.lock().unwrap_or_else(|e| e.into_inner()).align;
     let scale = monitor.scale_factor();
     let work = monitor.work_area();
     let (wx, wy) = (work.position.x, work.position.y);
@@ -130,15 +193,53 @@ fn frame(app: &AppHandle, side: EdgeHandle) -> Option<Frame> {
         EdgeHandle::Left => wx,
         _ => wx + ww - w,
     };
+    let y = match align {
+        EdgeAlign::Top => wy + px(MARGIN),
+        EdgeAlign::Center => wy + (wh - h) / 2,
+        EdgeAlign::Bottom => wy + wh - h - px(MARGIN),
+    };
     Some(Frame {
         x,
-        y: wy + (wh - h) / 2,
+        y,
         w,
         h,
-        column_top: (h - column_h) / 2,
+        // At the top or bottom the first or last tab lines up with the drawer.
+        column_top: column_top(align, h, column_h, px(DRAWER_PAD - TABS_PAD)),
         column_h,
         scale,
     })
+}
+
+/// The displays, for Settings.
+#[tauri::command]
+pub fn list_monitors(app: AppHandle) -> Vec<MonitorInfo> {
+    let primary = app
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .and_then(|m| m.name().cloned());
+    let mut list: Vec<MonitorInfo> = app
+        .available_monitors()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|m| {
+            let id = m.name()?.clone();
+            Some(MonitorInfo {
+                number: display_number(&id),
+                width: m.size().width,
+                height: m.size().height,
+                primary: primary.as_ref() == Some(&id),
+                id,
+            })
+        })
+        .collect();
+    list.sort_by_key(|m| m.number);
+    list
+}
+
+/// Windows' number for a display: "\\.\DISPLAY2" is 2.
+fn display_number(name: &str) -> u32 {
+    name.trim_start_matches(r"\\.\DISPLAY").parse().unwrap_or(0)
 }
 
 /// The part of the window that catches the cursor in a mode: (left, top,
@@ -272,6 +373,19 @@ fn place(app: &AppHandle, s: EdgeState) {
                 SWP_NOACTIVATE
             };
             let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, f.w, f.h, flags);
+            // Moving onto a display with another scale makes Windows resize
+            // the window for it on the way (WM_DPICHANGED): put it back.
+            let mut after = RECT::default();
+            let _ = GetWindowRect(hwnd, &mut after);
+            if (
+                after.left,
+                after.top,
+                after.right - after.left,
+                after.bottom - after.top,
+            ) != (x, y, f.w, f.h)
+            {
+                let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, f.w, f.h, SWP_NOACTIVATE);
+            }
             // The window owns the region from here on.
             let _ = SetWindowRgn(hwnd, Some(CreateRectRgn(l, t, r, b)), true);
         }
@@ -290,6 +404,10 @@ pub fn set_mode(app: &AppHandle, mode: Mode) {
         s.mode = mode;
         (before, *s)
     };
+    // Coming out: on the display with the mouse, if that's the setting.
+    if before.mode == Mode::Idle && mode != Mode::Idle {
+        follow_cursor(app);
+    }
     place(app, now);
     let _ = app.emit_to(LABEL, "edge-mode", now);
     if before.mode != Mode::Open && mode == Mode::Open {
@@ -318,6 +436,17 @@ pub fn toggle(app: &AppHandle) {
     } else {
         show(app)
     }
+}
+
+/// The display or position setting changed (or at startup).
+pub fn apply_placement(app: &AppHandle, monitor: &str, align: EdgeAlign) {
+    {
+        let mut p = PLACEMENT.lock().unwrap_or_else(|e| e.into_inner());
+        p.monitor = monitor.to_string();
+        p.align = align;
+    }
+    follow_cursor(app);
+    place(app, state());
 }
 
 /// The side setting changed (or at startup).
@@ -472,6 +601,10 @@ pub fn start_monitor(app: &AppHandle) {
         let mut last = None;
         loop {
             std::thread::sleep(Duration::from_millis(1500));
+            // Tucked in, the tabs follow the mouse across displays (if set).
+            if state().mode == Mode::Idle {
+                follow_cursor(&app);
+            }
             let reason = fullscreen_app();
             let busy = reason.is_some();
             let changed = FULLSCREEN.swap(busy, Ordering::SeqCst) != busy;
@@ -612,6 +745,25 @@ mod tests {
             0,
             0
         ));
+    }
+
+    #[test]
+    fn the_tab_column_sits_at_the_top_middle_or_bottom() {
+        // A 684px window, a 478px column, 10px from the edge at top or bottom.
+        assert_eq!(column_top(EdgeAlign::Top, 684, 478, 10), 10);
+        assert_eq!(column_top(EdgeAlign::Center, 684, 478, 10), 103);
+        assert_eq!(column_top(EdgeAlign::Bottom, 684, 478, 10), 196);
+        // A column as tall as the window fills it whatever the setting.
+        for align in [EdgeAlign::Top, EdgeAlign::Center, EdgeAlign::Bottom] {
+            assert_eq!(column_top(align, 684, 684, 10), 0);
+        }
+    }
+
+    #[test]
+    fn displays_are_numbered_like_windows_does() {
+        assert_eq!(display_number(r"\\.\DISPLAY1"), 1);
+        assert_eq!(display_number(r"\\.\DISPLAY12"), 12);
+        assert_eq!(display_number("something else"), 0);
     }
 
     #[test]
