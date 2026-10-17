@@ -119,15 +119,17 @@ test('keeps every tab on screen when there are more shelves than room', async ()
       )
     )
     .toBe(true)
-  // With the drawer open, the smaller tabs still hang off its left side.
+  // With the drawer open, every tab hangs off its left side: the drawer grows
+  // to the tabs, none float above or below it.
   await page.evaluate(() => window.stash.edgeMode('open'))
   await expect
     .poll(() =>
       page.evaluate(() => {
         const drawer = document.querySelector('.drawer')!.getBoundingClientRect()
-        return Array.from(document.querySelectorAll('.tab')).every(
-          (el) => el.getBoundingClientRect().left < drawer.left
-        )
+        return Array.from(document.querySelectorAll('.tab')).every((el) => {
+          const r = el.getBoundingClientRect()
+          return r.left < drawer.left && r.top >= drawer.top - 1 && r.bottom <= drawer.bottom + 1
+        })
       })
     )
     .toBe(true)

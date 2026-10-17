@@ -318,7 +318,8 @@ input {
   }
 }
 
-/* Centred on the tab column, as tall as the screen allows up to --drawer-h. */
+/* Centred on the tab column: --drawer-h, or as tall as the tabs (--tabs-span,
+   tabs.tsx) when there are many, as far as the screen allows. */
 .drawer {
   position: absolute;
   top: 0;
@@ -326,7 +327,7 @@ input {
   right: 0;
   z-index: 2;
   width: var(--drawer-w);
-  height: min(var(--drawer-h), calc(100% - 2 * var(--drawer-pad)));
+  height: min(max(var(--drawer-h), var(--tabs-span, 0px)), calc(100% - 2 * var(--drawer-pad)));
   margin-block: auto;
   will-change: transform;
   display: flex;

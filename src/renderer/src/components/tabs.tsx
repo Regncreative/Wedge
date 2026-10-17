@@ -60,17 +60,24 @@ export function Tabs() {
   const nav = useRef<HTMLElement>(null)
 
   // A screen too short for every tab (a small one at a large scale, or many
-  // shelves): the column shrinks to the window's height. The window catches
-  // the cursor only within its own edges (src-tauri/src/panel.rs), so tabs
-  // past them were cut off and couldn't be reached.
+  // shelves): the column shrinks to the tallest drawer the window has room
+  // for. The window catches the cursor only within its own edges
+  // (src-tauri/src/panel.rs), so tabs past them were cut off and couldn't be
+  // reached. The drawer grows to the tabs (--tabs-span), so with the drawer
+  // open they all hang off its side.
   useLayoutEffect(() => {
     const column = nav.current
     if (!column) return
-    const fit = () =>
-      column.style.setProperty(
-        '--tabs-fit',
-        String(Math.min(1, window.innerHeight / column.offsetHeight))
-      )
+    const root = document.documentElement
+    const fit = () => {
+      const style = getComputedStyle(column)
+      const pad = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)
+      const drawerPad = parseFloat(getComputedStyle(root).getPropertyValue('--drawer-pad')) || 0
+      const span = column.offsetHeight - pad
+      const scale = Math.min(1, (window.innerHeight - 2 * drawerPad) / span)
+      column.style.setProperty('--tabs-fit', String(scale))
+      root.style.setProperty('--tabs-span', `${span * scale}px`)
+    }
     fit()
     const observer = new ResizeObserver(fit)
     observer.observe(column)
