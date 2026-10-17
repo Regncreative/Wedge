@@ -5,6 +5,7 @@ pub mod commands;
 pub mod commands_extra;
 pub mod db;
 pub mod dragdrop;
+pub mod dragout;
 pub mod dragwatch;
 pub mod files;
 pub mod hotkey;

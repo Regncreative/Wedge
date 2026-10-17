@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Fixed
 - On some Windows 10 PCs the tabs never showed and dragging a file did nothing, because Windows reported a full-screen app that wasn't there. Wedge now checks for a full-screen window itself, only on the monitor with the tabs, and writes to its log when the tabs step aside.
 - On a short screen (a small one at a large scale, or with many shelves) the top and bottom tabs were cut off and couldn't be reached. The tab column now shrinks to fit the screen.
+- Steam's chat (and other apps that only take a drop they may move) refused files dragged from Wedge. Wedge now offers copy or move, as File Explorer does, and asks for a copy, so File Explorer still copies.
+- Dragging files from the pocket onto a place that refused them took them off the pocket anyway.
 - In the Microsoft Store version, Settings no longer says the File Explorer entry is under "Show more options" on Windows 11; there it's in the first menu.
 
 ## [2.0.1] - 2026-10-16

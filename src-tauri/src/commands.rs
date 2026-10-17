@@ -498,32 +498,13 @@ pub(crate) async fn drag_out(
     paths: Vec<std::path::PathBuf>,
     icon: Vec<u8>,
 ) -> CmdResult<bool> {
-    let window = panel::window(app).ok_or("no window")?;
     let (tx, rx) = std::sync::mpsc::channel::<Result<bool, String>>();
     app.run_on_main_thread(move || {
         if !win::primary_button_down() {
             let _ = tx.send(Ok(false));
             return;
         }
-        let dropped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let flag = dropped.clone();
-        let result = drag::start_drag(
-            &window,
-            drag::DragItem::Files(paths),
-            drag::Image::Raw(icon),
-            move |result, _cursor| {
-                flag.store(
-                    matches!(result, drag::DragResult::Dropped),
-                    Ordering::SeqCst,
-                )
-            },
-            drag::Options::default(),
-        );
-        let _ = tx.send(
-            result
-                .map(|_| dropped.load(Ordering::SeqCst))
-                .map_err(|e| e.to_string()),
-        );
+        let _ = tx.send(crate::dragout::drag_files(&paths, &icon));
     })
     .map_err(err)?;
     tauri::async_runtime::spawn_blocking(move || rx.recv())
