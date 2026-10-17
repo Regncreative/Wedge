@@ -206,28 +206,30 @@ export type Messages = {
   widgetEmpty: string
 
   // Settings
-  generalSection: string
-  captureSection: string
-  sharedSection: string
-  sharedSectionHint: string
-  noSharedShelves: string
   rulesSection: string
   rulesHint: string
   maintenanceSection: string
   updatesSection: string
+  // Settings: its tabs and rows
+  settingsLook: string
+  settingsUse: string
+  settingsAuto: string
+  settingsMore: string
+  windowsSection: string
+  edgeTabs: string
+  edgeTabsHint: string
+  backup: string
+  missingFiles: string
+  cleanUp: string
+  logsFolder: string
   theme: string
   themeSystem: string
   themeLight: string
   themeDark: string
   accentColor: string
   startWithWindows: string
-  startWithWindowsHint: string
   notifications: string
   notificationsHint: string
-  idleOpacity: string
-  idleOpacityHint: string
-  idleTimeout: string
-  idleTimeoutHint: string
   fileSort: string
   sortAdded: string
   sortName: string
@@ -243,17 +245,13 @@ export type Messages = {
   hotkeyMax: string
   hotkeyUnavailable: string
   edgeHandle: string
-  edgeHandleHint: string
-  edgeOff: string
   edgeLeft: string
   edgeRight: string
   edgeMonitor: string
-  edgeMonitorHint: string
   monitorPrimary: string
   monitorCursor: string
   monitorName: (n: number, width: number, height: number, primary: boolean) => string
   monitorGone: string
-  edgeAlign: string
   alignTop: string
   alignCenter: string
   alignBottom: string
@@ -286,7 +284,6 @@ export type Messages = {
   exportDone: string
   importDone: (shelves: number, files: number) => string
   importFailed: string
-  openLogs: string
   openLogsHint: string
   betaUpdates: string
   betaUpdatesHint: string

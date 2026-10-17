@@ -163,7 +163,7 @@ function ShelfPane() {
           </button>
         </div>
         <div className="flex min-w-0 items-end gap-2">
-          <h1 className="d-title display-font min-w-0 flex-1 truncate text-[38px] font-extrabold leading-[1] tracking-[-0.025em]">
+          <h1 className="d-title display-font -my-[0.12em] min-w-0 flex-1 truncate py-[0.12em] text-[38px] font-extrabold leading-[1] tracking-[-0.025em]">
             {shelf.name}
           </h1>
           <button

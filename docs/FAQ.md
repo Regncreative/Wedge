@@ -17,7 +17,7 @@ Yes. Select them with **Ctrl+click** or **Shift+click** (or Shift + arrow keys),
 ### Why do colored tabs slide out of the screen edge when I drag a file?
 Those are your shelves. The moment you start dragging files (from Explorer, the desktop, a browser…) they come out of the edge; drop on the one you want. When you're not dragging, only thin stripes show; moving the mouse to the edge makes them peek out, and clicking one pulls its shelf out as a drawer. Dragging a card from the drawer onto another tab moves it there.
 
-The tabs step aside while a full-screen app (a game, a video, a presentation) is running. Put them on the left edge, or turn them off, in *Settings → Catching files → Where the shelves live*.
+The tabs step aside while a full-screen app (a game, a video, a presentation) is running. Move them to another edge or position, or turn them off, in *Settings → Appearance → Where the shelves live*.
 
 Wedge notices a drag by the picture Windows shows next to the cursor while dragging; it doesn't read your mouse or keyboard. A few apps drag without that picture; for those, touch the stripes at the edge and the tabs come out.
 
@@ -72,13 +72,13 @@ To make a file smaller, use **Reduce size**: it scales very large images down to
 Wedge is not code-signed yet, so SmartScreen shows this for new downloads. Click **More info → Run anyway**. Updates are not affected: Wedge checks each update's signature itself before installing it.
 
 ### How do I move my shelves to another computer?
-*Settings → Data and upkeep → Export* on the old PC, then *Import* on the new one. Shelves with the same name are merged. File paths must exist on the new PC to be usable.
+*Settings → More → Backup → Export* on the old PC, then *Import* on the new one. Shelves with the same name are merged. File paths must exist on the new PC to be usable.
 
 ### How do I try new features early?
 Turn on *Settings → Updates → Get beta versions*. Turning it off later doesn't downgrade you; you'll get the next stable version when it comes out.
 
 ### Where are the logs?
-*Settings → Data and upkeep → Open log folder* opens `%APPDATA%\Wedge\logs`. Attach `main.log` when you report a bug.
+*Settings → More → Log folder → Open* opens `%APPDATA%\Wedge\logs`. Attach `main.log` when you report a bug.
 
 ### Why is Stash called Wedge now?
 It's the same app with a new name and logo from 2.0 on: "Stash" is used by several well-known products, and Wedge says what it does, it wedges your files into the edge of the screen.

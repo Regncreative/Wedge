@@ -260,6 +260,9 @@ input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Room for İ's dot and ş, g, y below the line, which the tight line height would clip. */
+  padding-block: 0.12em;
+  margin-block: -0.12em;
 }
 .tab .tab-sub {
   font-family: var(--mono);
@@ -269,6 +272,8 @@ input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-block: 0.12em;
+  margin-block: -0.12em;
 }
 .tab .tab-count {
   flex: none;
@@ -514,7 +519,8 @@ input {
     @apply h-7 rounded-[8px] px-2.5 text-[12px] font-medium transition-colors duration-100;
     color: var(--fg-2);
   }
-  .segmented > button[aria-pressed='true'] {
+  .segmented > button[aria-pressed='true'],
+  .segmented > button[aria-selected='true'] {
     background: var(--surface-pressed);
     color: var(--fg);
   }

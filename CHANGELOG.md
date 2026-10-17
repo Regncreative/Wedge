@@ -10,6 +10,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Russian, by [@alkidnn](https://github.com/alkidnn): Wedge speaks Russian on Russian Windows, including the tray menu, notifications, the phone page and File Explorer's entry.
 - French, Spanish, German, Portuguese (Brazil), Italian, Polish and Japanese, picked the same way from Windows' language. Corrections from native speakers are welcome.
 
+### Changed
+- Settings are split into four tabs (Appearance, Behavior, Automation, More), each fitting on one screen. Where the shelves sit is picked on a small picture of the screen, the rule form opens only when you add a rule, and every button says what it does. Shared shelves are managed from the shelf's own menu, as before.
+
 ### Fixed
 - On some Windows 10 PCs the tabs never showed and dragging a file did nothing, because Windows reported a full-screen app that wasn't there. Wedge now checks for a full-screen window itself, only on the monitor with the tabs, and writes to its log when the tabs step aside.
 - On a short screen (a small one at a large scale, or with many shelves) the top and bottom tabs were cut off and couldn't be reached. The tab column now shrinks to fit the screen.
