@@ -98,3 +98,37 @@ test('navigates and acts with the keyboard', async () => {
   await page.getByRole('dialog').getByRole('button').last().click()
   await expect(page.getByRole('option')).toHaveCount(2)
 })
+
+test('keeps every tab on screen when there are more shelves than room', async () => {
+  const { page } = stash
+  await page.evaluate(() => window.stash.setSettings({ onboardingDone: true }))
+  // More than any screen has room for at full size.
+  for (let i = 1; i <= 24; i++) {
+    await page.evaluate((name) => window.stash.createShelf({ name }), `Shelf ${i}`)
+  }
+  await page.reload()
+  const shelves = await page.evaluate(async () => (await window.stash.listShelves()).length)
+  await expect(page.locator('.tab')).toHaveCount(shelves)
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll('.tab')).every((el) => {
+          const r = el.getBoundingClientRect()
+          return r.top >= 0 && r.bottom <= window.innerHeight
+        })
+      )
+    )
+    .toBe(true)
+  // With the drawer open, the smaller tabs still hang off its left side.
+  await page.evaluate(() => window.stash.edgeMode('open'))
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const drawer = document.querySelector('.drawer')!.getBoundingClientRect()
+        return Array.from(document.querySelectorAll('.tab')).every(
+          (el) => el.getBoundingClientRect().left < drawer.left
+        )
+      })
+    )
+    .toBe(true)
+})

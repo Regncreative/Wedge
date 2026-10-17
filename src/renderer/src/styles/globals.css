@@ -160,12 +160,16 @@ input {
   display: grid;
   gap: 10px;
   padding: 22px 0;
-  transform: translateY(-50%);
+  /* --tabs-fit shrinks the column when the screen is too short (tabs.tsx),
+     around the screen edge so the slivers keep showing. */
+  transform: translateY(-50%) scale(var(--tabs-fit, 1));
+  transform-origin: calc(100% - var(--tab-tail)) 50%;
   z-index: 1;
 }
 .edge-root[data-side='left'] .tabs {
   right: auto;
   left: calc(-1 * var(--tab-tail));
+  transform-origin: var(--tab-tail) 50%;
 }
 
 .tab {
@@ -270,8 +274,10 @@ input {
  * Modes: tucked in (a sliver shows), out (the cursor is at the edge, or a
  * file is being dragged), open (tabs hang off the drawer, icons only).
  */
+/* Offsets measured on screen (the 9px sliver, hanging off the drawer) are
+   divided by --tabs-fit: a shrunk column keeps them where they are. */
 .edge-root[data-mode='idle'] .tab {
-  --x: calc(var(--tab-w) - 9px);
+  --x: calc(var(--tab-w) - 9px / var(--tabs-fit, 1));
   box-shadow: none;
   transition-delay: 0ms;
 }
@@ -286,14 +292,14 @@ input {
   transition-delay: 0ms;
 }
 .edge-root[data-mode='open'] .tab {
-  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 24px);
+  --x: calc(var(--tab-w) - (var(--drawer-w) + var(--tab-out) - 24px) / var(--tabs-fit, 1));
   transition-delay: 0ms;
 }
 /* 14px stay free on the outside so the tab's shadow isn't cut off. */
 .edge-root[data-mode='open'] .tab.is-active,
 .edge-root[data-mode='open'] .tab:hover,
 .edge-root[data-mode='open'] .tab.is-target {
-  --x: calc(var(--tab-w) - var(--drawer-w) - var(--tab-out) + 14px);
+  --x: calc(var(--tab-w) - (var(--drawer-w) + var(--tab-out) - 14px) / var(--tabs-fit, 1));
 }
 .tab .tab-label,
 .tab .tab-stack,

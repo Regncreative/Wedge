@@ -1,5 +1,5 @@
 import type { CSSProperties, MouseEvent } from 'react'
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import type { Shelf, StashFile } from '@shared/types'
 import { ShelfIcon } from './file-icon'
 import { hasThumbnail, useFileVisual } from '@/hooks/use-file-visual'
@@ -57,6 +57,29 @@ export function Tabs() {
   const mode = useEdge((s) => s.mode)
   const target = useEdge((s) => s.target)
   const bump = useEdge((s) => s.bump)
+  const nav = useRef<HTMLElement>(null)
+
+  // A screen too short for every tab (a small one at a large scale, or many
+  // shelves): the column shrinks to the window's height. The window catches
+  // the cursor only within its own edges (src-tauri/src/panel.rs), so tabs
+  // past them were cut off and couldn't be reached.
+  useLayoutEffect(() => {
+    const column = nav.current
+    if (!column) return
+    const fit = () =>
+      column.style.setProperty(
+        '--tabs-fit',
+        String(Math.min(1, window.innerHeight / column.offsetHeight))
+      )
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(column)
+    window.addEventListener('resize', fit)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', fit)
+    }
+  }, [])
 
   const ordered = useMemo(
     () => [
@@ -105,7 +128,7 @@ export function Tabs() {
   }
 
   return (
-    <nav className="tabs" aria-label={t.railLabel}>
+    <nav ref={nav} className="tabs" aria-label={t.railLabel}>
       {ordered.map((shelf, i) => {
         const items = counts.get(shelf.id) ?? []
         const pocket = shelf.kind === 'pocket'
