@@ -358,21 +358,110 @@ pub fn on_drag(app: &AppHandle, active: bool) {
     });
 }
 
+/// Why the tabs should step aside right now, if they should: a game, a video
+/// or a presentation in full screen. Windows' own answer is only trusted for
+/// Direct3D full screen and presentation mode; its general "busy"
+/// (QUNS_BUSY) stayed on without any full-screen app on some Windows 10 PCs,
+/// which hid the tabs for good. Otherwise the window in front has to fill
+/// the primary monitor, where the tabs are (Chromium checks the same way).
 #[cfg(windows)]
-fn fullscreen_app_running() -> bool {
+fn fullscreen_app() -> Option<String> {
     use windows::Win32::UI::Shell::{
-        SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE,
-        QUNS_RUNNING_D3D_FULL_SCREEN,
+        SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
     };
     match unsafe { SHQueryUserNotificationState() } {
-        Ok(s) => s == QUNS_BUSY || s == QUNS_RUNNING_D3D_FULL_SCREEN || s == QUNS_PRESENTATION_MODE,
-        Err(_) => false,
+        Ok(s) if s == QUNS_RUNNING_D3D_FULL_SCREEN => Some("Direct3D full screen".into()),
+        Ok(s) if s == QUNS_PRESENTATION_MODE => Some("presentation mode".into()),
+        _ => full_screen_window(),
     }
 }
 
 #[cfg(not(windows))]
-fn fullscreen_app_running() -> bool {
-    false
+fn fullscreen_app() -> Option<String> {
+    None
+}
+
+/// The foreground window, if it fills the primary monitor: its class, for
+/// the log.
+#[cfg(windows)]
+fn full_screen_window() -> Option<String> {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::Graphics::Gdi::{
+        GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetClassNameW, GetForegroundWindow, GetWindowLongW, GetWindowRect,
+        GetWindowThreadProcessId, IsIconic, IsWindowVisible, IsZoomed, GWL_EXSTYLE, GWL_STYLE,
+        MONITORINFOF_PRIMARY,
+    };
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.0.is_null()
+            || !IsWindowVisible(hwnd).as_bool()
+            || IsIconic(hwnd).as_bool()
+            // A maximized window fills the screen when the taskbar hides itself.
+            || IsZoomed(hwnd).as_bool()
+        {
+            return None;
+        }
+        let mut pid = 0;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        if pid == std::process::id() {
+            return None;
+        }
+        let mut buf = [0u16; 64];
+        let n = GetClassNameW(hwnd, &mut buf) as usize;
+        let class = String::from_utf16_lossy(&buf[..n]);
+        if is_shell_window(&class) {
+            return None;
+        }
+        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+        let mut info = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        if monitor.is_invalid()
+            || !GetMonitorInfoW(monitor, &mut info).as_bool()
+            || info.dwFlags & MONITORINFOF_PRIMARY == 0
+        {
+            return None;
+        }
+        let mut r = RECT::default();
+        GetWindowRect(hwnd, &mut r).ok()?;
+        let m = info.rcMonitor;
+        let window = (r.left, r.top, r.right, r.bottom);
+        let screen = (m.left, m.top, m.right, m.bottom);
+        let style = GetWindowLongW(hwnd, GWL_STYLE) as u32;
+        let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
+        fills_monitor(window, screen, style, ex_style).then(|| format!("{class} fills the screen"))
+    }
+}
+
+/// The desktop and the taskbar cover the screen but aren't full-screen apps.
+fn is_shell_window(class: &str) -> bool {
+    matches!(
+        class,
+        "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd"
+    )
+}
+
+/// A window (left, top, right, bottom) fills a monitor the way a full-screen
+/// game, video or browser does: all of it, without a frame. Windows with a
+/// resizing or dialog frame and tool windows don't count.
+fn fills_monitor(
+    w: (i32, i32, i32, i32),
+    m: (i32, i32, i32, i32),
+    style: u32,
+    ex_style: u32,
+) -> bool {
+    const WS_DLGFRAME: u32 = 0x0040_0000;
+    const WS_THICKFRAME: u32 = 0x0004_0000;
+    const WS_EX_TOOLWINDOW: u32 = 0x0000_0080;
+    const WS_EX_WINDOWEDGE: u32 = 0x0000_0100;
+    let covers = w.0 <= m.0 && w.1 <= m.1 && w.2 >= m.2 && w.3 >= m.3;
+    covers
+        && style & (WS_DLGFRAME | WS_THICKFRAME) == 0
+        && ex_style & (WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE) == 0
 }
 
 /// Hide the tabs while a full-screen app runs, and follow work-area changes
@@ -383,9 +472,17 @@ pub fn start_monitor(app: &AppHandle) {
         let mut last = None;
         loop {
             std::thread::sleep(Duration::from_millis(1500));
-            let busy = fullscreen_app_running();
+            let reason = fullscreen_app();
+            let busy = reason.is_some();
+            let changed = FULLSCREEN.swap(busy, Ordering::SeqCst) != busy;
+            if changed {
+                match &reason {
+                    Some(why) => log::info!("[edge] tabs step aside: {why}"),
+                    None => log::info!("[edge] tabs back"),
+                }
+            }
             let frame = frame(&app, state().side);
-            if FULLSCREEN.swap(busy, Ordering::SeqCst) != busy || frame != last {
+            if changed || frame != last {
                 last = frame;
                 let handle = app.clone();
                 let _ = app.run_on_main_thread(move || place(&handle, state()));
@@ -495,5 +592,33 @@ mod tests {
         assert!(hidden(s(Mode::Idle, EdgeHandle::Off)));
         // The drawer opens from the tray or hotkey even with the tabs off.
         assert!(!hidden(s(Mode::Open, EdgeHandle::Off)));
+    }
+
+    #[test]
+    fn only_frameless_windows_filling_the_monitor_count_as_full_screen() {
+        let screen = (0, 0, 1366, 768);
+        // A game or a browser in full screen; some reach past the edges.
+        assert!(fills_monitor((0, 0, 1366, 768), screen, 0, 0));
+        assert!(fills_monitor((-8, -8, 1374, 776), screen, 0, 0));
+        // A window on the work area, above the taskbar.
+        assert!(!fills_monitor((0, 0, 1366, 728), screen, 0, 0));
+        // Covering the screen with a resizing frame, or as a tool window.
+        assert!(!fills_monitor((0, 0, 1366, 768), screen, 0x0004_0000, 0));
+        assert!(!fills_monitor((0, 0, 1366, 768), screen, 0, 0x80));
+        // A second monitor's coordinates work the same.
+        assert!(fills_monitor(
+            (1366, 0, 3286, 1080),
+            (1366, 0, 3286, 1080),
+            0,
+            0
+        ));
+    }
+
+    #[test]
+    fn the_desktop_and_taskbar_are_not_full_screen_apps() {
+        assert!(is_shell_window("Progman"));
+        assert!(is_shell_window("WorkerW"));
+        assert!(is_shell_window("Shell_TrayWnd"));
+        assert!(!is_shell_window("Chrome_WidgetWin_1"));
     }
 }
