@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-18
+
 ### Added
 - Choose the display the shelves live on (the main one, the one with the mouse, or a given display) and their position on the edge (top, middle or bottom), in Settings. If the chosen display is unplugged, the shelves wait on the main one until it's back.
 - The tabs can hide away completely when not in use, so no colored sliver stays on the edge (kinder to OLED screens). They still come out when the mouse touches the edge or a file is dragged. In Settings → Appearance.
@@ -22,6 +24,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Steam's chat (and other apps that only take a drop they may move) refused files dragged from Wedge. Wedge now offers copy or move, as File Explorer does, and asks for a copy, so File Explorer still copies.
 - Dragging files from the pocket onto a place that refused them took them off the pocket anyway.
 - In the Microsoft Store version, Settings no longer says the File Explorer entry is under "Show more options" on Windows 11; there it's in the first menu.
+- The knob of the switches in Settings stuck out past their track.
+- The drawer's title and the tab labels cut off the dot of "İ" and the bottom of letters like ş, g and y.
 
 ## [2.0.1] - 2026-10-16
 
@@ -115,7 +119,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Regncreative/Wedge/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Regncreative/Wedge/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Regncreative/Wedge/compare/v1.0.4...v2.0.0
 [1.0.4]: https://github.com/Regncreative/Wedge/compare/v1.0.3...v1.0.4
