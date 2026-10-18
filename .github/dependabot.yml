@@ -28,6 +28,14 @@ updates:
         patterns: ["tauri", "tauri-*"]
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # Moves with the windows crate (it must match the windows-core that crate
+      # uses, for #[implement]), as one change by hand.
+      - dependency-name: "windows-core"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # zip changes its API often; Wedge moved to 4 in October 2026.
+      - dependency-name: "zip"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
