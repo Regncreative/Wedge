@@ -268,12 +268,16 @@ input {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.06em;
+  /* (Russian: tighter below, so "ХРАНИТСЯ 30 ДНЕЙ" fits; Cyrillic falls back to Cascadia Mono.) */
   opacity: 0.66;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding-block: 0.12em;
   margin-block: -0.12em;
+}
+:root:lang(ru) .tab .tab-sub {
+  letter-spacing: 0.04em;
 }
 .tab .tab-count {
   flex: none;

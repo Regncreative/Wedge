@@ -57,7 +57,7 @@ const COPY: Record<'en' | 'tr' | 'ru', Copy> = {
     labels: { settings: 'Ayarlar', createShelf: 'Raf oluştur', sharedShelf: 'Paylaşılan raf…' }
   },
   ru: {
-    shelves: { pocket: 'Карман', work: 'Работа', personal: 'Личное', temp: 'Временная' },
+    shelves: { pocket: 'Карман', work: 'Рабочее', personal: 'Личное', temp: 'Временное' },
     work: [
       ['Договор.docx'],
       ['Презентация.pptx'],

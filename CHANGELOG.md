@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- Russian wording, by [@alkidnn](https://github.com/alkidnn): tabs say "ЛЕЖИТ" and "ХРАНИТСЯ 7 ДНЕЙ", new installs get the shelves Рабочее, Личное and Временное, and Settings calls the drawer "панель".
+
 ## [2.1.0] - 2026-10-18
 
 ### Added
