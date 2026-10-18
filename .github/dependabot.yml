@@ -11,6 +11,13 @@ updates:
       dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
+    ignore:
+      # tailwind-merge 3 is for Tailwind 4; Wedge is on Tailwind 3.
+      - dependency-name: "tailwind-merge"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 (the native compiler) waits until the tooling around it supports it.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "cargo"
     directory: "/src-tauri"

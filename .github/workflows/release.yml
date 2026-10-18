@@ -26,9 +26,9 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -126,7 +126,7 @@ jobs:
         run: node scripts/build-msix.mjs
 
       - name: Upload the MSIX
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wedge-msix
           path: src-tauri/target/store/*.msix
