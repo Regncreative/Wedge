@@ -1,6 +1,6 @@
 [package]
 name = "wedge"
-version = "2.1.0"
+version = "2.1.1"
 description = "A file shelf on the edge of your screen"
 authors = ["Regncreative"]
 license = "MIT"

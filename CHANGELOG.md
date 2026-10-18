@@ -5,8 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-18
+
 ### Changed
 - Russian wording, by [@alkidnn](https://github.com/alkidnn): tabs say "ЛЕЖИТ" and "ХРАНИТСЯ 7 ДНЕЙ", new installs get the shelves Рабочее, Личное and Временное, and Settings calls the drawer "панель".
+- The Pocket shelf has an icon of its own, a jeans pocket; the old one was another app's logo.
+- Libraries brought up to date, among them React 19, the Tauri plugins (the updater too) and the ones that read SQLite, ZIP and PDF files.
 
 ## [2.1.0] - 2026-10-18
 
@@ -122,7 +126,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/Regncreative/Wedge/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Regncreative/Wedge/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Regncreative/Wedge/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Regncreative/Wedge/compare/v1.0.4...v2.0.0
