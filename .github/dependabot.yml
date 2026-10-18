@@ -11,6 +11,10 @@ updates:
       dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
+      # The rest of the app's own libraries, in one weekly PR; majors still come one by one.
+      minor-and-patch:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
     ignore:
       # tailwind-merge 3 is for Tailwind 4; Wedge is on Tailwind 3.
       - dependency-name: "tailwind-merge"

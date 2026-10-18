@@ -22,18 +22,28 @@ import {
   Inbox,
   Music,
   Package,
-  Pocket,
   Smartphone,
   Star,
-  Users
+  Users,
+  createLucideIcon
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { StashFile } from '@shared/types'
 import { classifyExtension } from '@shared/types'
 import { cn } from '@/lib/utils'
 
+/** Wedge's own pocket, a jeans pocket with its stitching (Lucide 1 dropped
+ *  the icon it used, the Pocket app's logo). */
+const PocketIcon = createLucideIcon('pocket', [
+  [
+    'path',
+    { d: 'M5 3h14v10.2a1.5 1.5 0 0 1-.6 1.2L12 20l-6.4-5.6a1.5 1.5 0 0 1-.6-1.2Z', key: 'outline' }
+  ],
+  ['path', { d: 'M8 7.5h8', key: 'stitch' }]
+])
+
 export const SHELF_ICONS: Record<string, LucideIcon> = {
-  pocket: Pocket,
+  pocket: PocketIcon,
   inbox: Inbox,
   folder: Folder,
   briefcase: Briefcase,
