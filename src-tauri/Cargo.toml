@@ -73,7 +73,7 @@ store = ["windows/ApplicationModel", "windows/Storage_Search"]
 
 [dev-dependencies]
 tempfile = "3"
-minisign-verify = "0.2"
+minisign-verify = "0.3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [profile.release]
