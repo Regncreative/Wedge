@@ -32,7 +32,7 @@ pub fn announce_changes(app: &AppHandle, conn: &rusqlite::Connection) {
     use std::sync::atomic::{AtomicBool, Ordering};
     static PENDING: AtomicBool = AtomicBool::new(false);
     let app = app.clone();
-    conn.update_hook(Some(
+    let hooked = conn.update_hook(Some(
         move |_: rusqlite::hooks::Action, _: &str, table: &str, _: i64| {
             if !matches!(table, "files" | "shelves") || PENDING.swap(true, Ordering::SeqCst) {
                 return;
@@ -53,6 +53,10 @@ pub fn announce_changes(app: &AppHandle, conn: &rusqlite::Connection) {
             });
         },
     ));
+    // Without it, other windows only catch up on their next refresh.
+    if let Err(e) = hooked {
+        log::warn!("database change hook unavailable: {e}");
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
