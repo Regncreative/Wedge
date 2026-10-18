@@ -37,7 +37,7 @@
     "@fontsource-variable/bricolage-grotesque": "5.2.10",
     "@fontsource/instrument-sans": "5.2.8",
     "@fontsource/martian-mono": "5.2.7",
-    "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/api": "^2.12.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^14.1.0",
