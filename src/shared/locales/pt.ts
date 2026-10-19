@@ -45,7 +45,6 @@ export const pt: Messages = {
   filterOther: 'Outros',
   filtersLabel: 'Filtrar por tipo',
 
-  tabSubNormal: 'GUARDA',
   tabSubTemp: (l) => `DURA ${l.toUpperCase()}`,
   tabSubShared: 'COMPARTILHADA',
   tabSubAuto: 'AUTOMÁTICA',
@@ -214,6 +213,8 @@ export const pt: Messages = {
   edgeAutoHide: 'Ocultar quando sem uso',
   edgeAutoHideHint:
     'Nada fica na borda; as abas aparecem quando o mouse toca nela ou ao começar a arrastar',
+  edgeTabDetails: 'Detalhes nas abas',
+  edgeTabDetailsHint: 'A linha abaixo do nome da prateleira, como “Dura 7 dias” ou “Para depois”',
   quitApp: 'Sair do Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',

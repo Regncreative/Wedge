@@ -58,7 +58,6 @@ export type Messages = {
   filtersLabel: string
 
   // Edge tabs and drawer
-  tabSubNormal: string
   tabSubTemp: (label: string) => string
   tabSubShared: string
   tabSubAuto: string
@@ -224,6 +223,8 @@ export type Messages = {
   logsFolder: string
   edgeAutoHide: string
   edgeAutoHideHint: string
+  edgeTabDetails: string
+  edgeTabDetailsHint: string
   quitApp: string
   theme: string
   themeSystem: string

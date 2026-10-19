@@ -43,7 +43,6 @@ export const tr: Messages = {
   filterOther: 'Diğer',
   filtersLabel: 'Türe göre süz',
 
-  tabSubNormal: 'KALICI',
   tabSubTemp: (l) => `${l.toLocaleUpperCase('tr')} KALIR`,
   tabSubShared: 'PAYLAŞILAN',
   tabSubAuto: 'OTOMATİK',
@@ -207,6 +206,8 @@ export const tr: Messages = {
   logsFolder: 'Log klasörü',
   edgeAutoHide: 'Kullanılmazken gizle',
   edgeAutoHideHint: 'Kenarda şerit kalmaz; fare kenara değince ya da dosya sürüklerken çıkar',
+  edgeTabDetails: 'Sekmelerde ayrıntılar',
+  edgeTabDetailsHint: 'Raf adının altındaki satır; ör. “7 gün kalır” ya da “Sonra sürükle”',
   quitApp: 'Wedge’ten çık',
   theme: 'Tema',
   themeSystem: 'Sistem',

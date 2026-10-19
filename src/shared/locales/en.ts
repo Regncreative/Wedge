@@ -43,7 +43,6 @@ export const en: Messages = {
   filterOther: 'Other',
   filtersLabel: 'Filter by type',
 
-  tabSubNormal: 'KEEPS',
   tabSubTemp: (l) => `KEEPS ${l.toUpperCase()}`,
   tabSubShared: 'SHARED',
   tabSubAuto: 'AUTOMATIC',
@@ -211,6 +210,8 @@ export const en: Messages = {
   edgeAutoHide: 'Hide when not in use',
   edgeAutoHideHint:
     'Nothing stays on the edge; the tabs come out when the mouse touches it or a drag starts',
+  edgeTabDetails: 'Details on the tabs',
+  edgeTabDetailsHint: 'The line under a shelf’s name, like “Keeps 7 days” or “Drag later”',
   quitApp: 'Quit Wedge',
   theme: 'Theme',
   themeSystem: 'System',

@@ -45,7 +45,6 @@ export const es: Messages = {
   filterOther: 'Otros',
   filtersLabel: 'Filtrar por tipo',
 
-  tabSubNormal: 'GUARDA',
   tabSubTemp: (l) => `DURA ${l.toUpperCase()}`,
   tabSubShared: 'COMPARTIDO',
   tabSubAuto: 'AUTOMÁTICO',
@@ -217,6 +216,8 @@ export const es: Messages = {
   edgeAutoHide: 'Ocultar cuando no se usan',
   edgeAutoHideHint:
     'No queda nada en el borde; las pestañas salen al tocarlo con el ratón o al empezar a arrastrar',
+  edgeTabDetails: 'Detalles en las pestañas',
+  edgeTabDetailsHint: 'La línea bajo el nombre del estante, como «Dura 7 días» o «Para después»',
   quitApp: 'Salir de Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',

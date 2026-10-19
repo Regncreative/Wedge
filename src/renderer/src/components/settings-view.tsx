@@ -503,6 +503,15 @@ export function SettingsView() {
             />
           </Row>
         )}
+        {edgeOn && (
+          <Row label={t.edgeTabDetails} hint={t.edgeTabDetailsHint}>
+            <Switch
+              label={t.edgeTabDetails}
+              checked={settings.edgeTabDetails}
+              onChange={(v) => void updateSettings({ edgeTabDetails: v })}
+            />
+          </Row>
+        )}
         <Row label={t.edgeTabs} hint={t.edgeTabsHint}>
           <Switch
             label={t.edgeTabs}

@@ -661,6 +661,7 @@ pub fn get_settings(conn: &Connection, lang: Language) -> Result<AppSettings> {
         },
         edge_align: enum_or(stored.get("edgeAlign"), EdgeAlign::Center),
         edge_auto_hide: bool_of("edgeAutoHide", false),
+        edge_tab_details: bool_of("edgeTabDetails", true),
         context_menu: bool_of("contextMenu", true),
     };
 
@@ -751,6 +752,9 @@ fn write_patch(tx: &Connection, patch: &SettingsPatch) -> Result<()> {
     }
     if let Some(v) = patch.edge_auto_hide {
         put("edgeAutoHide", Value::Bool(v))?;
+    }
+    if let Some(v) = patch.edge_tab_details {
+        put("edgeTabDetails", Value::Bool(v))?;
     }
     if let Some(v) = patch.context_menu {
         put("contextMenu", Value::Bool(v))?;
@@ -1180,6 +1184,18 @@ mod tests {
         assert_eq!(s.idle_timeout_sec, 5);
         assert_eq!(s.language, Language::En);
         assert_eq!(get_raw(&conn, "language").unwrap(), None);
+    }
+
+    #[test]
+    fn tab_details_are_on_until_turned_off() {
+        let conn = db();
+        assert!(get_settings(&conn, Language::En).unwrap().edge_tab_details);
+        let patch = SettingsPatch {
+            edge_tab_details: Some(false),
+            ..Default::default()
+        };
+        assert!(!set_settings(&conn, &patch, Language::En).unwrap().edge_tab_details);
+        assert!(!get_settings(&conn, Language::En).unwrap().edge_tab_details);
     }
 
     #[test]

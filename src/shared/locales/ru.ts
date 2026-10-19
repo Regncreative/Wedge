@@ -55,7 +55,6 @@ export const ru: Messages = {
   filterExecutables: 'Приложения',
   filterOther: 'Другое',
   filtersLabel: 'Фильтр по типу',
-  tabSubNormal: 'ЛЕЖИТ',
   tabSubTemp: (l) => `ХРАНИТСЯ ${l.toUpperCase()}`,
   tabSubShared: 'ОБЩАЯ',
   tabSubAuto: 'АВТО',
@@ -217,6 +216,8 @@ export const ru: Messages = {
   edgeAutoHide: 'Скрывать, когда не нужны',
   edgeAutoHideHint:
     'На краю ничего не остаётся; вкладки выезжают, когда мышь касается края или начинается перетаскивание',
+  edgeTabDetails: 'Подписи на вкладках',
+  edgeTabDetailsHint: 'Строка под названием полки, например «Хранится 7 дней» или «Перетащить»',
   quitApp: 'Выйти из Wedge',
   theme: 'Тема',
   themeSystem: 'Системная',

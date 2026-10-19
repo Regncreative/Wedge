@@ -43,7 +43,6 @@ export const ja: Messages = {
   filterOther: 'その他',
   filtersLabel: '種類で絞り込む',
 
-  tabSubNormal: '保持',
   tabSubTemp: (l) => `${l}保持`,
   tabSubShared: '共有',
   tabSubAuto: '自動',
@@ -210,6 +209,8 @@ export const ja: Messages = {
   edgeAutoHide: '使わないときは隠す',
   edgeAutoHideHint:
     '端には何も残りません。マウスが端に触れるか、ドラッグを始めるとタブが出てきます',
+  edgeTabDetails: 'タブに詳細を表示',
+  edgeTabDetailsHint: '棚の名前の下の行（例：「7日保持」「あとで」）',
   quitApp: 'Wedge を終了',
   theme: 'テーマ',
   themeSystem: 'システム',

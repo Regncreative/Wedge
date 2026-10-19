@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { formatDisplay, mapKey, toAccelerator } from '../../src/renderer/src/lib/hotkey'
 import { formatWhen } from '../../src/renderer/src/lib/format'
 import { droppedText } from '../../src/renderer/src/lib/dropped-text'
+import { hasThumbnail } from '../../src/renderer/src/hooks/use-file-visual'
+import type { StashFile } from '../../src/shared/types'
 
 describe('hotkey helpers', () => {
   const record = (...keys: string[]) =>
@@ -72,5 +74,18 @@ describe('droppedText', () => {
     ).toEqual({ text: ' Call Ada\nabout it ' })
     expect(droppedText(drag({ 'text/plain': ' \n ' }))).toBeNull()
     expect(droppedText(drag({}))).toBeNull()
+  })
+})
+
+describe('hasThumbnail', () => {
+  const file = (extension: string) => ({ extension, exists: true, isDirectory: false }) as StashFile
+
+  it('asks Windows for thumbnails of LibreOffice files in grids, as for Office ones', () => {
+    for (const ext of ['odt', 'ODS', 'odp', 'odg', 'docx', 'pdf']) {
+      expect(hasThumbnail(file(ext), true)).toBe(true)
+      expect(hasThumbnail(file(ext), false)).toBe(false)
+    }
+    expect(hasThumbnail(file('png'), false)).toBe(true)
+    expect(hasThumbnail(file('txt'), true)).toBe(false)
   })
 })

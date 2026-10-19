@@ -152,6 +152,8 @@ export interface AppSettings {
   edgeAlign: EdgeAlign
   /** Tucked in, the tabs leave the screen entirely (no sliver). */
   edgeAutoHide: boolean
+  /** The line under a shelf's name on its tab ("Keeps 7 days"); plain shelves have none. */
+  edgeTabDetails: boolean
   /** "Add to Wedge" in Explorer's right-click menu. */
   contextMenu: boolean
 }
@@ -207,6 +209,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   edgeMonitor: 'primary',
   edgeAlign: 'center',
   edgeAutoHide: false,
+  edgeTabDetails: true,
   contextMenu: true
 }
 
@@ -236,6 +239,7 @@ export function normalizeSettings(raw: Partial<AppSettings> | null | undefined):
   s.edgeMonitor = typeof s.edgeMonitor === 'string' && s.edgeMonitor ? s.edgeMonitor : 'primary'
   s.edgeAlign = s.edgeAlign === 'top' || s.edgeAlign === 'bottom' ? s.edgeAlign : 'center'
   s.edgeAutoHide = s.edgeAutoHide === true
+  s.edgeTabDetails = s.edgeTabDetails !== false
   return s
 }
 

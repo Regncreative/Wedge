@@ -52,7 +52,6 @@ export const plPL: Messages = {
   filterOther: 'Inne',
   filtersLabel: 'Filtruj według typu',
 
-  tabSubNormal: 'TRZYMA',
   tabSubTemp: (l) => `NA ${l.toUpperCase()}`,
   tabSubShared: 'UDOSTĘPNIONA',
   tabSubAuto: 'AUTOMATYCZNA',
@@ -222,6 +221,8 @@ export const plPL: Messages = {
   edgeAutoHide: 'Ukrywaj, gdy nieużywane',
   edgeAutoHideHint:
     'Przy krawędzi nic nie zostaje; zakładki wysuwają się, gdy mysz jej dotknie albo zaczniesz przeciągać',
+  edgeTabDetails: 'Szczegóły na zakładkach',
+  edgeTabDetailsHint: 'Wiersz pod nazwą półki, np. „Na 7 dni” albo „Na później”',
   quitApp: 'Zamknij Wedge',
   theme: 'Motyw',
   themeSystem: 'Systemowy',

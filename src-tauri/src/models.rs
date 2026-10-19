@@ -184,6 +184,8 @@ pub struct AppSettings {
     /// Tucked in, the tabs leave the screen entirely (no sliver, for OLED
     /// screens); they come out when the cursor touches the edge or a drag starts.
     pub edge_auto_hide: bool,
+    /// The line under a shelf's name on its tab ("Keeps 7 days").
+    pub edge_tab_details: bool,
     /// "Add to Wedge" in Explorer's right-click menu.
     pub context_menu: bool,
 }
@@ -212,6 +214,7 @@ pub struct SettingsPatch {
     pub edge_monitor: Option<String>,
     pub edge_align: Option<EdgeAlign>,
     pub edge_auto_hide: Option<bool>,
+    pub edge_tab_details: Option<bool>,
     pub context_menu: Option<bool>,
 }
 

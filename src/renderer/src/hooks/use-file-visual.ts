@@ -47,7 +47,9 @@ export function hasThumbnail(file: StashFile, documents: boolean): boolean {
   if (!file.exists || file.isDirectory) return false
   const ext = file.extension.toLowerCase()
   if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return true
-  return documents && ['pdf', 'docx', 'pptx', 'xlsx'].includes(ext)
+  // LibreOffice's files too: Windows makes their thumbnails with the File
+  // Explorer extension LibreOffice installs (without it, the icon stays).
+  return documents && ['pdf', 'docx', 'pptx', 'xlsx', 'odt', 'ods', 'odp', 'odg'].includes(ext)
 }
 
 export function useFileVisual(

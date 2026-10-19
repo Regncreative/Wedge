@@ -45,7 +45,6 @@ export const de: Messages = {
   filterOther: 'Sonstige',
   filtersLabel: 'Nach Typ filtern',
 
-  tabSubNormal: 'BEHÄLT',
   tabSubTemp: (l) => `HÄLT ${l.toUpperCase()}`,
   tabSubShared: 'GETEILT',
   tabSubAuto: 'AUTOMATISCH',
@@ -216,6 +215,8 @@ export const de: Messages = {
   edgeAutoHide: 'Ausblenden, wenn ungenutzt',
   edgeAutoHideHint:
     'Am Rand bleibt nichts stehen; die Reiter kommen, wenn die Maus ihn berührt oder du etwas ziehst',
+  edgeTabDetails: 'Details auf den Reitern',
+  edgeTabDetailsHint: 'Die Zeile unter dem Namen des Regals, etwa „Hält 7 Tage“ oder „Für später“',
   quitApp: 'Wedge beenden',
   theme: 'Design',
   themeSystem: 'System',

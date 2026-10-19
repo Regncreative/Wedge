@@ -45,7 +45,6 @@ export const it: Messages = {
   filterOther: 'Altro',
   filtersLabel: 'Filtra per tipo',
 
-  tabSubNormal: 'CONSERVA',
   tabSubTemp: (l) => `PER ${l.toUpperCase()}`,
   tabSubShared: 'CONDIVISO',
   tabSubAuto: 'AUTOMATICO',
@@ -215,6 +214,8 @@ export const it: Messages = {
   edgeAutoHide: 'Nascondi quando non servono',
   edgeAutoHideHint:
     'Sul bordo non resta niente; le linguette escono quando il mouse lo tocca o inizi a trascinare',
+  edgeTabDetails: 'Dettagli sulle linguette',
+  edgeTabDetailsHint: 'La riga sotto il nome dello scaffale, come “Per 7 giorni” o “Per dopo”',
   quitApp: 'Esci da Wedge',
   theme: 'Tema',
   themeSystem: 'Sistema',

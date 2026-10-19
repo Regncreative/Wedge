@@ -239,6 +239,39 @@ test('hides the tabs away entirely when asked, and they still come out', async (
   await tuckIn()
 })
 
+test('puts a second line on a tab only where it says something, and can drop it', async () => {
+  const { page } = stash
+  await page.locator('.tabs').waitFor()
+  const shelves = await page.evaluate(() => window.stash.listShelves())
+  const by = (f: (s: (typeof shelves)[number]) => boolean) => shelves.find(f)!
+  const work = by((s) => s.icon === 'briefcase').name
+  const pocket = by((s) => s.kind === 'pocket').name
+  // A new install's Temporary shelf keeps files until it's given a time.
+  const clock = by((s) => s.icon === 'clock')
+  const temp = clock.name
+  await expect(tab(page, temp).locator('.tab-sub')).toHaveCount(0)
+  await page.evaluate((id) => window.stash.setShelfExpiry(id, 168), clock.id)
+  await page.reload()
+  await page.locator('.tabs').waitFor()
+  const sub = (name: string) => tab(page, name).locator('.tab-sub')
+  // A plain shelf just keeps files: nothing to say under its name.
+  await expect(sub(work)).toHaveCount(0)
+  // (In the language Windows uses: "KEEPS 7 DAYS", "7 GÜN KALIR".)
+  await expect(sub(temp)).toHaveText(/7/)
+  await expect(sub(pocket)).toHaveCount(1)
+
+  await page.evaluate(() => window.stash.setSettings({ edgeTabDetails: false }))
+  await page.reload()
+  await page.locator('.tabs').waitFor()
+  await expect(page.locator('.tab .tab-sub')).toHaveCount(0)
+  await expect(page.locator('.tab .tab-name')).toHaveCount(shelves.length)
+
+  await page.evaluate(() => window.stash.setSettings({ edgeTabDetails: true }))
+  await page.evaluate((id) => window.stash.setShelfExpiry(id, null), clock.id)
+  await page.reload()
+  await expect(sub(pocket)).toHaveCount(1)
+})
+
 test('takes a link or text dragged from another app onto a tab', async () => {
   const { page } = stash
   await page.evaluate(() => window.stash.setSettings({ onboardingDone: true }))

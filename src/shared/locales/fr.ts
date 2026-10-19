@@ -46,7 +46,6 @@ export const fr: Messages = {
   filterOther: 'Autres',
   filtersLabel: 'Filtrer par type',
 
-  tabSubNormal: 'CONSERVE',
   tabSubTemp: (l) => `DURE ${l.toUpperCase()}`,
   tabSubShared: 'PARTAGÉE',
   tabSubAuto: 'AUTOMATIQUE',
@@ -216,6 +215,8 @@ export const fr: Messages = {
   edgeAutoHide: 'Masquer hors utilisation',
   edgeAutoHideHint:
     'Rien ne reste sur le bord ; les onglets sortent quand la souris le touche ou qu’un glissement commence',
+  edgeTabDetails: 'Détails sur les onglets',
+  edgeTabDetailsHint: 'La ligne sous le nom de l’étagère, comme « Dure 7 jours » ou « Pour après »',
   quitApp: 'Quitter Wedge',
   theme: 'Thème',
   themeSystem: 'Système',

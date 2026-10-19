@@ -16,12 +16,13 @@ function expiry(t: Messages, hours: number): string {
   return hours % 24 === 0 ? t.expiryDays(hours / 24) : t.expiryHours(hours)
 }
 
-function subLabel(t: Messages, s: Shelf): string {
+/** The line under the name, for shelves that work differently; a plain shelf has none. */
+function subLabel(t: Messages, s: Shelf): string | null {
   if (s.kind === 'pocket') return t.tabSubPocket
   if (s.folder) return t.tabSubShared
   if (s.expireHours) return t.tabSubTemp(expiry(t, s.expireHours))
   if (AUTOMATIC.has(s.kind)) return t.tabSubAuto
-  return t.tabSubNormal
+  return null
 }
 
 /** The last few files in the pocket, as small pictures on its tab. */
@@ -40,6 +41,7 @@ export function Tabs() {
   const mode = useEdge((s) => s.mode)
   const target = useEdge((s) => s.target)
   const bump = useEdge((s) => s.bump)
+  const details = useStashStore((s) => s.settings?.edgeTabDetails !== false)
   const nav = useRef<HTMLElement>(null)
 
   // A screen too short for every tab (a small one at a large scale, or many
@@ -122,6 +124,7 @@ export function Tabs() {
       {ordered.map((shelf, i) => {
         const items = counts.get(shelf.id) ?? []
         const pocket = shelf.kind === 'pocket'
+        const sub = details ? subLabel(t, shelf) : null
         return (
           <button
             key={shelf.id}
@@ -147,7 +150,7 @@ export function Tabs() {
             </span>
             <span className="tab-label">
               <span className="tab-name">{shelf.name}</span>
-              <span className="tab-sub">{subLabel(t, shelf)}</span>
+              {sub && <span className="tab-sub">{sub}</span>}
             </span>
             {pocket && items.length > 0 && (
               <span className="tab-stack" aria-hidden>

@@ -39,6 +39,11 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ edgeHandle: 'off' }).edgeHandle).toBe('off')
     expect(normalizeSettings({ edgeHandle: 'top' as never }).edgeHandle).toBe('right')
   })
+
+  it('shows the details on the tabs unless turned off', () => {
+    expect(normalizeSettings({}).edgeTabDetails).toBe(true)
+    expect(normalizeSettings({ edgeTabDetails: false }).edgeTabDetails).toBe(false)
+  })
 })
 
 describe('classifyExtension', () => {

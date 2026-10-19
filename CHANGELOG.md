@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- A switch in Settings → Appearance hides the line under the shelf names on every tab.
+- Cards of LibreOffice files (.odt, .ods, .odp, .odg) show a thumbnail, as Word, Excel and PowerPoint files do. Windows makes it with the File Explorer extension LibreOffice installs; without it the card keeps the icon.
+
+### Changed
+- A plain shelf's tab shows just its name. The line under it stays only where it tells you something: how long a temporary shelf keeps files, and on the pocket, shared and automatic shelves.
+
 ## [2.1.1] - 2026-10-18
 
 ### Changed
