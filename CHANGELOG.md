@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-10-19
+
 ### Added
 - A switch in Settings → Appearance hides the line under the shelf names on every tab.
 - Cards of LibreOffice files (.odt, .ods, .odp, .odg) show a thumbnail, as Word, Excel and PowerPoint files do. Windows makes it with the File Explorer extension LibreOffice installs; without it the card keeps the icon.
@@ -133,7 +135,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/Regncreative/Wedge/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/Regncreative/Wedge/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Regncreative/Wedge/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Regncreative/Wedge/compare/v2.0.0...v2.0.1
