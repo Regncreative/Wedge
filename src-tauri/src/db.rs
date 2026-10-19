@@ -1194,7 +1194,11 @@ mod tests {
             edge_tab_details: Some(false),
             ..Default::default()
         };
-        assert!(!set_settings(&conn, &patch, Language::En).unwrap().edge_tab_details);
+        assert!(
+            !set_settings(&conn, &patch, Language::En)
+                .unwrap()
+                .edge_tab_details
+        );
         assert!(!get_settings(&conn, Language::En).unwrap().edge_tab_details);
     }
 
