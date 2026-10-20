@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-10-20
+
 ### Fixed
 - With two displays side by side, moving the cursor from one to the other brushed the tabs sitting on the border between them, and they popped out, with "The display with the mouse" even on the other display ([#44](https://github.com/Regncreative/Wedge/issues/44)). On an edge that borders another display, the tabs now come out only when the cursor stays there for a moment, and always where it touched them.
 
@@ -141,7 +143,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.3...HEAD
+[2.1.3]: https://github.com/Regncreative/Wedge/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/Regncreative/Wedge/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/Regncreative/Wedge/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Regncreative/Wedge/compare/v2.0.1...v2.1.0
