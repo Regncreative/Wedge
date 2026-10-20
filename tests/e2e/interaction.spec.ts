@@ -239,6 +239,33 @@ test('hides the tabs away entirely when asked, and they still come out', async (
   await tuckIn()
 })
 
+test('on a border between two displays, waits for the cursor to stay before coming out', async () => {
+  const { page } = stash
+  await page.locator('.tabs').waitFor()
+  // Only with a display past the main one's right edge (as on a desk with two screens).
+  const inner = await page.evaluate(() => window.stash.edgeInner())
+  test.skip(!inner, 'needs another display past the right edge of the main one')
+  const mode = () => page.evaluate(async () => (await window.stash.edgeState()).mode)
+  await page.mouse.move(-20, -20)
+  await page.evaluate(() => window.stash.edgeMode('idle'))
+  await expect.poll(mode).toBe('idle')
+  const box = (await page.locator('.tabs').boundingBox())!
+  const edge = await page.evaluate(() => innerWidth - 1)
+  const y = box.y + box.height / 2
+
+  // On the way to the other display: in and out again.
+  await page.mouse.move(edge, y)
+  await page.mouse.move(-20, -20)
+  await page.waitForTimeout(500)
+  expect(await mode()).toBe('idle')
+
+  // Resting there brings them out.
+  await page.mouse.move(edge, y)
+  await expect.poll(mode).toBe('peek')
+  await page.mouse.move(-20, -20)
+  await expect.poll(mode).toBe('idle')
+})
+
 test('puts a second line on a tab only where it says something, and can drop it', async () => {
   const { page } = stash
   await page.locator('.tabs').waitFor()

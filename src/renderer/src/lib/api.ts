@@ -113,6 +113,8 @@ export interface StashApi {
   phoneStop: () => Promise<void>
   pickFolder: () => Promise<string | null>
   edgeState: () => Promise<EdgeState>
+  /** The tabs sit on a border between two displays, where the cursor passes by. */
+  edgeInner: () => Promise<boolean>
   /** Size the edge window for a mode (the page animates the change). */
   edgeMode: (mode: EdgeMode) => Promise<void>
   /** Where the edge window catches the cursor: [x, y, width, height], physical pixels. */
@@ -232,6 +234,7 @@ export const api: StashApi = {
   phoneStop: () => invoke('phone_stop'),
   pickFolder: () => invoke('pick_folder'),
   edgeState: () => invoke('edge_state'),
+  edgeInner: () => invoke('edge_inner'),
   edgeMode: (mode) => invoke('edge_mode', { mode }),
   edgeArea: () => invoke('edge_area'),
   listMonitors: () => invoke('list_monitors'),

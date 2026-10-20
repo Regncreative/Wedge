@@ -67,6 +67,8 @@ static STATE: Mutex<EdgeState> = Mutex::new(EdgeState {
 });
 /// A full-screen app (game, video, presentation) is in front.
 static FULLSCREEN: AtomicBool = AtomicBool::new(false);
+/// The tabs sit on a border between two displays (see `borders_display`).
+static INNER: AtomicBool = AtomicBool::new(false);
 /// The tabs leave the screen when tucked in (the edgeAutoHide setting).
 static AUTO_HIDE: AtomicBool = AtomicBool::new(false);
 
@@ -128,6 +130,8 @@ struct Frame {
     column_top: i32,
     column_h: i32,
     scale: f64,
+    /// Another display lies past the edge beside the tab column.
+    inner: bool,
 }
 
 /// The display the tabs live on. While the chosen one is gone (unplugged),
@@ -157,17 +161,22 @@ fn monitor(app: &AppHandle) -> Option<tauri::Monitor> {
 }
 
 /// With "the display with the mouse": take the display the cursor is on.
-/// Called while the tabs are tucked in, and as they come out.
-fn follow_cursor(app: &AppHandle) {
+/// Called while the tabs are tucked in, and as they come out. Says whether
+/// that's another display than before.
+fn follow_cursor(app: &AppHandle) -> bool {
     if PLACEMENT.lock().unwrap_or_else(|e| e.into_inner()).monitor != MONITOR_CURSOR {
-        return;
+        return false;
     }
     let Ok(pos) = app.cursor_position() else {
-        return;
+        return false;
     };
-    if let Ok(Some(m)) = app.monitor_from_point(pos.x, pos.y) {
-        *CURSOR_MONITOR.lock().unwrap_or_else(|e| e.into_inner()) = m.name().cloned();
-    }
+    let Ok(Some(m)) = app.monitor_from_point(pos.x, pos.y) else {
+        return false;
+    };
+    let mut now = CURSOR_MONITOR.lock().unwrap_or_else(|e| e.into_inner());
+    let moved = *now != m.name().cloned();
+    *now = m.name().cloned();
+    moved
 }
 
 /// The tab column's top in a window `h` tall: at the top, middle or bottom,
@@ -203,15 +212,50 @@ fn frame(app: &AppHandle, side: EdgeHandle) -> Option<Frame> {
         EdgeAlign::Center => wy + (wh - h) / 2,
         EdgeAlign::Bottom => wy + wh - h - px(MARGIN),
     };
+    // At the top or bottom the first or last tab lines up with the drawer.
+    let column_top = column_top(align, h, column_h, px(DRAWER_PAD - TABS_PAD));
+    let rect = |m: &tauri::Monitor| {
+        let (p, s) = (m.position(), m.size());
+        (p.x, p.y, s.width as i32, s.height as i32)
+    };
+    let others: Vec<_> = app
+        .available_monitors()
+        .unwrap_or_default()
+        .iter()
+        .filter(|m| m.name() != monitor.name())
+        .map(rect)
+        .collect();
+    let top = y + column_top;
+    let inner = borders_display(side, rect(&monitor), &others, top, top + column_h);
     Some(Frame {
         x,
         y,
         w,
         h,
-        // At the top or bottom the first or last tab lines up with the drawer.
-        column_top: column_top(align, h, column_h, px(DRAWER_PAD - TABS_PAD)),
+        column_top,
         column_h,
         scale,
+        inner,
+    })
+}
+
+/// Whether another display touches this edge of `me` beside the tab column
+/// (`top..bottom`). The cursor doesn't stop at such an edge, it crosses it on
+/// the way to that display, so the tabs there wait to see it stay (#44).
+/// Rectangles are (x, y, width, height) in physical pixels.
+fn borders_display(
+    side: EdgeHandle,
+    me: (i32, i32, i32, i32),
+    others: &[(i32, i32, i32, i32)],
+    top: i32,
+    bottom: i32,
+) -> bool {
+    others.iter().any(|&(x, y, w, h)| {
+        let touches = match side {
+            EdgeHandle::Left => (x + w - me.0).abs() <= 1,
+            _ => (x - (me.0 + me.2)).abs() <= 1,
+        };
+        touches && y < bottom && y + h > top
     })
 }
 
@@ -349,6 +393,17 @@ fn place(app: &AppHandle, s: EdgeState) {
     let Some(f) = frame(app, s.side) else {
         return;
     };
+    if INNER.swap(f.inner, Ordering::SeqCst) != f.inner {
+        log::info!(
+            "[edge] {}",
+            if f.inner {
+                "on a border between displays: the tabs wait for the cursor to stay"
+            } else {
+                "on an outer edge"
+            }
+        );
+        let _ = app.emit_to(LABEL, "edge-inner", f.inner);
+    }
     let (x, y) = if hidden(s) {
         (PARKED, PARKED)
     } else {
@@ -410,8 +465,11 @@ pub fn set_mode(app: &AppHandle, mode: Mode) {
         s.mode = mode;
         (before, *s)
     };
-    // Coming out: on the display with the mouse, if that's the setting.
-    if before.mode == Mode::Idle && mode != Mode::Idle {
+    // Coming out: on the display with the mouse, if that's the setting. Not
+    // for a hover: the cursor is on the tabs already, and on a border between
+    // two displays it may be on the next one by now, which took the tabs
+    // over there (#44).
+    if before.mode == Mode::Idle && !matches!(mode, Mode::Idle | Mode::Peek) {
         follow_cursor(app);
     }
     place(app, now);
@@ -611,11 +669,16 @@ pub fn start_monitor(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
         let mut last = None;
+        let mut tick = 0u32;
         loop {
-            std::thread::sleep(Duration::from_millis(1500));
-            // Tucked in, the tabs follow the mouse across displays (if set).
-            if state().mode == Mode::Idle {
-                follow_cursor(&app);
+            std::thread::sleep(Duration::from_millis(250));
+            tick = (tick + 1) % 6;
+            // Tucked in, the tabs follow the mouse across displays (if set),
+            // soon enough to be there when it reaches the edge. The rest
+            // runs every 1.5 s.
+            let moved = state().mode == Mode::Idle && follow_cursor(&app);
+            if !moved && tick != 0 {
+                continue;
             }
             let reason = fullscreen_app();
             let busy = reason.is_some();
@@ -676,6 +739,12 @@ pub fn edge_area(app: AppHandle) -> Option<[i32; 4]> {
     Some([x + l, y + t, r - l, b - t])
 }
 
+/// Whether the tabs sit on a border between two displays, for the page.
+#[tauri::command]
+pub fn edge_inner() -> bool {
+    INNER.load(Ordering::SeqCst)
+}
+
 /// The page asks for a mode (hover → peek, a drag over the sliver → drag,
 /// a tab click → open, done → idle).
 #[tauri::command]
@@ -711,6 +780,7 @@ mod tests {
             column_top: 196,
             column_h: 292,
             scale: 1.0,
+            inner: false,
         };
         let s = |mode, side| EdgeState { mode, side };
         assert_eq!(
@@ -781,6 +851,31 @@ mod tests {
         for align in [EdgeAlign::Top, EdgeAlign::Center, EdgeAlign::Bottom] {
             assert_eq!(column_top(align, 684, 684, 10), 0);
         }
+    }
+
+    #[test]
+    fn a_display_past_the_edge_beside_the_tabs_makes_it_a_border() {
+        // The main display, a second one to its right, a third above.
+        let main = (0, 0, 1920, 1080);
+        let others = [(1920, 0, 1920, 1080), (1097, -1080, 1920, 1080)];
+        assert!(borders_display(EdgeHandle::Right, main, &others, 400, 680));
+        assert!(!borders_display(EdgeHandle::Left, main, &others, 400, 680));
+        // The second display, seen from itself: its left edge is the border.
+        let second = (1920, 0, 1920, 1080);
+        assert!(borders_display(EdgeHandle::Left, second, &[main], 400, 680));
+        assert!(!borders_display(
+            EdgeHandle::Right,
+            second,
+            &[main],
+            400,
+            680
+        ));
+        // A display to the right but beside other heights doesn't count.
+        let low = [(1920, 900, 1920, 1080)];
+        assert!(!borders_display(EdgeHandle::Right, main, &low, 400, 680));
+        assert!(borders_display(EdgeHandle::Right, main, &low, 400, 1000));
+        // One display alone has outer edges only.
+        assert!(!borders_display(EdgeHandle::Right, main, &[], 400, 680));
     }
 
     #[test]

@@ -290,6 +290,7 @@ pub fn run() {
             commands_extra::quick_look,
             commands_extra::pick_folder,
             panel::edge_state,
+            panel::edge_inner,
             panel::edge_mode,
             panel::edge_area,
             panel::list_monitors,

@@ -12,6 +12,11 @@ import { useT } from './lib/i18n'
 
 /** After a drop on a tab, the tabs stay out this long before tucking in. */
 const AFTER_DROP_MS = 900
+/**
+ * On a border between two displays the cursor passes over the tabs on its
+ * way to the other one; there they come out only if it stays this long (#44).
+ */
+const BORDER_DWELL_MS = 180
 
 export default function App() {
   const t = useT()
@@ -22,6 +27,7 @@ export default function App() {
   const align = useStashStore((s) => s.settings?.edgeAlign ?? 'center')
   const autoHide = useStashStore((s) => s.settings?.edgeAutoHide === true)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     void init()
@@ -208,9 +214,18 @@ export default function App() {
       data-hide={autoHide || undefined}
       onPointerEnter={() => {
         cancelLater()
-        if (useEdge.getState().mode === 'idle') useEdge.getState().request('peek')
+        const peek = () => {
+          dwellTimer.current = null
+          if (useEdge.getState().mode === 'idle') useEdge.getState().request('peek')
+        }
+        if (!useEdge.getState().inner) peek()
+        else if (useEdge.getState().mode === 'idle') {
+          dwellTimer.current = setTimeout(peek, BORDER_DWELL_MS)
+        }
       }}
       onPointerLeave={() => {
+        if (dwellTimer.current) clearTimeout(dwellTimer.current)
+        dwellTimer.current = null
         if (useEdge.getState().mode === 'peek') later(tuckIn, 250)
       }}
     >

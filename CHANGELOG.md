@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- With two displays side by side, moving the cursor from one to the other brushed the tabs sitting on the border between them, and they popped out, with "The display with the mouse" even on the other display ([#44](https://github.com/Regncreative/Wedge/issues/44)). On an edge that borders another display, the tabs now come out only when the cursor stays there for a moment, and always where it touched them.
+
+### Changed
+- With "The display with the mouse", the tabs move to the display the cursor goes to within a quarter of a second, instead of up to a second and a half, so they're there by the time it reaches the edge.
+
 ## [2.1.2] - 2026-10-19
 
 ### Added

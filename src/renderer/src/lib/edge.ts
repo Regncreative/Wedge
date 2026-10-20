@@ -15,6 +15,8 @@ interface EdgeStore {
   side: EdgeSide
   /** A file drag is in progress somewhere in Windows (the backend's drag watcher). */
   dragging: boolean
+  /** The tabs sit on a border between two displays (src-tauri/src/panel.rs). */
+  inner: boolean
   /** Shelf tab under the pointer during a drag. */
   target: string | null
   setTarget: (id: string | null) => void
@@ -42,6 +44,7 @@ export const useEdge = create<EdgeStore>((set, get) => ({
   mode: 'idle',
   side: 'right',
   dragging: false,
+  inner: false,
   target: null,
   setTarget: (id) => {
     if (get().target !== id) set({ target: id })
@@ -97,6 +100,8 @@ export function connectEdge(): () => void {
       useEdge.setState({ dragging: payload })
     })
   )
+  void window.stash.edgeInner().then((inner) => useEdge.setState({ inner }))
+  offs.push(listen<boolean>('edge-inner', ({ payload }) => useEdge.setState({ inner: payload })))
   return () => {
     for (const off of offs) void off.then((fn) => fn())
   }
