@@ -261,7 +261,7 @@ export const ja: Messages = {
   sourceDownloads: 'ダウンロード',
   sourceScreenshots: 'スクリーンショット',
   sourcePhone: 'スマホ',
-  sourceClipboard: 'クリップボード',
+  sourceClipboard: '貼り付け (Ctrl+V)',
   addRule: 'ルールを追加',
   noRules: 'まだルールはありません',
   clearMissing: '見つからないファイルを片付ける',

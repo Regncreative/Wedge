@@ -257,7 +257,7 @@ export const tr: Messages = {
   sourceDownloads: 'İndirilenler',
   sourceScreenshots: 'Ekran görüntüleri',
   sourcePhone: 'Telefon',
-  sourceClipboard: 'Pano',
+  sourceClipboard: 'Yapıştırılan (Ctrl+V)',
   addRule: 'Kural ekle',
   noRules: 'Henüz kural yok',
   clearMissing: 'Eksik dosyaları temizle',

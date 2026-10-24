@@ -267,7 +267,7 @@ export const ru: Messages = {
   sourceDownloads: 'Загрузки',
   sourceScreenshots: 'Скриншоты',
   sourcePhone: 'Телефон',
-  sourceClipboard: 'Буфер обмена',
+  sourceClipboard: 'Вставлено (Ctrl+V)',
   addRule: 'Добавить правило',
   noRules: 'Пока нет правил',
   clearMissing: 'Очистить отсутствующие файлы',

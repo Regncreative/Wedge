@@ -265,7 +265,7 @@ export const it: Messages = {
   sourceDownloads: 'Download',
   sourceScreenshots: 'Screenshot',
   sourcePhone: 'Telefono',
-  sourceClipboard: 'Appunti',
+  sourceClipboard: 'Incollato (Ctrl+V)',
   addRule: 'Aggiungi regola',
   noRules: 'Ancora nessuna regola',
   clearMissing: 'Pulisci i file mancanti',

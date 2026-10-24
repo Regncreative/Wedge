@@ -497,7 +497,9 @@ pub async fn paste_clipboard(
         .await
         .map_err(err)?;
     if !files.is_empty() {
-        let n = added_to(files, "manual");
+        // Pasted, like the images and text below, so a "Pasted" rule routes
+        // them too (#47).
+        let n = added_to(files, "clipboard");
         return Ok(PasteResult {
             kind: "files",
             added: n,

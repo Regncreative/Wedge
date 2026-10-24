@@ -266,7 +266,7 @@ export const de: Messages = {
   sourceDownloads: 'Downloads',
   sourceScreenshots: 'Screenshots',
   sourcePhone: 'Handy',
-  sourceClipboard: 'Zwischenablage',
+  sourceClipboard: 'Eingefügt (Strg+V)',
   addRule: 'Regel hinzufügen',
   noRules: 'Noch keine Regeln',
   clearMissing: 'Fehlende Dateien aufräumen',

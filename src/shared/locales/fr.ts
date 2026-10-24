@@ -266,7 +266,7 @@ export const fr: Messages = {
   sourceDownloads: 'Téléchargements',
   sourceScreenshots: 'Captures d’écran',
   sourcePhone: 'Téléphone',
-  sourceClipboard: 'Presse-papiers',
+  sourceClipboard: 'Collé (Ctrl+V)',
   addRule: 'Ajouter une règle',
   noRules: 'Aucune règle pour l’instant',
   clearMissing: 'Nettoyer les fichiers manquants',

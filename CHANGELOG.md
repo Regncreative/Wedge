@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- A rule for the clipboard never caught files pasted with Ctrl+V, only pasted images, links and text, because pasted files counted as added by hand ([#47](https://github.com/Regncreative/Wedge/issues/47)). Pasted files now follow it too.
+
+### Changed
+- In rules, the clipboard source is called "Pasted (Ctrl+V)": it means what you paste into Wedge, not everything you copy.
+
 ## [2.1.3] - 2026-10-20
 
 ### Fixed

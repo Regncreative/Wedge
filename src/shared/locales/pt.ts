@@ -264,7 +264,7 @@ export const pt: Messages = {
   sourceDownloads: 'Downloads',
   sourceScreenshots: 'Capturas de tela',
   sourcePhone: 'Celular',
-  sourceClipboard: 'Área de transferência',
+  sourceClipboard: 'Colado (Ctrl+V)',
   addRule: 'Adicionar regra',
   noRules: 'Nenhuma regra ainda',
   clearMissing: 'Limpar arquivos ausentes',

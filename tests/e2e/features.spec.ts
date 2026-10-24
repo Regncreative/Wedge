@@ -239,6 +239,42 @@ test('Ctrl+V adds a copied link to the shelf', async () => {
   }
 })
 
+test('a pasted file follows a Pasted rule, like pasted text does', async () => {
+  const { page } = stash
+  await addAndShow(page, {})
+  // A file somewhere on disk, not on a shelf yet.
+  const file = join(work, 'Snapshot 01.png')
+  writeFileSync(file, noisyPng(4, 4))
+  const shelf = await page.evaluate(() => window.stash.createShelf({ name: 'snapshot' }))
+  await page.evaluate((id) => window.stash.addRule(id, '', 'clipboard'), shelf.id)
+  const ps = (cmd: string) =>
+    execFileSync('powershell.exe', ['-NoProfile', '-Command', cmd], { encoding: 'utf8' })
+  let previous = ''
+  try {
+    previous = ps('Get-Clipboard -Raw')
+  } catch {
+    previous = ''
+  }
+  try {
+    // What Ctrl+C on a file in File Explorer puts on the clipboard.
+    ps(`Set-Clipboard -Path '${file.replace(/'/g, "''")}'`)
+    await page.locator('header').click()
+    await page.keyboard.press('Control+v')
+    await expect
+      .poll(async () =>
+        (await page.evaluate((id) => window.stash.listFiles(id), shelf.id)).map(
+          (f) => `${f.name}:${f.source}`
+        )
+      )
+      .toEqual(['Snapshot 01.png:clipboard'])
+  } finally {
+    if (previous.trim())
+      execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Set-Clipboard -Value $input'], {
+        input: previous
+      })
+  }
+})
+
 test('files sent from a phone land on their own shelf', async () => {
   const { page } = stash
   await addAndShow(page, {})

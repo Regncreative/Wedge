@@ -261,7 +261,7 @@ export const en: Messages = {
   sourceDownloads: 'Downloads',
   sourceScreenshots: 'Screenshots',
   sourcePhone: 'Phone',
-  sourceClipboard: 'Clipboard',
+  sourceClipboard: 'Pasted (Ctrl+V)',
   addRule: 'Add rule',
   noRules: 'No rules yet',
   clearMissing: 'Clear missing files',

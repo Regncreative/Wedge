@@ -272,7 +272,7 @@ export const plPL: Messages = {
   sourceDownloads: 'Pobrane',
   sourceScreenshots: 'Zrzuty ekranu',
   sourcePhone: 'Telefon',
-  sourceClipboard: 'Schowek',
+  sourceClipboard: 'Wklejone (Ctrl+V)',
   addRule: 'Dodaj regułę',
   noRules: 'Jeszcze nie ma reguł',
   clearMissing: 'Usuń brakujące pliki',
