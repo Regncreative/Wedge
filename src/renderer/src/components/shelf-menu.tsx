@@ -1,6 +1,7 @@
 import type { DragEvent } from 'react'
 import {
   Archive,
+  BrushCleaning,
   Clock,
   ExternalLink,
   FolderOpen,
@@ -15,6 +16,7 @@ import {
 import { SHELF_ICONS } from './file-icon'
 import { Menu, type MenuEntry } from './menu'
 import { dragOut } from '@/lib/file-drop'
+import { removeFiles } from '@/lib/file-actions'
 import { useStashStore } from '@/stores/stash-store'
 import { useT } from '@/lib/i18n'
 import type { ShelfColorName, ShelfIconName } from '@shared/i18n'
@@ -61,6 +63,8 @@ export function ShelfMenu() {
 
   const { refresh, askPrompt, askConfirm, showToast } = useStashStore.getState()
   const ids = files.filter((f) => f.shelfId === shelf.id && f.exists).map((f) => f.id)
+  // Missing files too: clearing a shelf takes every card off it (#51).
+  const all = files.filter((f) => f.shelfId === shelf.id).map((f) => f.id)
   const pocket = shelf.kind === 'pocket'
   const expiryLabel = (h: number | null) =>
     h === null ? t.expiryOff : h === 24 ? t.expiry24h : h === 24 * 7 ? t.expiry7d : t.expiry30d
@@ -156,11 +160,24 @@ export function ShelfMenu() {
       icon: MonitorUp,
       action: () => window.stash.openWidget(shelf.id)
     },
+    // Not on a shared shelf: removing its files takes them out of the folder for everyone.
+    ...(shelf.folder
+      ? []
+      : [
+          {
+            label: t.removeAllFiles,
+            icon: BrushCleaning,
+            danger: true,
+            separated: true,
+            disabled: all.length === 0,
+            action: () => removeFiles(all)
+          }
+        ]),
     {
       label: t.deleteShelf(shelf.name),
       icon: Trash2,
       danger: true,
-      separated: true,
+      separated: !!shelf.folder,
       disabled: pocket || shelves.filter((s) => s.kind !== 'pocket').length <= 1,
       action: async () => {
         const ok = await askConfirm({

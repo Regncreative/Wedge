@@ -31,6 +31,7 @@ export const de: Messages = {
   shelfOptions: 'Regal-Optionen',
   sharedBadge: 'Geteilt',
   tempShelf: 'Temporäres Regal',
+  removeAllFiles: 'Alle Dateien entfernen…',
   expiresBadge: (l) => `Temporär · ${l}`,
 
   filterImages: 'Bilder',

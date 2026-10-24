@@ -349,6 +349,38 @@ test('temporary shelves and desktop widgets from the shelf menu', async () => {
   await expect(tab(page, first.name).locator('.tab-count')).toHaveText('03', { timeout: 2000 })
 })
 
+test('the shelf menu clears a shelf and leaves the files on disk', async () => {
+  const { page } = stash
+  const paths = await addAndShow(page, { 'a.txt': 'a', 'b.txt': 'b', 'c.txt': 'c' })
+  const first = (await page.evaluate(() => window.stash.listShelves()))[0]
+
+  await tab(page, first.name).click({ ...TAB_END, button: 'right' })
+  await page.getByRole('menuitem', { name: ui('Tüm dosyaları kaldır', 'Remove all files') }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toContainText(/3/)
+  await dialog.getByRole('button').last().click() // confirm
+  await expect
+    .poll(async () => (await page.evaluate((id) => window.stash.listFiles(id), first.id)).length)
+    .toBe(0)
+  for (const p of paths) expect(existsSync(p)).toBe(true)
+
+  // A shared shelf has none: removing there would empty the folder for everyone.
+  const folder = mkdtempSync(join(tmpdir(), 'stash-shared-'))
+  try {
+    const shared = await page.evaluate((f) => window.stash.createSharedShelf(f), folder)
+    await page.reload()
+    await tab(page, shared.name).click({ ...TAB_END, button: 'right' })
+    await expect(
+      page.getByRole('menuitem', { name: ui('Klasörü aç', 'Open folder') })
+    ).toBeVisible()
+    await expect(
+      page.getByRole('menuitem', { name: ui('Tüm dosyaları kaldır', 'Remove all files') })
+    ).toHaveCount(0)
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
+})
+
 test('icons and previews come from Windows, side by side', async () => {
   const { page } = stash
   const photo = join(work, 'photo.jpg')

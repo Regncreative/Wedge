@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- "Remove all files…" in a shelf's menu (right-click its tab) clears the shelf in one go, after asking; the files stay on disk ([#51](https://github.com/Regncreative/Wedge/issues/51)). Shared shelves don't have it, since there removing a file deletes it from the folder for everyone.
+
 ### Fixed
 - A rule for the clipboard never caught files pasted with Ctrl+V, only pasted images, links and text, because pasted files counted as added by hand ([#47](https://github.com/Regncreative/Wedge/issues/47)). Pasted files now follow it too.
 

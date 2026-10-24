@@ -29,6 +29,7 @@ export const ja: Messages = {
   shelfOptions: '棚のオプション',
   sharedBadge: '共有',
   tempShelf: '一時的な棚',
+  removeAllFiles: 'すべてのファイルを外す…',
   expiresBadge: (l) => `一時的 · ${l}`,
 
   filterImages: '画像',

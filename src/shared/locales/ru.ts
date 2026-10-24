@@ -43,6 +43,7 @@ export const ru: Messages = {
   shelfOptions: 'Опции полки',
   sharedBadge: 'Общая',
   tempShelf: 'Временная полка',
+  removeAllFiles: 'Убрать все файлы…',
   expiresBadge: (l) => `Временная · ${l}`,
   filterImages: 'Изображения',
   filterVideos: 'Видео',

@@ -38,6 +38,7 @@ export const plPL: Messages = {
   shelfOptions: 'Opcje półki',
   sharedBadge: 'Udostępniona',
   tempShelf: 'Półka tymczasowa',
+  removeAllFiles: 'Zdejmij wszystkie pliki…',
   expiresBadge: (l) => `Tymczasowa · ${l}`,
 
   filterImages: 'Obrazy',

@@ -32,6 +32,7 @@ export const fr: Messages = {
   shelfOptions: 'Options de l’étagère',
   sharedBadge: 'Partagée',
   tempShelf: 'Étagère temporaire',
+  removeAllFiles: 'Retirer tous les fichiers…',
   expiresBadge: (l) => `Temporaire · ${l}`,
 
   filterImages: 'Images',

@@ -31,6 +31,7 @@ export const pt: Messages = {
   shelfOptions: 'Opções da prateleira',
   sharedBadge: 'Compartilhada',
   tempShelf: 'Prateleira temporária',
+  removeAllFiles: 'Remover todos os arquivos…',
   expiresBadge: (l) => `Temporária · ${l}`,
 
   filterImages: 'Imagens',

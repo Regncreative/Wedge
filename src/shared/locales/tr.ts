@@ -29,6 +29,7 @@ export const tr: Messages = {
   shelfOptions: 'Raf seçenekleri',
   sharedBadge: 'Paylaşılan',
   tempShelf: 'Geçici raf',
+  removeAllFiles: 'Tüm dosyaları kaldır…',
   expiresBadge: (l) => `Geçici · ${l}`,
 
   filterImages: 'Görsel',

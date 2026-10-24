@@ -42,6 +42,7 @@ export type Messages = {
   shelfOptions: string
   sharedBadge: string
   tempShelf: string
+  removeAllFiles: string
   expiresBadge: (label: string) => string
 
   // Filters

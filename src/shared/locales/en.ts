@@ -29,6 +29,7 @@ export const en: Messages = {
   shelfOptions: 'Shelf options',
   sharedBadge: 'Shared',
   tempShelf: 'Temporary shelf',
+  removeAllFiles: 'Remove all files…',
   expiresBadge: (l) => `Temporary · ${l}`,
 
   filterImages: 'Images',

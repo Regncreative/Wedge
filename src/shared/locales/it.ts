@@ -31,6 +31,7 @@ export const it: Messages = {
   shelfOptions: 'Opzioni dello scaffale',
   sharedBadge: 'Condiviso',
   tempShelf: 'Scaffale temporaneo',
+  removeAllFiles: 'Rimuovi tutti i file…',
   expiresBadge: (l) => `Temporaneo · ${l}`,
 
   filterImages: 'Immagini',

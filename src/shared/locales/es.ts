@@ -31,6 +31,7 @@ export const es: Messages = {
   shelfOptions: 'Opciones del estante',
   sharedBadge: 'Compartido',
   tempShelf: 'Estante temporal',
+  removeAllFiles: 'Quitar todos los archivos…',
   expiresBadge: (l) => `Temporal · ${l}`,
 
   filterImages: 'Imágenes',
