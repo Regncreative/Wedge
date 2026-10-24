@@ -1,6 +1,6 @@
 [package]
 name = "wedge_shell"
-version = "2.1.3"
+version = "2.1.4"
 edition = "2021"
 publish = false
 description = "Add to Wedge in File Explorer's context menu, for the Microsoft Store (MSIX) build"

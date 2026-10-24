@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-10-24
+
 ### Added
 - "Remove all files…" in a shelf's menu (right-click its tab) clears the shelf in one go, after asking; the files stay on disk ([#51](https://github.com/Regncreative/Wedge/issues/51)). Shared shelves don't have it, since there removing a file deletes it from the folder for everyone.
 
@@ -152,7 +154,8 @@ Stash is now **Wedge**: the same app with a new name and logo, rebuilt on Tauri 
 ## [1.0.0] - 2026-07-24
 - Initial release: tray file shelf with shelves, drag and drop, search, and global hotkey.
 
-[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.3...HEAD
+[Unreleased]: https://github.com/Regncreative/Wedge/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/Regncreative/Wedge/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/Regncreative/Wedge/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/Regncreative/Wedge/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/Regncreative/Wedge/compare/v2.1.0...v2.1.1
